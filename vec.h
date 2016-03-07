@@ -12,27 +12,20 @@ typedef float vec2[2];
 typedef float vec3[3];
 typedef float vec4[4];
 
-/*
-  cross product for vec2 and vec3
-  length
-  
-  
- */
-
 inline void vec2_add(vec2 r, vec2 a, vec2 b)
 {
     r[0] = a[0] + b[0];    
     r[1] = a[1] + b[1];    
 }
 
-inline void vec3_add(vec3 r, vec3 a, vec3 b)
+inline void vec3_add(vec3 r, const vec3 a, const vec3 b)
 {
     r[0] = a[0] + b[0];    
     r[1] = a[1] + b[1];    
     r[2] = a[2] + b[2];    
 }
 
-inline void vec4_add(vec4 r, vec4 a, vec4 b)
+inline void vec4_add(vec4 r, const vec4 a, const vec4 b)
 {
     r[0] = a[0] + b[0];    
     r[1] = a[1] + b[1];    
@@ -40,20 +33,20 @@ inline void vec4_add(vec4 r, vec4 a, vec4 b)
     r[3] = a[3] + b[3];        
 }
 
-inline void vec2_sub(vec2 r, vec2 a, vec2 b)
+inline void vec2_sub(vec2 r, const vec2 a, const vec2 b)
 {
     r[0] = a[0] - b[0];    
     r[1] = a[1] - b[1];    
 }
 
-inline void vec3_sub(vec3 r, vec3 a, vec3 b)
+inline void vec3_sub(vec3 r, const vec3 a, const vec3 b)
 {
     r[0] = a[0] - b[0];    
     r[1] = a[1] - b[1];    
     r[2] = a[2] - b[2];
 }
 
-inline void vec4_sub(vec4 r, vec4 a, vec4 b)
+inline void vec4_sub(vec4 r, const vec4 a, const vec4 b)
 {
     r[0] = a[0] - b[0];    
     r[1] = a[1] - b[1];    
@@ -61,20 +54,20 @@ inline void vec4_sub(vec4 r, vec4 a, vec4 b)
     r[3] = a[3] - b[3];        
 }
 
-inline void vec2_scale(vec2 r, const vec2 a, float scale)
+inline void vec2_scale(vec2 r, const vec2 a, const float scale)
 {
     r[0] = a[0] * scale;
     r[1] = a[1] * scale;
 }
 
-inline void vec3_scale(vec3 r, const vec3 a, float scale)
+inline void vec3_scale(vec3 r, const vec3 a, const float scale)
 {
     r[0] = a[0] * scale;
     r[1] = a[1] * scale;
     r[2] = a[2] * scale;
 }
 
-inline void vec4_scale(vec4 r, const vec4 a, float scale)
+inline void vec4_scale(vec4 r, const vec4 a, const float scale)
 {
     r[0] = a[0] * scale;
     r[1] = a[1] * scale;

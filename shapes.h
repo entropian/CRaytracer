@@ -1,9 +1,10 @@
 #pragma once
 
-class Shape
+#include "vec.h"
+
+struct Sphere
 {
-    /*
-      a virtual intersect function
-      brdf?
-     */
-}
+    vec3 center;
+    vec3 color;
+    float radius;
+};

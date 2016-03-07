@@ -27,10 +27,12 @@
 #include <ctime>
 #include "vec.h"
 #include "shaders.h"
+#include "shapes.h"
 #include "glcode.h"
 
 static const float TMAX = 1000.0f;
 static const float k_epsilon = 0.000001f;
+static const int MAX_SPHERES = 1000;
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 vec3 cam_orientation = {0.0f, 0.0f, 0.0f};
@@ -58,20 +60,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         }
     }
 }
-/*
-void generateRegularSamples(Vec2 *samples, const int num_samples)
-{
-    int samples_per_row = static_cast<int>(sqrt(num_samples));
-    for(int i = 0; i < samples_per_row; i++)
-    {
-        for(int j = 0; j < samples_per_row; j++)
-        {
-            samples[i*samples_per_row + j] = Vec2((i + 0.5f) / samples_per_row,
-                                                  (j + 0.5f) / samples_per_row);
-        }
-    }
-}
-*/
+
 void generateRegularSamples(vec2 *samples, const int num_samples)
 {
     int samples_per_row = (int)sqrt(num_samples);
@@ -99,16 +88,21 @@ struct ShadeRec
     bool hit_status;
     vec3 hit_point;
     vec3 normal;
+    vec3 color;                // NOTE: Temporary 
 };
 
-struct Sphere
+void fillShadeRecSphere(ShadeRec *sr, const Sphere sphere, const Ray ray, const float t)
 {
-    vec3 center;
-    vec3 color;
-    float radius;
-};
+    sr->hit_status = true;
+    vec3 displacement;
+    vec3_scale(displacement, ray.direction, t);
+    vec3_add(sr->hit_point, ray.origin, displacement);
+    vec3_sub(displacement, sr->hit_point, sphere.center);
+    vec3_normalize(sr->normal, displacement);
+    vec3_copy(sr->color, sphere.color);
+}
 
-float rayIntersectSphere(Sphere sphere, Ray ray)
+float rayIntersectSphere(ShadeRec *sr, const Sphere sphere, const Ray ray)
 {
     // The analytic solution is so much better than the shitty loop from before
     // though I probably should have used smaller increment for the loop
@@ -130,16 +124,34 @@ float rayIntersectSphere(Sphere sphere, Ray ray)
         float t = (-b - e)/denom;
         if(t > k_epsilon)
         {
+            fillShadeRecSphere(sr, sphere, ray, t);            
             return t;
         }
 
         t = (-b + e)/denom;
         if(t > k_epsilon)
         {
+            fillShadeRecSphere(sr, sphere, ray, t);            
             return t;
         }
     }
     return TMAX;
+}
+
+int initSpheres(Sphere spheres[])
+{
+    int sphere_count = 0;
+    vec3_assign(spheres[sphere_count].center, 0.0f, 0.0f, -4.0f);
+    spheres[sphere_count].radius = 1.0f;
+    vec3_assign(spheres[sphere_count].color, 255.0f, 0.0f, 0.0f);
+    sphere_count++;    
+
+    vec3_assign(spheres[sphere_count].center, 0.75f, 0.0f, -4.0f);
+    spheres[sphere_count].radius = 1.0f;
+    vec3_assign(spheres[sphere_count].color, 0.0f, 255.0f, 0.0f);
+    sphere_count++;
+
+    return sphere_count;
 }
 
 int main()
@@ -154,24 +166,6 @@ int main()
     
     unsigned char *image;
     image = (unsigned char*)calloc(width * height * 3, sizeof(char));
-
-    /*
-      Center of the frame is at (0, 0, 0)
-      Assume the default focal distance is 1, and default aspect ratio is 16:9
-      Assume resolution is 1280 x 720
-      Assume default horizontal fov is 90 degrees
-      The length of the frame is 2(sin(fov/2) * focal distance) = 2(sin(45)) = sqrt(2)
-      The height of the frame is length * 9/16.
-      The area of a pixel is length/1280 * height/720. length/1280 == height 720      
-      The center of the top left pixel is (-length/2 + length/1280/2, height/2 - height/720/2)
-      let p_len = length/1280
-      The center of the nth pixel is (-length/2 + p_len * (n mod 1280) + p_len/2, height/2 - p_len(n / 720) - p_len/2)
-      Focal point is (0, 0, 1).
-      Ray direction for the nth pixel is:
-      (-l/2 + p_len * (n mod 1280) + p_len/2, h/2 - p_len(n / 720) - p_len/2), 0) - (0, 0, 1)
-      Ray origin is at the pixel on the frame.
-
-     */
 
     /* TODO: Moving the camera
        Should be done after sphere is implemented so that we can see the result
@@ -199,56 +193,52 @@ int main()
     float frame_height = frame_length * static_cast<float>(height)/static_cast<float>(width);    
     float pixel_length = frame_length/static_cast<float>(width);
     int num_samples = 4;
-    int samples_per_row = sqrt(static_cast<float>(4));
+    int samples_per_row = (int)sqrt(num_samples);
     float sample_length = pixel_length / static_cast<float>(samples_per_row);
 
-    Sphere sphere1;
-    vec3_assign(sphere1.center, 0.0f, 0.0f, -4.0f);
-    sphere1.radius = 1.0f;
-    vec3_assign(sphere1.color, 255.0f, 0.0f, 0.0f);
-    
-    Sphere sphere2;
-    vec3_assign(sphere2.center, 0.75f, 0.0f, -4.0f);
-    sphere2.radius = 1.0f;
-    vec3_assign(sphere2.color, 0.0f, 255.0f, 0.0f);
+    vec2 *samples = (vec2*)malloc(sizeof(vec2) * num_samples);
+    generateRegularSamples(samples, num_samples);
+
+    Sphere spheres[MAX_SPHERES];
+    int sphere_count = 
+    sphere_count = initSpheres(spheres);
 
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
-        for(int p = 0; p < samples_per_row; p++)
+        for(int p = 0; p < num_samples; p++)
         {
-            for(int q = 0; q < samples_per_row; q++)
+            // (-length/2 + p_len * (n mod width) + p_len/2, height/2 - p_len(n / height) - p_len/2)
+            float x = -frame_length/2 + pixel_length * ((float)(i % width) + samples[p][0]);
+            float y = frame_height/2 - pixel_length * ((float)(i / width) - samples[p][1]);
+            
+            Ray ray;
+            vec3_assign(ray.origin, x, y, 0.0f);
+            vec3_add(ray.origin, ray.origin, cam_position);
+            vec3_sub(ray.direction, ray.origin, focal_point);
+            vec3_normalize(ray.direction, ray.direction);
+
+            float min_t = tmp_t = TMAX;
+            ShadeRec min_sr, tmp_sr;
+            for(int i = 0; i < sphere_count; i++)
             {
-                // (-length/2 + p_len * (n mod width) + p_len/2, height/2 - p_len(n / height) - p_len/2)
-                float x = -frame_length/2 + pixel_length * (float)(i % width) + sample_length * p;
-                float y = frame_height/2 - pixel_length * (float)(i / width) - sample_length * q;
-                Ray ray;
-
-                vec3_assign(ray.origin, x, y, 0.0f);
-                vec3_add(ray.origin, ray.origin, cam_position);
-                vec3_sub(ray.direction, ray.origin, focal_point);
-                vec3_normalize(ray.direction, ray.direction);
-                
-                
-                float sphere1_intersect = rayIntersectSphere(sphere1, ray);
-                float sphere2_intersect = rayIntersectSphere(sphere2, ray);
-
-                if(sphere1_intersect < sphere2_intersect)
+                tmp_t = rayIntersectSphere(&tmp_sr, spheres[i], ray);
+                if(tmp_t < min_t)
                 {
-                    vec3_add(color, color, sphere1.color);
-                }else if(sphere2_intersect  < sphere1_intersect)
-                {
-                    //image[i*3 + 2] = static_cast<unsigned char>(sphere2.color[2]);
-                    vec3_add(color, color, sphere2.color);                    
+                    min_t = tmp_t;
+                    min_sr = tmp_sr;
                 }
+            }
+            if(min_t < TMAX)
+            {
+                vec3_add(color, color, min_sr.color);
             }
         }
         vec3_scale(color, color, 1.0f/num_samples);
-        image[i*3] = (float)(color[0]);
-        image[i*3 + 1] = (float)(color[1]);
-        image[i*3 + 2] = (float)(color[2]);
+        image[i*3] = (char)(color[0]);
+        image[i*3 + 1] = (char)(color[1]);
+        image[i*3 + 2] = (char)(color[2]);
     }
-
     displayImage(window, viewport, image, width, height);
 
     while(true)

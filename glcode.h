@@ -104,8 +104,8 @@ void initViewport(GlViewport *viewport)
     glBindTexture(GL_TEXTURE_2D, viewport->textureHandle);
     
     // NOTE: implement antialiasing and filtering?
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     GLuint textureUniform = glGetUniformLocation(viewport->shaderProgram, "textureMap");
     glUniform1i(textureUniform, 0);    
