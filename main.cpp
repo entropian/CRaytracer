@@ -32,8 +32,8 @@
 static const float TMAX = 1000.0f;
 static const float k_epsilon = 0.000001f;
 
-Vec3 cam_position(0.0f, 0.0f, 0.0f);
-Vec3 cam_orientation(0.0f, 0.0f, 0.0f);
+vec3 cam_position = {0.0f, 0.0f, 0.0f};
+vec3 cam_orientation = {0.0f, 0.0f, 0.0f};
 
 
 // TODO: not finished
@@ -58,7 +58,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         }
     }
 }
-
+/*
 void generateRegularSamples(Vec2 *samples, const int num_samples)
 {
     int samples_per_row = static_cast<int>(sqrt(num_samples));
@@ -71,24 +71,40 @@ void generateRegularSamples(Vec2 *samples, const int num_samples)
         }
     }
 }
+*/
+void generateRegularSamples(vec2 *samples, const int num_samples)
+{
+    int samples_per_row = (int)sqrt(num_samples);
+    int sample_index;
+    for(int i = 0; i < samples_per_row; i++)
+    {
+        for(int j = 0; j < samples_per_row; j++)
+        {
+            // NOTE: instead of computing a sample index, could probably just increment an index variable.
+            sample_index = i*samples_per_row + j;
+            samples[sample_index][0] = (i + 0.5f) / samples_per_row;
+            samples[sample_index][1] = (j + 0.5f) / samples_per_row;
+        }
+    }
+}
 
 struct Ray
 {
-    Vec3 origin;
-    Vec3 direction;
+    vec3 origin;
+    vec3 direction;
 };
 
 struct ShadeRec
 {
     bool hit_status;
-    Vec3 hit_point;
-    Vec3 normal;
+    vec3 hit_point;
+    vec3 normal;
 };
 
 struct Sphere
 {
-    Vec3 center;
-    Vec3 color;
+    vec3 center;
+    vec3 color;
     float radius;
 };
 
@@ -96,9 +112,12 @@ float rayIntersectSphere(Sphere sphere, Ray ray)
 {
     // The analytic solution is so much better than the shitty loop from before
     // though I probably should have used smaller increment for the loop
-    float a = dot(ray.direction, ray.direction);
-    float b = dot((ray.origin - sphere.center)*2, ray.direction);
-    float c = norm2(ray.origin - sphere.center) - sphere.radius*sphere.radius;
+    float a = vec3_dot(ray.direction, ray.direction);
+    vec3 origin_to_center, tmp;
+    vec3_sub(origin_to_center, ray.origin, sphere.center);
+    vec3_scale(tmp, origin_to_center, 2);
+    float b = vec3_dot(tmp, ray.direction);
+    float c = vec3_dot(origin_to_center, origin_to_center) - sphere.radius*sphere.radius;
     float disc = b*b - 4*a*c;
 
     if(disc < 0.0f)
@@ -122,7 +141,6 @@ float rayIntersectSphere(Sphere sphere, Ray ray)
     }
     return TMAX;
 }
-
 
 int main()
 {
@@ -174,6 +192,7 @@ int main()
      */
 
     int num_pixels = width * height;
+    vec3 focal_point = {0.0f, 0.0f, 1.0f};
     float fov = 90.0f;
     float focal_dist = 1.0f;
     float frame_length = 2.0f * (sin(fov/2.0f) * focal_dist);
@@ -184,46 +203,50 @@ int main()
     float sample_length = pixel_length / static_cast<float>(samples_per_row);
 
     Sphere sphere1;
-    sphere1.center = Vec3(0.0f, 0.0f, -4.0f);
+    vec3_assign(sphere1.center, 0.0f, 0.0f, -4.0f);
     sphere1.radius = 1.0f;
-    sphere1.color = Vec3(255.0f, 0.0f, 0.0f);
-
+    vec3_assign(sphere1.color, 255.0f, 0.0f, 0.0f);
+    
     Sphere sphere2;
-    sphere2.center = Vec3(0.75f, 0.0f, -4.0f);
+    vec3_assign(sphere2.center, 0.75f, 0.0f, -4.0f);
     sphere2.radius = 1.0f;
-    sphere2.color = Vec3(0.0f, 255.0f, 0.0f);
+    vec3_assign(sphere2.color, 0.0f, 255.0f, 0.0f);
 
     for(int i = 0; i < num_pixels; i++)
     {
-        Vec3 color;
+        vec3 color = {0.0f, 0.0f, 0.0f};
         for(int p = 0; p < samples_per_row; p++)
         {
             for(int q = 0; q < samples_per_row; q++)
             {
                 // (-length/2 + p_len * (n mod width) + p_len/2, height/2 - p_len(n / height) - p_len/2)
-                float x = -frame_length/2 + pixel_length * static_cast<float>(i % width) + sample_length * p;
-                float y = frame_height/2 - pixel_length * static_cast<float>(i / width) - sample_length * q;
+                float x = -frame_length/2 + pixel_length * (float)(i % width) + sample_length * p;
+                float y = frame_height/2 - pixel_length * (float)(i / width) - sample_length * q;
                 Ray ray;
-                ray.origin = Vec3(x, y, 0.0f) + cam_position;;
-                ray.direction = normalize(ray.origin - Vec3(0.0f, 0.0f, 1.0f));
 
+                vec3_assign(ray.origin, x, y, 0.0f);
+                vec3_add(ray.origin, ray.origin, cam_position);
+                vec3_sub(ray.direction, ray.origin, focal_point);
+                vec3_normalize(ray.direction, ray.direction);
+                
+                
                 float sphere1_intersect = rayIntersectSphere(sphere1, ray);
                 float sphere2_intersect = rayIntersectSphere(sphere2, ray);
 
                 if(sphere1_intersect < sphere2_intersect)
                 {
-                    color += sphere1.color;
+                    vec3_add(color, color, sphere1.color);
                 }else if(sphere2_intersect  < sphere1_intersect)
                 {
                     //image[i*3 + 2] = static_cast<unsigned char>(sphere2.color[2]);
-                    color += sphere2.color;
+                    vec3_add(color, color, sphere2.color);                    
                 }
             }
         }
-        color /= static_cast<float>(num_samples);
-        image[i*3] = static_cast<float>(color[0]);
-        image[i*3 + 1] = static_cast<float>(color[1]);
-        image[i*3 + 2] = static_cast<float>(color[2]);                    
+        vec3_scale(color, color, 1.0f/num_samples);
+        image[i*3] = (float)(color[0]);
+        image[i*3 + 1] = (float)(color[1]);
+        image[i*3 + 2] = (float)(color[2]);
     }
 
     displayImage(window, viewport, image, width, height);

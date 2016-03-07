@@ -1,9 +1,6 @@
-#ifndef VEC_H
-#define VEC_H
+#pragma once
 
 #include <math.h>
-#include <assert.h>
-#include <algorithm>
 
 // TODO: figure out this stuff
 static const double PI = 3.14159265358979323846264338327950288;
@@ -11,176 +8,203 @@ static const double EPS = 1e-8;
 static const double EPS2 = EPS*EPS;
 static const double EPS3 = EPS*EPS*EPS;
 
-template <int n>
-class Vec
+typedef float vec2[2];
+typedef float vec3[3];
+typedef float vec4[4];
+
+/*
+  cross product for vec2 and vec3
+  length
+  
+  
+ */
+
+inline void vec2_add(vec2 r, vec2 a, vec2 b)
 {
-	float f_[n];
-
-public:
-	Vec()
-	{
-		for (int i = 0; i < n; i++)
-			f_[i] = 0;
-	}
-
-	Vec(float t)
-	{
-		for (int i = 0; i < n; i++)
-			f_[i] = t;
-	}
-
-
-	Vec(float a, float b)
-	{
-		assert(n == 2);
-		f_[0] = a;
-		f_[1] = b;
-	}
-
-	Vec(float a, float b, float c)
-	{
-		assert(n == 3);
-		f_[0] = a;
-		f_[1] = b;
-		f_[2] = c;
-	}
-
-	Vec(float a, float b, float c, float d)
-	{
-		assert(n == 4);
-		f_[0] = a;
-		f_[1] = b;
-		f_[2] = c;
-		f_[3] = d;
-	}
-
-	// truncate if m < n, or extend the vector with extendValue
-	template<int m>
-	explicit Vec(const Vec<m>& a, const float extendValue = 0.0)
-	{
-		for (int i = 0; i < std::min(m, n); i++)
-			f_[i] = a[i];
-
-		for (int i = std::min(m, n); i < n; i++)
-			f_[i] = extendValue;
-	}
-
-	float& operator [](const int i)
-	{
-		return f_[i];
-	}
-
-	const float& operator[](const int i) const
-	{
-		return f_[i];
-	}
-
-	Vec operator - () const
-	{
-		return Vec(*this) *= -1;
-	}
-
-	Vec& operator +=(const Vec& v)
-	{
-		for (int i = 0; i < n; i++)
-			f_[i] += v[i];
-		return *this;
-	}
-
-	Vec& operator -=(const Vec& v)
-	{
-		for (int i = 0; i < n; i++)
-			f_[i] -= v[i];
-		return *this;
-	}
-
-	Vec& operator *=(const float a)
-	{
-		for (int i = 0; i < n; i++)
-			f_[i] *= a;
-		return *this;
-	}
-
-	Vec& operator /=(const float a)
-	{
-		const float inva = 1 / a;
-		for (int i = 0; i < n; i++)
-			f_[i] *= inva;
-		return *this;
-	}
-
-	Vec operator +(const Vec& v) const
-	{
-		return Vec(*this) += v;
-	}
-
-	Vec operator -(const Vec& v) const
-	{
-		return Vec(*this) -= v;
-	}
-
-	Vec operator *(const float a) const
-	{
-		return Vec(*this) *= a;
-	}
-
-	Vec operator /(const float a) const
-	{
-		return Vec(*this) /= a;
-	}
-
-	Vec& normalize()
-	{
-		assert((double)dot(*this, *this) > EPS2);
-		return *this /= sqrt(dot(*this, *this));
-	}
-};
-
-typedef Vec<2> Vec2;
-typedef Vec<3> Vec3;
-typedef Vec<4> Vec4;
-
-inline Vec3 cross(const Vec3& a, const Vec3& b)
-{
-	return Vec3((a[1] * b[2]) - (a[2] * b[1]), (a[2] * b[0]) - (a[0] * b[2]), (a[0] * b[1]) - (a[1] * b[0]));
+    r[0] = a[0] + b[0];    
+    r[1] = a[1] + b[1];    
 }
 
-template<int n>
-inline float dot(const Vec<n>& a, const Vec<n>& b)
+inline void vec3_add(vec3 r, vec3 a, vec3 b)
 {
-	float r = 0;
-	for (int i = 0; i < n; i++)
-		r += a[i] * b[i];
-	return r;
+    r[0] = a[0] + b[0];    
+    r[1] = a[1] + b[1];    
+    r[2] = a[2] + b[2];    
 }
 
-template<int n>
-inline float norm2(const Vec<n>& v)
+inline void vec4_add(vec4 r, vec4 a, vec4 b)
 {
-	return dot(v, v);
+    r[0] = a[0] + b[0];    
+    r[1] = a[1] + b[1];    
+    r[2] = a[2] + b[2];
+    r[3] = a[3] + b[3];        
 }
 
-template<int n>
-inline float norm(const Vec<n>& v)
+inline void vec2_sub(vec2 r, vec2 a, vec2 b)
 {
-	return sqrt(dot(v, v));
+    r[0] = a[0] - b[0];    
+    r[1] = a[1] - b[1];    
 }
 
-// Return a normalized vector without modifying the input
-template<int n>
-inline Vec<n> normalize(const Vec<n>& v)
+inline void vec3_sub(vec3 r, vec3 a, vec3 b)
 {
-    /*
-    assert((double)(dot(v, v)) > EPS2);
-    return v / norm(v);
-    */
-
-    if((double)(dot(v, v)) < EPS2)
-        return Vec3(0.0f, 0.0f, 0.0f);
-    else
-        return v / norm(v);
-
+    r[0] = a[0] - b[0];    
+    r[1] = a[1] - b[1];    
+    r[2] = a[2] - b[2];
 }
 
+inline void vec4_sub(vec4 r, vec4 a, vec4 b)
+{
+    r[0] = a[0] - b[0];    
+    r[1] = a[1] - b[1];    
+    r[2] = a[2] - b[2];
+    r[3] = a[3] - b[3];        
+}
 
-#endif
+inline void vec2_scale(vec2 r, const vec2 a, float scale)
+{
+    r[0] = a[0] * scale;
+    r[1] = a[1] * scale;
+}
+
+inline void vec3_scale(vec3 r, const vec3 a, float scale)
+{
+    r[0] = a[0] * scale;
+    r[1] = a[1] * scale;
+    r[2] = a[2] * scale;
+}
+
+inline void vec4_scale(vec4 r, const vec4 a, float scale)
+{
+    r[0] = a[0] * scale;
+    r[1] = a[1] * scale;
+    r[2] = a[2] * scale;
+    r[3] = a[3] * scale;    
+}
+
+inline float vec2_dot(const vec2 a, const vec2 b)
+{
+    return a[0]*b[0] + a[1]*b[1];
+}
+
+inline float vec3_dot(const vec3 a, const vec3 b)
+{
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+}
+
+inline float vec4_dot(const vec4 a, const vec4 b)
+{
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3];
+}
+
+inline void vec2_clear(vec2 a)
+{
+    a[0] = a[1] = 0.0f;
+}
+
+inline void vec3_clear(vec3 a)
+{
+    a[0] = a[1] = a[2] = 0.0f;
+}
+
+inline void vec4_clear(vec4 a)
+{
+    a[0] = a[1] = a[2] = a[3] = 0.0f;
+}
+
+inline void vec2_normalize(vec2 r, const vec2 a)
+{
+    float length = sqrt(vec2_dot(a, a));
+    if(length == 0)
+    {
+        vec2_clear(r);
+        return;
+    }
+    vec2_scale(r, a, 1.0f/length);
+}
+
+inline void vec3_normalize(vec2 r, const vec3 a)
+{
+    float length = sqrt(vec3_dot(a, a));
+    if(length == 0)
+    {
+        vec3_clear(r);
+        return;
+    }
+    vec3_scale(r, a, 1.0f/length);
+}
+
+inline void vec4_normalize(vec4 r, vec4 a)
+{
+    float length = sqrt(vec4_dot(a, a));
+    if(length == 0)
+    {
+        vec4_clear(r);
+        return;
+    }
+    vec4_scale(r, a, 1.0f/length);
+}
+
+inline void vec3_cross(vec3 r, const vec3 a, const vec3 b)
+{
+    r[0] = a[1]*b[2] - a[2]*b[1];
+    r[1] = a[2]*b[0] - a[0]*b[2];
+    r[2] = a[0]*b[1] - a[1]*b[0];
+}
+
+inline float vec2_length(const vec2 a)
+{
+    return sqrt(vec2_dot(a, a));
+}
+
+inline float vec3_length(const vec3 a)
+{
+    return sqrt(vec3_dot(a, a));
+}
+
+inline float vec4_length(const vec4 a)
+{
+    return sqrt(vec4_dot(a, a));
+}
+
+inline void vec2_copy(vec2 r, const vec2 a)
+{
+    r[0] = a[0];
+    r[1] = a[1];
+}
+
+inline void vec3_copy(vec3 r, const vec3 a)
+{
+    r[0] = a[0];
+    r[1] = a[1];
+    r[2] = a[2];
+}
+
+inline void vec4_copy(vec4 r, const vec4 a)
+{
+    r[0] = a[0];
+    r[1] = a[1];
+    r[2] = a[2];
+    r[3] = a[3];    
+}
+
+inline void vec3_assign(vec2 r, const float x, const float y)
+{
+    r[0] = x;
+    r[1] = y;
+}
+
+inline void vec3_assign(vec3 r, const float x, const float y, const float z)
+{
+    r[0] = x;
+    r[1] = y;
+    r[2] = z;
+}
+
+inline void vec4_assign(vec4 r, const float x, const float y, const float z, const float a)
+{
+    r[0] = x;
+    r[1] = y;
+    r[2] = z;
+    r[3] = a;
+}
