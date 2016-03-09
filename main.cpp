@@ -179,7 +179,8 @@ int main()
 
     Samples samples;
     //genRegularSamples(&samples, num_samples, num_sets);
-    genMultijitteredSamples(&samples, num_samples, num_sets);
+    //genMultijitteredSamples(&samples, num_samples, num_sets);
+    genHammersleySamples(&samples, num_samples, num_sets);
 
     Sphere spheres[MAX_SPHERES];
     int sphere_count = 0;
