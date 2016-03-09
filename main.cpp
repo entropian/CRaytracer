@@ -4,9 +4,6 @@
   objects -- implicit surfaces vs explicit surfaces
   sampling -- different sampling algorithms
 
-  Need a struct for recording intersect point info,
-  like position, normal, brdf, etc.
-
   TODO:
   gamma correction
   consider how variables should be grouped into objects?
@@ -29,6 +26,7 @@
 #include "shaders.h"
 #include "shapes.h"
 #include "glcode.h"
+#include "sampling.h"
 
 static const float TMAX = 1000.0f;
 static const float k_epsilon = 0.000001f;
@@ -61,35 +59,19 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
-void generateRegularSamples(vec2 *samples, const int num_samples)
-{
-    int samples_per_row = (int)sqrt(num_samples);
-    int sample_index;
-    for(int i = 0; i < samples_per_row; i++)
-    {
-        for(int j = 0; j < samples_per_row; j++)
-        {
-            // NOTE: instead of computing a sample index, could probably just increment an index variable.
-            sample_index = i*samples_per_row + j;
-            samples[sample_index][0] = (i + 0.5f) / samples_per_row;
-            samples[sample_index][1] = (j + 0.5f) / samples_per_row;
-        }
-    }
-}
-
-struct Ray
+typedef struct Ray
 {
     vec3 origin;
     vec3 direction;
-};
+} Ray;
 
-struct ShadeRec
+typedef struct ShadeRec
 {
     bool hit_status;
     vec3 hit_point;
     vec3 normal;
     vec3 color;                // NOTE: Temporary 
-};
+} ShadeRec;
 
 void fillShadeRecSphere(ShadeRec *sr, const Sphere sphere, const Ray ray, const float t)
 {
@@ -192,25 +174,26 @@ int main()
     float frame_length = 2.0f * (sin(fov/2.0f) * focal_dist);
     float frame_height = frame_length * static_cast<float>(height)/static_cast<float>(width);    
     float pixel_length = frame_length/static_cast<float>(width);
-    int num_samples = 4;
-    int samples_per_row = (int)sqrt(num_samples);
-    float sample_length = pixel_length / static_cast<float>(samples_per_row);
+    int num_samples = 16;
+    int num_sets = 1;
 
-    vec2 *samples = (vec2*)malloc(sizeof(vec2) * num_samples);
-    generateRegularSamples(samples, num_samples);
+    Samples samples;
+    //genRegularSamples(&samples, num_samples, num_sets);
+    genMultijitteredSamples(&samples, num_samples, num_sets);
 
     Sphere spheres[MAX_SPHERES];
-    int sphere_count = 
+    int sphere_count = 0;
     sphere_count = initSpheres(spheres);
 
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
+        vec2 sample;
         for(int p = 0; p < num_samples; p++)
         {
-            // (-length/2 + p_len * (n mod width) + p_len/2, height/2 - p_len(n / height) - p_len/2)
-            float x = -frame_length/2 + pixel_length * ((float)(i % width) + samples[p][0]);
-            float y = frame_height/2 - pixel_length * ((float)(i / width) - samples[p][1]);
+            getNextSample(sample, &samples);
+            float x = -frame_length/2 + pixel_length * ((float)(i % width) + sample[0]);
+            float y = frame_height/2 - pixel_length * ((float)(i / width) - sample[1]);            
             
             Ray ray;
             vec3_assign(ray.origin, x, y, 0.0f);
@@ -218,7 +201,7 @@ int main()
             vec3_sub(ray.direction, ray.origin, focal_point);
             vec3_normalize(ray.direction, ray.direction);
 
-            float min_t = tmp_t = TMAX;
+            float min_t = TMAX,  tmp_t = TMAX;
             ShadeRec min_sr, tmp_sr;
             for(int i = 0; i < sphere_count; i++)
             {
@@ -240,6 +223,8 @@ int main()
         image[i*3 + 2] = (char)(color[2]);
     }
     displayImage(window, viewport, image, width, height);
+    free(image);
+    freeSamples(&samples);
 
     while(true)
     {
