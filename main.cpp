@@ -175,12 +175,15 @@ int main()
     float frame_height = frame_length * static_cast<float>(height)/static_cast<float>(width);    
     float pixel_length = frame_length/static_cast<float>(width);
     int num_samples = 16;
-    int num_sets = 1;
+    int num_sets = 3;
 
-    Samples samples;
+    Samples samples = Samples_default;
     //genRegularSamples(&samples, num_samples, num_sets);
     //genMultijitteredSamples(&samples, num_samples, num_sets);
     genHammersleySamples(&samples, num_samples, num_sets);
+    mapSamplesToDisk(&samples);
+    mapSamplesToHemisphere(&samples, 5);
+    
 
     Sphere spheres[MAX_SPHERES];
     int sphere_count = 0;

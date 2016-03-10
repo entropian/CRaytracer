@@ -6,18 +6,49 @@
 
 /*
  TODO:
- shuffled indices
+ shuffled indices that isn't crap
+ Not all sampling methods needs the same randomization?
+ Think about whether the disk samples should be in the same struct
 */
 struct Samples_s
 {
     int num_samples;
     int num_sets;
     vec2 *samples;
+    vec2 *disk_samples;                // for mapping samples from unit square to unit disk
+    vec3 *hemisphere_samples;
     int *shuffled_indices;
     unsigned long count;
     int jump;
-} Samples_default = {0, 0, NULL, NULL, 0, 0};
+} Samples_default = {0, 0, NULL, NULL, NULL, NULL, 0, 0};
 typedef Samples_s Samples;
+
+void freeSamples(Samples *samples)
+{
+    if(samples->samples != NULL)
+    {
+        free(samples->samples);
+        samples->samples = NULL;
+    }
+    if(samples->disk_samples != NULL)
+    {
+        free(samples->disk_samples);
+        samples->disk_samples = NULL;
+    }
+    if(samples->hemisphere_samples != NULL)
+    {
+        free(samples->hemisphere_samples);
+        samples->hemisphere_samples = NULL;
+    }
+    if(samples->shuffled_indices != NULL)
+    {
+        free(samples->shuffled_indices);
+        samples->shuffled_indices = NULL;
+    }
+    samples->count = samples->jump = 0;
+    samples->num_sets = 0;
+    samples->num_samples = 0;
+}
 
 void getNextSample(vec2 r, Samples *samples)
 {
@@ -65,6 +96,14 @@ void prepSampleStruct(Samples *samples, const int num_samples, const int num_set
     {
         free(samples->samples);        
     }
+    if(samples->disk_samples != NULL)
+    {
+        free(samples->disk_samples);
+    }
+    if(samples->hemisphere_samples != NULL)
+    {
+        free(samples->hemisphere_samples);
+    }    
     if(samples->shuffled_indices != NULL)
     {
         free(samples->shuffled_indices);
@@ -159,8 +198,8 @@ void genHammersleySamples(Samples *samples, const int num_samples, const int num
     {
         for(int i = 0; i < num_samples; i++)
         {
-            samples->samples[i][0] = (float)i / (float)num_samples;
-            samples->samples[i][1] = radicalInverse(i);
+            samples->samples[i + p*num_samples][0] = (float)i / (float)num_samples;
+            samples->samples[i + p*num_samples][1] = radicalInverse(i);
         }
     }
 }
@@ -173,19 +212,85 @@ int hashFuncMult(const int i, const int table_size)
     return (int)floor(table_size * fractional_part);
 }
 
-void freeSamples(Samples *samples)
+void mapSamplesToDisk(Samples *samples)
 {
-    if(samples->samples != NULL)
+    if(samples->samples == NULL)
     {
-        free(samples->samples);
-        samples->samples = NULL;
-    }
-    if(samples->shuffled_indices != NULL)
+        fprintf(stderr, "No samples to be mapped to disk.\n");
+    }    
+    int size = samples->num_sets * samples->num_samples;
+    float r, phi;
+    if(samples->disk_samples != NULL)
     {
-        free(samples->shuffled_indices);
-        samples->shuffled_indices = NULL;
+        free(samples->disk_samples);
     }
-    samples->count = samples->jump = 0;
-    samples->num_sets = 0;
-    samples->num_samples = 0;
+    samples->disk_samples = (vec2*)malloc(sizeof(vec2) * size);
+    float x, y;
+
+    for(int i = 0; i < size; i++)
+    {
+        // map sample point from [0,1] to [-1,1]
+        x = 2.0f * samples->samples[i][0] - 1.0f;
+        y = 2.0f * samples->samples[i][0] - 1.0f;
+        if(x > -y)
+        {
+            if(x > y)
+            {
+                r = x;
+                phi = y/x;
+            }else
+            {
+                r = y;
+                phi = 2 - x/y;
+            }
+        }else
+        {
+            if(x < y)
+            {
+                r = -x;
+                phi = 4 + y/x;
+            }else
+            {
+                r = -y;
+                if(y != 0.0f)
+                {
+                    phi = 6 - x/y;
+                }else
+                {
+                    phi = 0.0f;
+                }
+            }
+        }
+        phi *= (float)PI/4.0f;
+        samples->disk_samples[i][0] = r*cos(phi);
+        samples->disk_samples[i][1] = r*sin(phi);        
+    }
+}
+
+void mapSamplesToHemisphere(Samples *samples, const float e)
+{
+    if(samples->samples == NULL)
+    {
+        fprintf(stderr, "No samples to be mapped to hemisphere.\n");
+    }    
+    int size = samples->num_sets * samples->num_samples;
+    if(samples->hemisphere_samples != NULL)
+    {
+        free(samples->hemisphere_samples);
+    }
+    samples->hemisphere_samples = (vec3*)malloc(sizeof(vec3) * size);
+
+    for(int i = 0; i < size; i++)
+    {
+        float cos_phi = cos(2.0f * (float)PI * samples->samples[i][0]);
+        float sin_phi = sin(2.0f * (float)PI * samples->samples[i][0]);
+        float cos_theta = pow((1.0f - samples->samples[i][1]), 1.0f / (e + 1.0f));
+        float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+        float pu = sin_theta * cos_phi;
+        float pv = sin_theta * sin_phi;
+        float pw = cos_theta;
+        samples->hemisphere_samples[i][0] = pu;
+        samples->hemisphere_samples[i][1] = pv;
+        samples->hemisphere_samples[i][2] = pw;        
+    }
 }
