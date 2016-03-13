@@ -27,14 +27,13 @@
 #include "shapes.h"
 #include "glcode.h"
 #include "sampling.h"
+#include "camera.h"
 
 static const float TMAX = 1000.0f;
 static const float k_epsilon = 0.000001f;
 static const int MAX_SPHERES = 1000;
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
-vec3 cam_orientation = {0.0f, 0.0f, 0.0f};
-
 
 // TODO: not finished
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -72,6 +71,7 @@ typedef struct ShadeRec
     vec3 normal;
     vec3 color;                // NOTE: Temporary 
 } ShadeRec;
+
 
 void fillShadeRecSphere(ShadeRec *sr, const Sphere sphere, const Ray ray, const float t)
 {
@@ -126,7 +126,7 @@ int initSpheres(Sphere spheres[])
     vec3_assign(spheres[sphere_count].center, 0.0f, 0.0f, -4.0f);
     spheres[sphere_count].radius = 1.0f;
     vec3_assign(spheres[sphere_count].color, 255.0f, 0.0f, 0.0f);
-    sphere_count++;    
+    sphere_count++;
 
     vec3_assign(spheres[sphere_count].center, 0.75f, 0.0f, -4.0f);
     spheres[sphere_count].radius = 1.0f;
@@ -134,6 +134,28 @@ int initSpheres(Sphere spheres[])
     sphere_count++;
 
     return sphere_count;
+}
+
+void calcRayCam(Ray *ray, const float sample_x, const float sample_y, const Camera *camera)
+{
+    vec3 sample_loc_cam, tmp_vec_1, tmp_vec_2, focal_point;
+    vec3_scale(tmp_vec_1, camera->x_axis, sample_x);
+    vec3_scale(tmp_vec_2, camera->y_axis, sample_y);
+    vec3_add(sample_loc_cam, tmp_vec_1, tmp_vec_2);
+    vec3_scale(focal_point, camera->z_axis, camera->focal_dist);    // focal_point is rotated but not translated
+    vec3_sub(ray->direction, sample_loc_cam, focal_point);
+    vec3_normalize(ray->direction, ray->direction);
+    vec3_add(ray->origin, focal_point, camera->position);
+}
+
+void transformPoint(vec3 r, const vec3 a, const vec3 x, const vec3 y, const vec3 z, const vec3 cam_position)
+{
+    vec3 tmp_vec, result_vec;
+    result_vec[0] = vec3_dot(a, x[0], y[0], z[0]);
+    result_vec[1] = vec3_dot(a, x[1], y[1], z[1]);
+    result_vec[2] = vec3_dot(a, x[2], y[2], z[2]);    
+    vec3_add(result_vec, result_vec, cam_position);
+    vec3_copy(r, result_vec);
 }
 
 int main()
@@ -177,13 +199,20 @@ int main()
     int num_samples = 16;
     int num_sets = 3;
 
+    // TODO: hammersley sampling doesn't seem to work horizontally
     Samples samples = Samples_default;
     //genRegularSamples(&samples, num_samples, num_sets);
-    //genMultijitteredSamples(&samples, num_samples, num_sets);
-    genHammersleySamples(&samples, num_samples, num_sets);
-    mapSamplesToDisk(&samples);
-    mapSamplesToHemisphere(&samples, 5);
-    
+    genMultijitteredSamples(&samples, num_samples, num_sets);
+    //genHammersleySamples(&samples, num_samples, num_sets);
+    //mapSamplesToDisk(&samples);
+    //mapSamplesToHemisphere(&samples, 5);
+
+
+    Camera camera;
+    initCameraDefault(&camera);
+    vec3 look_point = {0.75f, 0.0f, -4.0f};
+    vec3 up_vec = {0.0f, 1.0f, 0.0f};
+    cameraLookAt(&camera, cam_position, look_point, up_vec);
 
     Sphere spheres[MAX_SPHERES];
     int sphere_count = 0;
@@ -197,14 +226,10 @@ int main()
         {
             getNextSample(sample, &samples);
             float x = -frame_length/2 + pixel_length * ((float)(i % width) + sample[0]);
-            float y = frame_height/2 - pixel_length * ((float)(i / width) - sample[1]);            
-            
+            float y = frame_height/2 - pixel_length * ((float)(i / width) + sample[1]);            
             Ray ray;
-            vec3_assign(ray.origin, x, y, 0.0f);
-            vec3_add(ray.origin, ray.origin, cam_position);
-            vec3_sub(ray.direction, ray.origin, focal_point);
-            vec3_normalize(ray.direction, ray.direction);
-
+            calcRayCam(&ray, x, y, &camera);
+            
             float min_t = TMAX,  tmp_t = TMAX;
             ShadeRec min_sr, tmp_sr;
             for(int i = 0; i < sphere_count; i++)

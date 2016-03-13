@@ -90,6 +90,22 @@ inline float vec4_dot(const vec4 a, const vec4 b)
     return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3];
 }
 
+
+inline float vec2_dot(const vec4 a, const float x, const float y)
+{
+    return a[0]*x + a[1]*y;
+}
+
+inline float vec3_dot(const vec4 a, const float x, const float y, const float z)
+{
+    return a[0]*x + a[1]*y + a[2]*z;
+}
+
+inline float vec4_dot(const vec4 a, const float x, const float y, const float z, const float w)
+{
+    return a[0]*x + a[1]*y + a[2]*z + a[3]*w;
+}
+
 inline void vec2_clear(vec2 a)
 {
     a[0] = a[1] = 0.0f;
@@ -201,3 +217,25 @@ inline void vec4_assign(vec4 r, const float x, const float y, const float z, con
     r[2] = z;
     r[3] = a;
 }
+
+inline void vec2_negate(vec2 r, const vec2 a)
+{
+    r[0] = -a[0];
+    r[1] = -a[1];
+}
+
+inline void vec3_negate(vec3 r, const vec3 a)
+{
+    r[0] = -a[0];
+    r[1] = -a[1];
+    r[2] = -a[2];
+}
+
+inline void vec4_negate(vec4 r, const vec4 a)
+{
+    r[0] = -a[0];
+    r[1] = -a[1];
+    r[2] = -a[2];
+    r[3] = -a[3];    
+}
+     
