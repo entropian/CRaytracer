@@ -43,3 +43,11 @@ void cameraLookAt(Camera *camera, const vec3 position, const vec3 look_point, co
     vec3_add(camera->focal_point, position, displacement);
     vec3_copy(camera->position, position);
 }
+
+void setFocalDist(Camera *camera, const float focal_dist)
+{
+    camera->focal_dist = focal_dist;
+    vec3 displacement;
+    vec3_scale(displacement, camera->z_axis, focal_dist);
+    vec3_add(camera->focal_point, camera->position, displacement);
+}

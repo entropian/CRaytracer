@@ -19,8 +19,10 @@ struct Samples_s
     vec3 *hemisphere_samples;
     int *shuffled_indices;
     unsigned long count;
+    unsigned long disk_count;
     int jump;
-} Samples_default = {0, 0, NULL, NULL, NULL, NULL, 0, 0};
+    int disk_jump;                // TODO: verify if disk_count and disk_jump are necessary
+} Samples_default = {0, 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0};
 typedef Samples_s Samples;
 
 void freeSamples(Samples *samples)
@@ -55,10 +57,26 @@ void getNextSample(vec2 r, Samples *samples)
     srand((unsigned int)time(NULL));
     if(samples->count % samples->num_samples == 0)
     {
+        samples->disk_jump = (rand() % samples->num_sets) * samples->num_samples;
+    }
+    vec2_copy(r, samples->samples[samples->disk_jump + samples->shuffled_indices[samples->disk_jump +
+                                                                            samples->count++ % samples->num_samples]]);
+}
+
+void getNextDiskSample(vec2 r, Samples *samples)
+{
+    if(samples->disk_samples == NULL)
+    {
+        fprintf(stderr, "No disk samples.\n");
+        return;
+    }
+    srand((unsigned int)time(NULL));
+    if(samples->disk_count % samples->num_samples == 0)
+    {
         samples->jump = (rand() % samples->num_sets) * samples->num_samples;
     }
-    vec2_copy(r, samples->samples[samples->jump + samples->shuffled_indices[samples->jump +
-                                                                            samples->count++ % samples->num_samples]]);
+    vec2_copy(r, samples->disk_samples[samples->jump + samples->shuffled_indices[samples->jump +
+                                                                            samples->disk_count++ % samples->num_samples]]);
 }
 
 void shuffleIndices(Samples *samples)
@@ -184,6 +202,7 @@ float radicalInverse(int j)
     return x;
 }
 
+// TODO: debug this. only samples horizontally it seems
 void genHammersleySamples(Samples *samples, const int num_samples, const int num_sets)
 {
     int samples_per_row = (int)sqrt(num_samples);    
@@ -231,7 +250,7 @@ void mapSamplesToDisk(Samples *samples)
     {
         // map sample point from [0,1] to [-1,1]
         x = 2.0f * samples->samples[i][0] - 1.0f;
-        y = 2.0f * samples->samples[i][0] - 1.0f;
+        y = 2.0f * samples->samples[i][1] - 1.0f;
         if(x > -y)
         {
             if(x > y)
