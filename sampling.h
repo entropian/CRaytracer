@@ -126,7 +126,7 @@ void prepSampleStruct(Samples *samples, const int num_samples, const int num_set
     {
         free(samples->shuffled_indices);
     }
-    samples->count = samples->jump = 0;
+    samples->count = samples->jump = samples->disk_jump = 0;
     samples->samples = (vec2*)malloc(sizeof(vec2) * num_samples * num_sets);    
     samples->num_samples = num_samples;
     samples->num_sets = num_sets;
@@ -188,6 +188,7 @@ void genMultijitteredSamples(Samples *samples, const int num_samples, const int 
     }    
 }
 
+// TODO: debug this. only returns 0
 // Returns j reflected around the decimal point in binary
 float radicalInverse(int j)
 {
@@ -202,7 +203,6 @@ float radicalInverse(int j)
     return x;
 }
 
-// TODO: debug this. only samples horizontally it seems
 void genHammersleySamples(Samples *samples, const int num_samples, const int num_sets)
 {
     int samples_per_row = (int)sqrt(num_samples);    
@@ -218,7 +218,8 @@ void genHammersleySamples(Samples *samples, const int num_samples, const int num
         for(int i = 0; i < num_samples; i++)
         {
             samples->samples[i + p*num_samples][0] = (float)i / (float)num_samples;
-            samples->samples[i + p*num_samples][1] = radicalInverse(i);
+            float f = samples->samples[i + p*num_samples][1] = radicalInverse(i);
+            printf("%f\n", f);
         }
     }
 }

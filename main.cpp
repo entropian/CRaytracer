@@ -72,19 +72,6 @@ int initSpheres(Sphere spheres[])
     return sphere_count;
 }
 
-// Compute a ray for pinhole camera
-void calcRayCam(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
-{
-    vec3 sample_loc_cam, tmp_vec_1, tmp_vec_2, focal_point;
-    vec3_scale(tmp_vec_1, camera->x_axis, viewplane_coord[0]);
-    vec3_scale(tmp_vec_2, camera->y_axis, viewplane_coord[1]);
-    vec3_add(sample_loc_cam, tmp_vec_1, tmp_vec_2);
-    vec3_scale(focal_point, camera->z_axis, camera->focal_dist);    // focal_point is rotated but not translated
-    vec3_sub(ray->direction, sample_loc_cam, focal_point);
-    vec3_normalize(ray->direction, ray->direction);
-    vec3_add(ray->origin, focal_point, camera->position);
-}
-
 void transformPoint(vec3 r, const vec3 a, const vec3 x, const vec3 y, const vec3 z, const vec3 cam_position)
 {
     vec3 result_vec;
@@ -93,37 +80,6 @@ void transformPoint(vec3 r, const vec3 a, const vec3 x, const vec3 y, const vec3
     result_vec[2] = vec3_dot(a, x[2], y[2], z[2]);    
     vec3_add(result_vec, result_vec, cam_position);
     vec3_copy(r, result_vec);
-}
-
-// Compute a ray for thin lens camera
-void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const vec2 disk_sample, const float focal_length,
-                     const float lens_radius, const Camera *camera)
-{
-    // NOTE: consider doing the calculations in camera space instead of transforming the resulting ray to camera space
-    vec3 point_viewplane = {viewplane_coord[0], viewplane_coord[1], 0.0f};
-    vec3_copy(ray->origin, camera->focal_point);
-    vec3_sub(ray->direction, point_viewplane, ray->origin);
-    vec3_normalize(ray->direction, ray->direction);
-    vec3 focal_plane_point = {point_viewplane[0] * (focal_length/camera->focal_dist),
-                              point_viewplane[1] * (focal_length/camera->focal_dist),
-                              -focal_length};
-    vec3_assign(ray->origin, disk_sample[0] * lens_radius, disk_sample[1] * lens_radius, camera->focal_dist);
-    vec3_sub(ray->direction, focal_plane_point, ray->origin);
-    vec3_normalize(ray->direction, ray->direction);
-
-    // Transform ray to camera space
-    vec3 tmp_vec_1, tmp_vec_2, tmp_vec_3;
-    vec3_scale(tmp_vec_1, camera->x_axis, ray->direction[0]);
-    vec3_scale(tmp_vec_2, camera->y_axis, ray->direction[1]);
-    vec3_scale(tmp_vec_3, camera->z_axis, ray->direction[2]);
-    vec3_add(tmp_vec_1, tmp_vec_1, tmp_vec_2);
-    vec3_add(ray->direction, tmp_vec_1, tmp_vec_3);
-    vec3_scale(tmp_vec_1, camera->x_axis, ray->origin[0]);
-    vec3_scale(tmp_vec_2, camera->y_axis, ray->origin[1]);
-    vec3_scale(tmp_vec_3, camera->z_axis, ray->origin[2]);
-    vec3_add(tmp_vec_1, tmp_vec_1, tmp_vec_2);
-    vec3_add(tmp_vec_1, tmp_vec_1, tmp_vec_3);
-    vec3_add(ray->origin, tmp_vec_1, camera->position);
 }
 
 int main()
@@ -166,21 +122,20 @@ int main()
     int num_sets = 3;    
     Samples samples = Samples_default;
     //genRegularSamples(&samples, num_samples, num_sets);
-    genMultijitteredSamples(&samples, num_samples, num_sets);
-    //genHammersleySamples(&samples, num_samples, num_sets);
+    //genMultijitteredSamples(&samples, num_samples, num_sets);
+    genHammersleySamples(&samples, num_samples, num_sets);
     mapSamplesToDisk(&samples);
     //mapSamplesToHemisphere(&samples, 5);
 
     Camera camera;
-    initCameraDefault(&camera);
+    initThinLensCameraDefault(&camera);
 
     vec3 look_point = {0.75f, 0.0f, -4.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, cam_position, look_point, up_vec);
 
-
     float fov = 90.0f;
-    float frame_length = 2.0f * (sin(fov/2.0f) * camera.focal_dist);
+    float frame_length = 2.0f * (sin(fov/2.0f) * camera.focal_pt_dist);
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
     float pixel_length = frame_length/(float)(frame_res_width);
 
@@ -195,19 +150,23 @@ int main()
             getNextSample(sample, &samples);
             viewplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);            
             viewplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);            
-
-            Ray center_ray;            
-            getNextDiskSample(disk_sample, &samples);            
-            calcRayThinLens(&center_ray, viewplane_coord, disk_sample, focal_length, lens_radius, &camera);
-            
             Ray ray;
-            calcRayCam(&ray, viewplane_coord, &camera);
+            switch(camera.camera_type)
+            {
+            case Pinhole:
+                calcRayCam(&ray, viewplane_coord, &camera);
+                break;
+            case ThinLens:
+                getNextDiskSample(disk_sample, &samples);            
+                calcRayThinLens(&ray, viewplane_coord, disk_sample, focal_length, lens_radius, &camera);
+                break;
+            }
             
             float min_t = TMAX,  tmp_t = TMAX;
             ShadeRec min_sr, tmp_sr;
             for(int i = 0; i < sphere_count; i++)
             {
-                tmp_t = rayIntersectSphere(&tmp_sr, spheres[i], center_ray);
+                tmp_t = rayIntersectSphere(&tmp_sr, spheres[i], ray);
                 if(tmp_t < min_t)
                 {
                     min_t = tmp_t;
