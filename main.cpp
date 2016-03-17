@@ -4,6 +4,9 @@
   objects -- implicit surfaces vs explicit surfaces
   sampling -- different sampling algorithms
 
+  Features to consider:
+  being able to scale the camera and viewplane 
+
   TODO:
   gamma correction
   consider how variables should be grouped into objects?
@@ -118,7 +121,7 @@ int main()
     sphere_count = initSpheres(spheres);
     
     // TODO: hammersley sampling doesn't seem to work horizontally
-    int num_samples = 25;
+    int num_samples = 16;
     int num_sets = 3;    
     Samples samples = Samples_default;
     //genRegularSamples(&samples, num_samples, num_sets);
@@ -149,7 +152,8 @@ int main()
             vec2 sample, disk_sample, viewplane_coord;
             getNextSample(sample, &samples);
             viewplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);            
-            viewplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);            
+            viewplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
+            
             Ray ray;
             switch(camera.camera_type)
             {
@@ -158,7 +162,8 @@ int main()
                 break;
             case ThinLens:
                 getNextDiskSample(disk_sample, &samples);            
-                calcRayThinLens(&ray, viewplane_coord, disk_sample, focal_length, lens_radius, &camera);
+                //calcRayThinLens(&ray, viewplane_coord, disk_sample, focal_length, lens_radius, &camera);
+                calcRayThinLens(&ray, viewplane_coord, disk_sample, &camera);
                 break;
             }
             

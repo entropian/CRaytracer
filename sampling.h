@@ -188,16 +188,15 @@ void genMultijitteredSamples(Samples *samples, const int num_samples, const int 
     }    
 }
 
-// TODO: debug this. only returns 0
 // Returns j reflected around the decimal point in binary
-float radicalInverse(int j)
+float radicalInverse(unsigned int j)
 {
-    float x = 0.0f;
-    float f = 0.5f;
+    double x = 0.0;
+    double f = 0.5;
     while(j)
     {
-        x += f * (float)(!j & 1);
-        j /= 2;
+        x += f * (double)(j & 1);
+        j = j >> 1;
         f *= 0.5f;
     }
     return x;
@@ -213,13 +212,14 @@ void genHammersleySamples(Samples *samples, const int num_samples, const int num
     }
     prepSampleStruct(samples, num_samples, num_sets);
     int sample_index = 0;
+    printf("num_samples = %d\n", num_samples);
     for(int p = 0; p < num_sets; p++)
     {
-        for(int i = 0; i < num_samples; i++)
+        printf("new set\n");
+        for(unsigned int i = 0; i < num_samples; i++)
         {
             samples->samples[i + p*num_samples][0] = (float)i / (float)num_samples;
-            float f = samples->samples[i + p*num_samples][1] = radicalInverse(i);
-            printf("%f\n", f);
+            samples->samples[i + p*num_samples][1] = radicalInverse(i);
         }
     }
 }

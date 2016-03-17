@@ -91,22 +91,23 @@ void calcRayCam(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
 }
 
 // Compute a ray for thin lens camera
-void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const vec2 disk_sample, const float focal_length,
-                     const float lens_radius, const Camera *camera)
+void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const vec2 disk_sample, const Camera *camera)
 {
     // NOTE: consider doing the calculations in camera space instead of transforming the resulting ray to camera space
     vec3 point_viewplane = {viewplane_coord[0], viewplane_coord[1], 0.0f};
     vec3_copy(ray->origin, camera->focal_point);
     vec3_sub(ray->direction, point_viewplane, ray->origin);
     vec3_normalize(ray->direction, ray->direction);
-    vec3 focal_plane_point = {point_viewplane[0] * (focal_length/camera->focal_pt_dist),
-                              point_viewplane[1] * (focal_length/camera->focal_pt_dist),
-                              -focal_length};
-    vec3_assign(ray->origin, disk_sample[0] * lens_radius, disk_sample[1] * lens_radius, camera->focal_pt_dist);
+    vec3 focal_plane_point = {point_viewplane[0] * (camera->focal_length/camera->focal_pt_dist),
+                              point_viewplane[1] * (camera->focal_length/camera->focal_pt_dist),
+                              -camera->focal_length};
+    vec3_assign(ray->origin, disk_sample[0] * camera->lens_radius,
+                disk_sample[1] * camera->lens_radius, camera->focal_pt_dist);
     vec3_sub(ray->direction, focal_plane_point, ray->origin);
     vec3_normalize(ray->direction, ray->direction);
 
     // Transform ray to camera space
+    // NOTE: shrink below into two function calls
     vec3 tmp_vec_1, tmp_vec_2, tmp_vec_3;
     vec3_scale(tmp_vec_1, camera->x_axis, ray->direction[0]);
     vec3_scale(tmp_vec_2, camera->y_axis, ray->direction[1]);
