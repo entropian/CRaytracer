@@ -1,9 +1,7 @@
 #pragma once
 
 #include "vec.h"
-
-static const float DEFAULT_FOCAL_LENGTH = 3.0f;
-static const float DEFAULT_LENS_RADIUS = 0.2f;
+#include "constants.h"
 
 enum CameraType
 {

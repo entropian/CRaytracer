@@ -38,10 +38,7 @@
 #include "sampling.h"
 #include "camera.h"
 #include "lights.h"
-
-static const int MAX_SPHERES = 1000;
-static const int MAX_DIRECTIONAL_LIGHTS = 10;
-static const int MAX_POINT_LIGHTS = 100;
+#include "constants.h"
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -72,35 +69,31 @@ int initSpheres(Sphere spheres[])
 {
     // TODO: tidy up material assignment
     int sphere_count = 0;
-    vec3_assign(spheres[sphere_count].center, 0.0f, 0.0f, -4.0f);
+    vec3_assign(spheres[sphere_count].center, -1.0f, 0.0f, -4.0f);
     spheres[sphere_count].radius = 1.0f;
-    //vec3_assign(spheres[sphere_count].color, 255.0f, 0.0f, 0.0f);
-    vec3_assign(spheres[sphere_count].mat.cd, 1.0f, 0.0f, 0.0f);
-    vec3_assign(spheres[sphere_count].mat.ca, 1.0f, 0.0f, 0.0f);
-    spheres[sphere_count].mat.kd = 1.0f;
-    spheres[sphere_count].mat.ka = 1.0f;    
+    vec3_copy(spheres[sphere_count].mat.cd, PINK);
+    vec3_copy(spheres[sphere_count].mat.ca, PINK);
+    vec3_copy(spheres[sphere_count].mat.cs, PINK);    
+    spheres[sphere_count].mat.kd = 0.6f;
+    spheres[sphere_count].mat.ka = 1.0f;
+    spheres[sphere_count].mat.ks = 0.4f;
+    spheres[sphere_count].mat.exp = 5.0f;        
+    spheres[sphere_count].mat.mat_type = Matte;
     sphere_count++;
 
     vec3_assign(spheres[sphere_count].center, 0.75f, 0.0f, -4.0f);
     spheres[sphere_count].radius = 1.0f;
-    //vec3_assign(spheres[sphere_count].color, 0.0f, 255.0f, 0.0f);
-    vec3_assign(spheres[sphere_count].mat.cd, 0.0f, 1.0f, 0.0f);
-    vec3_assign(spheres[sphere_count].mat.ca, 0.0f, 1.0f, 0.0f);
-    spheres[sphere_count].mat.kd = 1.0f;
-    spheres[sphere_count].mat.ka = 1.0f;        
+    vec3_copy(spheres[sphere_count].mat.cd, CYAN);
+    vec3_copy(spheres[sphere_count].mat.ca, CYAN);
+    vec3_copy(spheres[sphere_count].mat.cs, CYAN);    
+    spheres[sphere_count].mat.kd = 0.6f;
+    spheres[sphere_count].mat.ka = 1.0f;
+    spheres[sphere_count].mat.ks = 0.4f;
+    spheres[sphere_count].mat.exp = 10.0f;            
+    spheres[sphere_count].mat.mat_type = Matte;    
     sphere_count++;
 
     return sphere_count;
-}
-
-void transformPoint(vec3 r, const vec3 a, const vec3 x, const vec3 y, const vec3 z, const vec3 cam_position)
-{
-    vec3 result_vec;
-    result_vec[0] = vec3_dot(a, x[0], y[0], z[0]);
-    result_vec[1] = vec3_dot(a, x[1], y[1], z[1]);
-    result_vec[2] = vec3_dot(a, x[2], y[2], z[2]);    
-    vec3_add(result_vec, result_vec, cam_position);
-    vec3_copy(r, result_vec);
 }
 
 int main()
@@ -117,6 +110,8 @@ int main()
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
+    vec3 bg_color = {35.0f/255.0f, 47.0f/255.0f, 47.0f/255.0f};
+
     // Objects
     Sphere spheres[MAX_SPHERES];
     int sphere_count = 0;
@@ -127,12 +122,11 @@ int main()
     float amb_ls = 0.05f;
 
     // Directional light
-    float intensity = 1.0f;
-    vec3 color = {1.0f, 1.0f, 1.0f};
+    float intensity = 2.0f;
     vec3 direction = {10.0f, 10.0f, 10.0f};
     vec3_normalize(direction, direction);    
     DirectionalLight dir_light;
-    assignDirLight(&dir_light, intensity, color, direction);
+    assignDirLight(&dir_light, intensity, WHITE, direction);
 
     // Samples
     int num_samples = 16;
@@ -153,6 +147,7 @@ int main()
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
+    // TODO: throw these in a struct for camera scaling
     float fov = 90.0f;
     float frame_length = 2.0f * (sin(fov/2.0f) * camera.focal_pt_dist);
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
@@ -193,7 +188,10 @@ int main()
             }
             if(min_t < TMAX)
             {
-                vec3 radiance = {0.0f, 0.0f, 0.0f};
+                // TODO: multiple lights, different materials
+                vec3 radiance;
+                // Ambient component
+                // ka*ca * amb_inc_radiance
                 vec3 amb_inc_radiance;
                 vec3_scale(amb_inc_radiance, amb_color, amb_ls);
                 vec3 reflectance;
@@ -203,21 +201,51 @@ int main()
                 float ndotwi = vec3_dot(dir_light.direction, min_sr.normal);
                 if(ndotwi >= 0)
                 {
+                    // TODO: write out the math expressions in the comments
+                    // Diffuse component
+                    // kd*cd/PI * inc_radiance_cos
                     vec3_scale(reflectance, min_sr.mat->cd, min_sr.mat->kd);
-                    vec3 brdf;
-                    vec3_scale(brdf, reflectance, 1.0f/PI);
-                    vec3 tmp;                                    
+                    vec3 f;
+                    vec3_scale(f, reflectance, 1.0f/(float)PI);
+                    vec3 tmp, inc_radiance_cos;                                    
                     vec3_scale(tmp, dir_light.color, dir_light.intensity);
-                    vec3_scale(tmp, tmp, ndotwi);
-                    vec3_mult(tmp, tmp, brdf);
+                    vec3_scale(inc_radiance_cos, tmp, ndotwi);
+                    vec3_mult(tmp, inc_radiance_cos, f);
+                    vec3_add(radiance, radiance, tmp);
+
+
+                    // Specular
+                    // ks*cs * cos(theta)^exp * inc_radiance_cos
+                    // theta = angle between light and reflected view vector
+                    vec3 reflect_dir;
+                    // TODO: add wo to ShadeRec, optimize
+                    // reflect vector: 2*dot(n, v)*n - v
+                    vec3 wo;
+                    vec3_negate(wo, ray.direction);
+                    float ndotwo = vec3_dot(min_sr.normal, wo);
+                    vec3_scale(tmp, min_sr.normal, ndotwo * 2);
+                    vec3_add(reflect_dir, ray.direction, tmp);
+                    vec3_normalize(reflect_dir, reflect_dir);
+                    float rdotwi = vec3_dot(reflect_dir, dir_light.direction);
+                    vec3_scale(tmp, min_sr.mat->cs, min_sr.mat->ks * pow(rdotwi, min_sr.mat->exp));
+                    vec3_mult(tmp, inc_radiance_cos, tmp);
                     vec3_add(radiance, radiance, tmp);
                 }
                 vec3_add(color, color, radiance);                    
-                
-                //vec3_add(color, color, min_sr.color);
+            }else
+            {
+                vec3_add(color, color, bg_color);
             }
         }
         vec3_scale(color, color, 1.0f/num_samples);
+        // divide color by max component if max component > 1
+        float max;
+        max = (color[0] > color[1]) ? color[0] : color[1];
+        max = (max > color[2]) ? max : color[2];
+        if(max > 1.0f)
+        {
+            vec3_scale(color, color, 1.0f/max);
+        }
         image[i*3] = (char)(color[0] * 255.0f);
         image[i*3 + 1] = (char)(color[1] * 255.0f);
         image[i*3 + 2] = (char)(color[2] * 255.0f);
