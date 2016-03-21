@@ -2,8 +2,8 @@
 
 #include "vec.h"
 
-static const float DEFAULT_FOCAL_LENGTH = 5.0f;
-static const float DEFAULT_LENS_RADIUS = 0.4f;
+static const float DEFAULT_FOCAL_LENGTH = 3.0f;
+static const float DEFAULT_LENS_RADIUS = 0.2f;
 
 enum CameraType
 {

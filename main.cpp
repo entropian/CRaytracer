@@ -12,6 +12,12 @@
   consider how variables should be grouped into objects?
  */
 
+    /*
+      Camera related things: fov, resolution, position, orientation.
+      Be cool and throw them into a class?
+      What design pattern is this?
+     */
+
 #include <GL/glew.h>
 
 #if __GNUG__
@@ -31,8 +37,11 @@
 #include "glcode.h"
 #include "sampling.h"
 #include "camera.h"
+#include "lights.h"
 
 static const int MAX_SPHERES = 1000;
+static const int MAX_DIRECTIONAL_LIGHTS = 10;
+static const int MAX_POINT_LIGHTS = 100;
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -61,15 +70,24 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 int initSpheres(Sphere spheres[])
 {
+    // TODO: tidy up material assignment
     int sphere_count = 0;
     vec3_assign(spheres[sphere_count].center, 0.0f, 0.0f, -4.0f);
     spheres[sphere_count].radius = 1.0f;
-    vec3_assign(spheres[sphere_count].color, 255.0f, 0.0f, 0.0f);
+    //vec3_assign(spheres[sphere_count].color, 255.0f, 0.0f, 0.0f);
+    vec3_assign(spheres[sphere_count].mat.cd, 1.0f, 0.0f, 0.0f);
+    vec3_assign(spheres[sphere_count].mat.ca, 1.0f, 0.0f, 0.0f);
+    spheres[sphere_count].mat.kd = 1.0f;
+    spheres[sphere_count].mat.ka = 1.0f;    
     sphere_count++;
 
     vec3_assign(spheres[sphere_count].center, 0.75f, 0.0f, -4.0f);
     spheres[sphere_count].radius = 1.0f;
-    vec3_assign(spheres[sphere_count].color, 0.0f, 255.0f, 0.0f);
+    //vec3_assign(spheres[sphere_count].color, 0.0f, 255.0f, 0.0f);
+    vec3_assign(spheres[sphere_count].mat.cd, 0.0f, 1.0f, 0.0f);
+    vec3_assign(spheres[sphere_count].mat.ca, 0.0f, 1.0f, 0.0f);
+    spheres[sphere_count].mat.kd = 1.0f;
+    spheres[sphere_count].mat.ka = 1.0f;        
     sphere_count++;
 
     return sphere_count;
@@ -99,28 +117,24 @@ int main()
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
-    /* TODO: Moving the camera
-       Should be done after sphere is implemented so that we can see the result
-       Two Vec3's. One for translation and one for euler angle. Done?
-       First calculate ray direction, then rotate it with euler angle.
-       Rotate and translate the position of the pixel to use as ray starting point.
-       Implement euler-angle-to-matrix conversion.
-     */
-
-    /*
-      Camera related things: fov, resolution, position, orientation.
-      Be cool and throw them into a class?
-      What design pattern is this?
-     */
-    /*
-      Array of objects
-      Array of lights?
-     */
+    // Objects
     Sphere spheres[MAX_SPHERES];
     int sphere_count = 0;
     sphere_count = initSpheres(spheres);
-    
-    // TODO: hammersley sampling doesn't seem to work horizontally
+
+    // Ambient light
+    vec3 amb_color = {1.0f, 1.0f, 1.0f};
+    float amb_ls = 0.05f;
+
+    // Directional light
+    float intensity = 1.0f;
+    vec3 color = {1.0f, 1.0f, 1.0f};
+    vec3 direction = {10.0f, 10.0f, 10.0f};
+    vec3_normalize(direction, direction);    
+    DirectionalLight dir_light;
+    assignDirLight(&dir_light, intensity, color, direction);
+
+    // Samples
     int num_samples = 16;
     int num_sets = 3;    
     Samples samples = Samples_default;
@@ -130,40 +144,39 @@ int main()
     mapSamplesToDisk(&samples);
     //mapSamplesToHemisphere(&samples, 5);
 
+    // Camera
     Camera camera;
-    initThinLensCameraDefault(&camera);
+    initPinholeCameraDefault(&camera);
 
+    vec3 position = {0.0f, 0.0f, 0.0f};
     vec3 look_point = {0.75f, 0.0f, -4.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
-    cameraLookAt(&camera, cam_position, look_point, up_vec);
+    cameraLookAt(&camera, position, look_point, up_vec);
 
     float fov = 90.0f;
     float frame_length = 2.0f * (sin(fov/2.0f) * camera.focal_pt_dist);
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
     float pixel_length = frame_length/(float)(frame_res_width);
 
-    float focal_length = 4.0f;
-    float lens_radius = 1.0f;
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
         for(int p = 0; p < num_samples; p++)
         {
-            vec2 sample, disk_sample, viewplane_coord;
+            vec2 sample, disk_sample, imageplane_coord;
             getNextSample(sample, &samples);
-            viewplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);            
-            viewplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
+            imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);            
+            imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
             
             Ray ray;
             switch(camera.camera_type)
             {
             case Pinhole:
-                calcRayCam(&ray, viewplane_coord, &camera);
+                calcRayCam(&ray, imageplane_coord, &camera);
                 break;
             case ThinLens:
                 getNextDiskSample(disk_sample, &samples);            
-                //calcRayThinLens(&ray, viewplane_coord, disk_sample, focal_length, lens_radius, &camera);
-                calcRayThinLens(&ray, viewplane_coord, disk_sample, &camera);
+                calcRayThinLens(&ray, imageplane_coord, disk_sample, &camera);
                 break;
             }
             
@@ -171,7 +184,7 @@ int main()
             ShadeRec min_sr, tmp_sr;
             for(int i = 0; i < sphere_count; i++)
             {
-                tmp_t = rayIntersectSphere(&tmp_sr, spheres[i], ray);
+                tmp_t = rayIntersectSphere(&tmp_sr, &(spheres[i]), ray);
                 if(tmp_t < min_t)
                 {
                     min_t = tmp_t;
@@ -180,13 +193,34 @@ int main()
             }
             if(min_t < TMAX)
             {
-                vec3_add(color, color, min_sr.color);
+                vec3 radiance = {0.0f, 0.0f, 0.0f};
+                vec3 amb_inc_radiance;
+                vec3_scale(amb_inc_radiance, amb_color, amb_ls);
+                vec3 reflectance;
+                vec3_scale(reflectance, min_sr.mat->ca, min_sr.mat->ka);
+                vec3_mult(radiance, amb_inc_radiance, reflectance);
+                
+                float ndotwi = vec3_dot(dir_light.direction, min_sr.normal);
+                if(ndotwi >= 0)
+                {
+                    vec3_scale(reflectance, min_sr.mat->cd, min_sr.mat->kd);
+                    vec3 brdf;
+                    vec3_scale(brdf, reflectance, 1.0f/PI);
+                    vec3 tmp;                                    
+                    vec3_scale(tmp, dir_light.color, dir_light.intensity);
+                    vec3_scale(tmp, tmp, ndotwi);
+                    vec3_mult(tmp, tmp, brdf);
+                    vec3_add(radiance, radiance, tmp);
+                }
+                vec3_add(color, color, radiance);                    
+                
+                //vec3_add(color, color, min_sr.color);
             }
         }
         vec3_scale(color, color, 1.0f/num_samples);
-        image[i*3] = (char)(color[0]);
-        image[i*3 + 1] = (char)(color[1]);
-        image[i*3 + 2] = (char)(color[2]);
+        image[i*3] = (char)(color[0] * 255.0f);
+        image[i*3 + 1] = (char)(color[1] * 255.0f);
+        image[i*3 + 2] = (char)(color[2] * 255.0f);
     }
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
     free(image);

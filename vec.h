@@ -75,6 +75,27 @@ inline void vec4_scale(vec4 r, const vec4 a, const float scale)
     r[3] = a[3] * scale;    
 }
 
+inline void vec2_mult(vec2 r, const vec2 a, const vec2 b)
+{
+    r[0] = a[0] * b[0];
+    r[1] = a[1] * b[1];
+}
+
+inline void vec3_mult(vec3 r, const vec3 a, const vec3 b)
+{
+    r[0] = a[0] * b[0];
+    r[1] = a[1] * b[1];
+    r[2] = a[2] * b[2];
+}
+
+inline void vec4_mult(vec4 r, const vec4 a, const vec4 b)
+{
+    r[0] = a[0] * b[0];
+    r[1] = a[1] * b[1];
+    r[2] = a[2] * b[2];
+    r[3] = a[3] * b[3];    
+}
+
 inline float vec2_dot(const vec2 a, const vec2 b)
 {
     return a[0]*b[0] + a[1]*b[1];
