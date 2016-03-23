@@ -212,10 +212,8 @@ void genHammersleySamples(Samples *samples, const int num_samples, const int num
     }
     prepSampleStruct(samples, num_samples, num_sets);
     int sample_index = 0;
-    printf("num_samples = %d\n", num_samples);
     for(int p = 0; p < num_sets; p++)
     {
-        printf("new set\n");
         for(unsigned int i = 0; i < (unsigned)num_samples; i++)
         {
             samples->samples[i + p*num_samples][0] = (float)i / (float)num_samples;

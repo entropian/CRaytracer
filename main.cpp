@@ -42,6 +42,12 @@
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
+typedef struct SceneObjects
+{
+    Sphere spheres[MAX_SPHERES];
+    int num_spheres;
+} SceneObjects;
+
 // TODO: not finished
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -79,6 +85,7 @@ int initSpheres(Sphere spheres[])
     spheres[sphere_count].mat.ks = 0.4f;
     spheres[sphere_count].mat.exp = 5.0f;        
     spheres[sphere_count].mat.mat_type = Matte;
+    spheres[sphere_count].shadow = true;    
     sphere_count++;
 
     vec3_assign(spheres[sphere_count].center, 0.75f, 0.0f, -4.0f);
@@ -90,10 +97,54 @@ int initSpheres(Sphere spheres[])
     spheres[sphere_count].mat.ka = 1.0f;
     spheres[sphere_count].mat.ks = 0.4f;
     spheres[sphere_count].mat.exp = 10.0f;            
-    spheres[sphere_count].mat.mat_type = Matte;    
+    spheres[sphere_count].mat.mat_type = Phong;
+    spheres[sphere_count].shadow = true;        
     sphere_count++;
 
     return sphere_count;
+}
+
+void initSceneObjects(SceneObjects *so)
+{
+    so->num_spheres = initSpheres(so->spheres);
+}
+
+float intersectTest(ShadeRec *sr, SceneObjects *scene_objects, const Ray ray)
+{
+    float tmp_t = TMAX,  min_t = TMAX;
+    ShadeRec tmp_sr, min_sr;
+    // Spheres
+    for(int i = 0; i < scene_objects->num_spheres; i++)
+    {
+        tmp_t = rayIntersectSphere(&tmp_sr, &(scene_objects->spheres[i]), ray);
+        if(tmp_t < min_t)
+        {
+            min_t = tmp_t;
+            min_sr = tmp_sr;
+        }
+    }
+    *sr = min_sr;
+    return min_t;
+}
+
+int initLights(Light lights[])
+{
+    // Directional light
+    int light_count = 0;
+    float intensity = 1.0f;
+    vec3 point;
+    vec3 direction = {10.0f, 10.0f, 10.0f};
+    vec3_normalize(direction, direction);    
+    assignLight(&(lights[light_count]), true, DIRECTIONAL, intensity, WHITE, direction);
+    light_count++;
+
+    // Point light
+    intensity = 0.5f;
+    vec3_assign(point, -3.0f, -5.0f, 0.0f);
+    assignLight(&(lights[light_count]), true, POINT, intensity, WHITE, point);
+    light_count++;
+
+    return light_count;
 }
 
 int main()
@@ -112,7 +163,10 @@ int main()
 
     vec3 bg_color = {35.0f/255.0f, 47.0f/255.0f, 47.0f/255.0f};
 
-    // Objects
+    // Scene Objects
+    SceneObjects scene_objects;
+    initSceneObjects(&scene_objects);
+
     Sphere spheres[MAX_SPHERES];
     int sphere_count = 0;
     sphere_count = initSpheres(spheres);
@@ -121,12 +175,10 @@ int main()
     vec3 amb_color = {1.0f, 1.0f, 1.0f};
     float amb_ls = 0.05f;
 
-    // Directional light
-    float intensity = 2.0f;
-    vec3 direction = {10.0f, 10.0f, 10.0f};
-    vec3_normalize(direction, direction);    
-    DirectionalLight dir_light;
-    assignDirLight(&dir_light, intensity, WHITE, direction);
+    // Directional and point light
+    Light lights[MAX_LIGHTS];
+    int num_lights = 0;
+    num_lights = initLights(lights);
 
     // Samples
     int num_samples = 16;
@@ -167,28 +219,19 @@ int main()
             switch(camera.camera_type)
             {
             case Pinhole:
-                calcRayCam(&ray, imageplane_coord, &camera);
+                calcRayPinhole(&ray, imageplane_coord, &camera);
                 break;
             case ThinLens:
                 getNextDiskSample(disk_sample, &samples);            
                 calcRayThinLens(&ray, imageplane_coord, disk_sample, &camera);
                 break;
             }
-            
+
             float min_t = TMAX,  tmp_t = TMAX;
             ShadeRec min_sr, tmp_sr;
-            for(int i = 0; i < sphere_count; i++)
-            {
-                tmp_t = rayIntersectSphere(&tmp_sr, &(spheres[i]), ray);
-                if(tmp_t < min_t)
-                {
-                    min_t = tmp_t;
-                    min_sr = tmp_sr;
-                }
-            }
+            min_t = intersectTest(&min_sr, &scene_objects, ray);
             if(min_t < TMAX)
             {
-                // TODO: multiple lights, different materials
                 vec3 radiance;
                 // Ambient component
                 // ka*ca * amb_inc_radiance
@@ -197,41 +240,90 @@ int main()
                 vec3 reflectance;
                 vec3_scale(reflectance, min_sr.mat->ca, min_sr.mat->ka);
                 vec3_mult(radiance, amb_inc_radiance, reflectance);
-                
-                float ndotwi = vec3_dot(dir_light.direction, min_sr.normal);
-                if(ndotwi >= 0)
+
+                for(int i = 0; i < num_lights; i++)
                 {
-                    // TODO: write out the math expressions in the comments
-                    // Diffuse component
-                    // kd*cd/PI * inc_radiance_cos
-                    vec3_scale(reflectance, min_sr.mat->cd, min_sr.mat->kd);
-                    vec3 f;
-                    vec3_scale(f, reflectance, 1.0f/(float)PI);
-                    vec3 tmp, inc_radiance_cos;                                    
-                    vec3_scale(tmp, dir_light.color, dir_light.intensity);
-                    vec3_scale(inc_radiance_cos, tmp, ndotwi);
-                    vec3_mult(tmp, inc_radiance_cos, f);
-                    vec3_add(radiance, radiance, tmp);
+                    vec3 light_dir;
+                    getLightDirection(light_dir, &(lights[i]), min_sr.hit_point);
+                    float ndotwi = vec3_dot(light_dir, min_sr.normal);
+                    if(ndotwi >= 0)
+                    {
+                        // Shadow test
+                        bool in_shadow = false;
+                        if(lights[i].shadow)
+                        {
+                            Ray shadow_ray;
+                            vec3_copy(shadow_ray.origin, min_sr.hit_point);
+                            vec3_copy(shadow_ray.direction, light_dir);
+                            
+                            if(lights[i].light_type == DIRECTIONAL)
+                            {
+                                for(int i = 0; i < sphere_count; i++)
+                                {
+                                    tmp_t = shadowRayIntersectSphere(&(spheres[i]), shadow_ray);
+                                    if(tmp_t < TMAX)
+                                    {
+                                        in_shadow = true;
+                                        break;
+                                    }
+                                }
+                            }else if(lights[i].light_type == POINT)
+                            {
+                                vec3 light_to_hit_point;
+                                vec3_sub(light_to_hit_point, lights[i].position, min_sr.hit_point);
+                                float t = vec3_length(light_to_hit_point);
+                                min_t = TMAX;
+                                for(int i = 0; i < sphere_count; i++)
+                                {
+                                    tmp_t = rayIntersectSphere(&tmp_sr, &(spheres[i]), shadow_ray);
+                                    if(tmp_t < min_t)
+                                    {
+                                        min_t = tmp_t;
+                                    }
+                                }
+                                if(min_t <= t)
+                                {
+                                    in_shadow = true;
+                                }
+                            }
+                        }
 
+                        if(!in_shadow)
+                        {
+                            // Diffuse component
+                            // kd*cd/PI * inc_radiance_cos
+                            vec3_scale(reflectance, min_sr.mat->cd, min_sr.mat->kd);
+                            vec3 f;
+                            vec3_scale(f, reflectance, 1.0f/(float)PI);
+                            vec3 tmp, inc_radiance_cos;                                    
+                            vec3_scale(tmp, lights[i].color, lights[i].intensity);
+                            vec3_scale(inc_radiance_cos, tmp, ndotwi);
+                            vec3_mult(tmp, inc_radiance_cos, f);
+                            vec3_add(radiance, radiance, tmp);
 
-                    // Specular
-                    // ks*cs * cos(theta)^exp * inc_radiance_cos
-                    // theta = angle between light and reflected view vector
-                    vec3 reflect_dir;
-                    // TODO: add wo to ShadeRec, optimize
-                    // reflect vector: 2*dot(n, v)*n - v
-                    vec3 wo;
-                    vec3_negate(wo, ray.direction);
-                    float ndotwo = vec3_dot(min_sr.normal, wo);
-                    vec3_scale(tmp, min_sr.normal, ndotwo * 2);
-                    vec3_add(reflect_dir, ray.direction, tmp);
-                    vec3_normalize(reflect_dir, reflect_dir);
-                    float rdotwi = vec3_dot(reflect_dir, dir_light.direction);
-                    vec3_scale(tmp, min_sr.mat->cs, min_sr.mat->ks * pow(rdotwi, min_sr.mat->exp));
-                    vec3_mult(tmp, inc_radiance_cos, tmp);
-                    vec3_add(radiance, radiance, tmp);
+                            if(min_sr.mat->mat_type == Phong)
+                            {
+                                // Specular component
+                                // ks*cs * cos(theta)^exp * inc_radiance_cos
+                                // theta = angle between light and reflected view vector
+                                vec3 reflect_dir;
+                                // TODO: add wo to ShadeRec, optimize
+                                // reflect vector: 2*dot(n, v)*n - v
+                                vec3 wo;
+                                vec3_negate(wo, ray.direction);
+                                float ndotwo = vec3_dot(min_sr.normal, wo);
+                                vec3_scale(tmp, min_sr.normal, ndotwo * 2);
+                                vec3_add(reflect_dir, ray.direction, tmp);
+                                vec3_normalize(reflect_dir, reflect_dir);
+                                float rdotwi = vec3_dot(reflect_dir, light_dir);
+                                vec3_scale(tmp, min_sr.mat->cs, min_sr.mat->ks * pow(rdotwi, min_sr.mat->exp));
+                                vec3_mult(tmp, inc_radiance_cos, tmp);
+                                vec3_add(radiance, radiance, tmp);
+                            }
+                        }
+                    }
+                    vec3_add(color, color, radiance);
                 }
-                vec3_add(color, color, radiance);                    
             }else
             {
                 vec3_add(color, color, bg_color);

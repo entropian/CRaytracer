@@ -76,7 +76,7 @@ void setFocalDist(Camera *camera, const float focal_pt_dist)
 }
 
 // Compute a ray for pinhole camera
-void calcRayCam(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
+void calcRayPinhole(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
 {
     vec3 sample_loc_cam, tmp_vec_1, tmp_vec_2, focal_point;
     vec3_scale(tmp_vec_1, camera->x_axis, viewplane_coord[0]);

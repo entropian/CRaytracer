@@ -6,6 +6,7 @@
 
 struct Sphere
 {
+    bool shadow;
     float radius;    
     vec3 center;
     //vec3 color;
@@ -14,6 +15,7 @@ struct Sphere
 
 struct Plane
 {
+    bool shadow;
     vec3 point;
     vec3 normal;
     Material mat;
@@ -28,10 +30,9 @@ typedef struct Ray
 typedef struct ShadeRec
 {
     bool hit_status;
-    Material *mat;
+    Material *mat;                // Points to the material member of an object
     vec3 hit_point;
     vec3 normal;
-    //vec3 color;                // NOTE: Temporary
 } ShadeRec;
 
 void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const Ray ray, const float t)
@@ -76,6 +77,42 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
         if(t > k_epsilon)
         {
             fillShadeRecSphere(sr, sphere, ray, t);            
+            return t;
+        }
+    }
+    return TMAX;
+}
+
+float shadowRayIntersectSphere(Sphere *sphere, const Ray ray)
+{
+    if(!sphere->shadow)
+    {
+        return TMAX;
+    }
+    float a = vec3_dot(ray.direction, ray.direction);
+    vec3 origin_to_center, tmp;
+    vec3_sub(origin_to_center, ray.origin, sphere->center);
+    vec3_scale(tmp, origin_to_center, 2);
+    float b = vec3_dot(tmp, ray.direction);
+    float c = vec3_dot(origin_to_center, origin_to_center) - sphere->radius*sphere->radius;
+    float disc = b*b - 4*a*c;
+
+    if(disc < 0.0f)
+    {
+        return TMAX;
+    }else
+    {
+        float e = sqrt(disc);
+        float denom = 2*a;
+        float t = (-b - e)/denom;
+        if(t > k_epsilon)
+        {
+            return t;
+        }
+
+        t = (-b + e)/denom;
+        if(t > k_epsilon)
+        {
             return t;
         }
     }
