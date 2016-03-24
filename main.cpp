@@ -39,14 +39,9 @@
 #include "camera.h"
 #include "lights.h"
 #include "constants.h"
+#include "sceneobj.h"
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
-
-typedef struct SceneObjects
-{
-    Sphere spheres[MAX_SPHERES];
-    int num_spheres;
-} SceneObjects;
 
 // TODO: not finished
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -104,27 +99,28 @@ int initSpheres(Sphere spheres[])
     return sphere_count;
 }
 
+int initPlanes(Plane planes[])
+{
+    int plane_count = 0;
+
+    // Current task:
+    vec3_assign(planes[plane_count].point, 0.0f, -2.0f, 0.0f);
+    vec3_copy(planes[plane_count].normal, UP);
+    vec3_copy(planes[plane_count].mat.cd, GREY);
+    vec3_copy(planes[plane_count].mat.ca, GREY);
+    planes[plane_count].mat.kd = 0.6f;
+    planes[plane_count].mat.ka = 1.0f;
+    planes[plane_count].mat.mat_type  = Matte;
+    planes[plane_count].shadow  = true;
+    plane_count++;
+    
+    return plane_count;
+}
+
 void initSceneObjects(SceneObjects *so)
 {
     so->num_spheres = initSpheres(so->spheres);
-}
-
-float intersectTest(ShadeRec *sr, SceneObjects *scene_objects, const Ray ray)
-{
-    float tmp_t = TMAX,  min_t = TMAX;
-    ShadeRec tmp_sr, min_sr;
-    // Spheres
-    for(int i = 0; i < scene_objects->num_spheres; i++)
-    {
-        tmp_t = rayIntersectSphere(&tmp_sr, &(scene_objects->spheres[i]), ray);
-        if(tmp_t < min_t)
-        {
-            min_t = tmp_t;
-            min_sr = tmp_sr;
-        }
-    }
-    *sr = min_sr;
-    return min_t;
+    so->num_planes = initPlanes(so->planes);
 }
 
 int initLights(Light lights[])
@@ -166,10 +162,6 @@ int main()
     // Scene Objects
     SceneObjects scene_objects;
     initSceneObjects(&scene_objects);
-
-    Sphere spheres[MAX_SPHERES];
-    int sphere_count = 0;
-    sphere_count = initSpheres(spheres);
 
     // Ambient light
     vec3 amb_color = {1.0f, 1.0f, 1.0f};
@@ -228,8 +220,10 @@ int main()
             }
 
             float min_t = TMAX,  tmp_t = TMAX;
-            ShadeRec min_sr, tmp_sr;
+            ShadeRec min_sr;
             min_t = intersectTest(&min_sr, &scene_objects, ray);
+            
+            // Shading
             if(min_t < TMAX)
             {
                 vec3 radiance;
@@ -255,37 +249,21 @@ int main()
                             Ray shadow_ray;
                             vec3_copy(shadow_ray.origin, min_sr.hit_point);
                             vec3_copy(shadow_ray.direction, light_dir);
-                            
+                            min_t = shadowIntersectTest(&scene_objects, shadow_ray);                            
+                            float t;                            
                             if(lights[i].light_type == DIRECTIONAL)
                             {
-                                for(int i = 0; i < sphere_count; i++)
-                                {
-                                    tmp_t = shadowRayIntersectSphere(&(spheres[i]), shadow_ray);
-                                    if(tmp_t < TMAX)
-                                    {
-                                        in_shadow = true;
-                                        break;
-                                    }
-                                }
+                                t = TMAX;                                
                             }else if(lights[i].light_type == POINT)
                             {
                                 vec3 light_to_hit_point;
                                 vec3_sub(light_to_hit_point, lights[i].position, min_sr.hit_point);
-                                float t = vec3_length(light_to_hit_point);
-                                min_t = TMAX;
-                                for(int i = 0; i < sphere_count; i++)
-                                {
-                                    tmp_t = rayIntersectSphere(&tmp_sr, &(spheres[i]), shadow_ray);
-                                    if(tmp_t < min_t)
-                                    {
-                                        min_t = tmp_t;
-                                    }
-                                }
-                                if(min_t <= t)
-                                {
-                                    in_shadow = true;
-                                }
+                                t = vec3_length(light_to_hit_point);
                             }
+                            if(min_t < t)
+                            {
+                                in_shadow = true;
+                            }                            
                         }
 
                         if(!in_shadow)
