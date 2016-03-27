@@ -188,6 +188,7 @@ int main()
     num_lights = initLights(lights);
 
     // Samples
+    srand(time(NULL));
     int num_samples = 64;
     int num_sets = 83;    
     Samples samples = Samples_default;
@@ -212,6 +213,7 @@ int main()
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
     float pixel_length = frame_length/(float)(frame_res_width);
 
+    drawSamples(image, &samples, frame_res_width, frame_res_height, num_pixels);
 //#if 0
     unsigned sample_index = 0;    
     for(int i = 0; i < num_pixels; i++)
@@ -250,10 +252,12 @@ int main()
                 vec3_scale(amb_inc_radiance, amb_color, amb_ls);
                 vec3 reflectance;
                 vec3_scale(reflectance, min_sr.mat->ca, min_sr.mat->ka);
-                //vec3_mult(radiance, amb_inc_radiance, reflectance);
-                
+
+                // Ambient Occlusion
                 if(amb_occlusion)
                 {
+                    vec3 min_amb;
+                    vec3_scale(min_amb, amb_color, 0.01);
                     vec3 h_sample;
                     getNextHemisphereSample(h_sample, &samples);
                     vec3 u, v, w;
@@ -262,19 +266,21 @@ int main()
                     vec3_normalize(v, v);
                     vec3_cross(u, v, w);
                     Ray shadow_ray;
-                    vec3_normalize(h_sample, h_sample);
                     orthoNormalTransform(shadow_ray.direction, u, v, w, h_sample);
-                    vec3_normalize(shadow_ray.direction, shadow_ray.direction); 
                     vec3_copy(shadow_ray.origin, min_sr.hit_point);
                     float t = shadowIntersectTest(&scene_objects, shadow_ray);
                     if(t < TMAX)
                     {
-                        vec3_assign(radiance, 0.01f, 0.01f, 0.01f);
+                        vec3_copy(radiance, min_amb);
                     }else
                     {
                         vec3_mult(radiance, amb_inc_radiance, reflectance);
                     }
+                }else
+                {
+                    vec3_mult(radiance, amb_inc_radiance, reflectance);
                 }
+                
                 /*
                 for(int i = 0; i < num_lights; i++)
                 {

@@ -17,7 +17,7 @@ struct Samples_s
     int num_sets;
     vec2 *samples;
     vec2 *disk_samples;                // for mapping samples from unit square to unit disk
-    vec3 *hemisphere_samples;
+    vec3 *h_samples;
     int *shuffled_indices;
     unsigned long count;
     unsigned long disk_count;
@@ -40,10 +40,10 @@ void freeSamples(Samples *samples)
         free(samples->disk_samples);
         samples->disk_samples = NULL;
     }
-    if(samples->hemisphere_samples != NULL)
+    if(samples->h_samples != NULL)
     {
-        free(samples->hemisphere_samples);
-        samples->hemisphere_samples = NULL;
+        free(samples->h_samples);
+        samples->h_samples = NULL;
     }
     if(samples->shuffled_indices != NULL)
     {
@@ -92,7 +92,7 @@ void getNextDiskSample(vec2 r, Samples *samples)
 
 void getNextHemisphereSample(vec3 r, Samples *samples)
 {
-    if(samples->hemisphere_samples == NULL)
+    if(samples->h_samples == NULL)
     {
         fprintf(stderr, "No hemisphere samples.\n");
         return;
@@ -101,7 +101,7 @@ void getNextHemisphereSample(vec3 r, Samples *samples)
     {
         samples->h_jump = (rand() % samples->num_sets) * samples->num_samples;
     }
-    vec3_copy(r, samples->hemisphere_samples[samples->h_jump + samples->shuffled_indices[samples->h_jump +
+    vec3_copy(r, samples->h_samples[samples->h_jump + samples->shuffled_indices[samples->h_jump +
                                                                             samples->h_count++ % samples->num_samples]]);
 }
 
@@ -139,9 +139,9 @@ void prepSampleStruct(Samples *samples, const int num_samples, const int num_set
     {
         free(samples->disk_samples);
     }
-    if(samples->hemisphere_samples != NULL)
+    if(samples->h_samples != NULL)
     {
-        free(samples->hemisphere_samples);
+        free(samples->h_samples);
     }    
     if(samples->shuffled_indices != NULL)
     {
@@ -205,7 +205,6 @@ void shuffleYCoordinates(Samples *samples)
     }
 }
 
-// Current task: fix multijittered sampling
 void genMultijitteredSamples(Samples *samples, const int num_samples, const int num_sets)
 {
     int samples_per_row = (int)sqrt(num_samples);    
@@ -235,8 +234,34 @@ void genMultijitteredSamples(Samples *samples, const int num_samples, const int 
             }
         }
     }
-    shuffleXCoordinates(samples);
-    shuffleYCoordinates(samples);
+
+    for(int p = 0; p < samples->num_sets; p++)
+    {
+        int row_offset = 0;
+        for(int i = 0; i < samples->num_samples; i++)
+        {
+            if(i % samples_per_row == 0)
+            {
+                row_offset = i + p * samples->num_samples;
+            }
+            int target = rand() % samples_per_row + row_offset;
+            float tmp = samples->samples[i + p * samples->num_samples][0];
+            samples->samples[i + p * samples->num_samples][0] = samples->samples[target][0];
+            samples->samples[target][0] = tmp;
+        }
+    }
+    for(int p = 0; p < samples->num_sets; p++)
+    {
+
+        for(int i = 0; i < samples->num_samples; i++)
+        {
+            int target = rand() % samples_per_row * samples_per_row + (i % samples_per_row)
+                + p * samples->num_samples;
+            float tmp = samples->samples[i + p * samples->num_samples][1];
+            samples->samples[i + p * samples->num_samples][1] = samples->samples[target][1];
+            samples->samples[target][1] = tmp;
+        }
+    }
 }
 
 // Returns j reflected around the decimal point in binary
@@ -343,11 +368,11 @@ void mapSamplesToHemisphere(Samples *samples, const float e)
         fprintf(stderr, "No samples to be mapped to hemisphere.\n");
     }    
     int size = samples->num_sets * samples->num_samples;
-    if(samples->hemisphere_samples != NULL)
+    if(samples->h_samples != NULL)
     {
-        free(samples->hemisphere_samples);
+        free(samples->h_samples);
     }
-    samples->hemisphere_samples = (vec3*)malloc(sizeof(vec3) * size);
+    samples->h_samples = (vec3*)malloc(sizeof(vec3) * size);
 
     for(int i = 0; i < size; i++)
     {
@@ -359,7 +384,7 @@ void mapSamplesToHemisphere(Samples *samples, const float e)
         float pu = sin_theta * cos_phi;
         float pv = sin_theta * sin_phi;
         float pw = cos_theta;
-        vec3_assign(samples->hemisphere_samples[i], pu, pv, pw);
+        vec3_assign(samples->h_samples[i], pu, pv, pw);
     }
 }
 
@@ -421,7 +446,6 @@ void printHemisphereSamples(const Samples *samples)
 {
     for(int i = 0; i < samples->num_sets * samples->num_samples; i++)
     {
-        printf("%f\t%f\t%f\n", samples->hemisphere_samples[i][0], samples->hemisphere_samples[i][1],
-               samples->hemisphere_samples[i][2]);
+        printf("%f\t%f\t%f\n", samples->h_samples[i][0], samples->h_samples[i][1], samples->h_samples[i][2]);
     }
 }
