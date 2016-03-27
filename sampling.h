@@ -6,10 +6,11 @@
 
 /*
  TODO:
- shuffled indices that isn't crap
  Not all sampling methods needs the same randomization?
  Think about whether the disk samples should be in the same struct
 */
+
+// NOTE: There might still be correlational problem due to all samples using the same shuffled indices
 struct Samples_s
 {
     int num_samples;
@@ -20,8 +21,10 @@ struct Samples_s
     int *shuffled_indices;
     unsigned long count;
     unsigned long disk_count;
+    unsigned long h_count;
     int jump;
     int disk_jump;                // TODO: verify if disk_count and disk_jump are necessary
+    int h_jump;
 } Samples_default = {0, 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0};
 typedef Samples_s Samples;
 
@@ -54,12 +57,21 @@ void freeSamples(Samples *samples)
 
 void getNextSample(vec2 r, Samples *samples)
 {
-    srand((unsigned int)time(NULL));
     if(samples->count % samples->num_samples == 0)
     {
-        samples->disk_jump = (rand() % samples->num_sets) * samples->num_samples;
+        samples->jump = (rand() % samples->num_sets) * samples->num_samples;
     }
-    vec2_copy(r, samples->samples[samples->disk_jump + samples->shuffled_indices[samples->disk_jump +
+    vec2_copy(r, samples->samples[samples->jump + samples->shuffled_indices[samples->jump +
+                                                                            samples->count++ % samples->num_samples]]);
+}
+
+void getNextShuffledSample(vec2 r, Samples *samples)
+{
+    if(samples->count % samples->num_samples == 0)
+    {
+        samples->jump = (rand() % samples->num_sets) * samples->num_samples;        
+    }
+    vec2_copy(r, samples->samples[samples->jump + samples->shuffled_indices[samples->jump +
                                                                             samples->count++ % samples->num_samples]]);
 }
 
@@ -70,40 +82,49 @@ void getNextDiskSample(vec2 r, Samples *samples)
         fprintf(stderr, "No disk samples.\n");
         return;
     }
-    srand((unsigned int)time(NULL));
     if(samples->disk_count % samples->num_samples == 0)
     {
-        samples->jump = (rand() % samples->num_sets) * samples->num_samples;
+        samples->disk_jump = (rand() % samples->num_sets) * samples->num_samples;
     }
-    vec2_copy(r, samples->disk_samples[samples->jump + samples->shuffled_indices[samples->jump +
+    vec2_copy(r, samples->disk_samples[samples->disk_jump + samples->shuffled_indices[samples->disk_jump +
                                                                             samples->disk_count++ % samples->num_samples]]);
+}
+
+void getNextHemisphereSample(vec3 r, Samples *samples)
+{
+    if(samples->hemisphere_samples == NULL)
+    {
+        fprintf(stderr, "No hemisphere samples.\n");
+        return;
+    }
+    if(samples->h_count % samples->num_samples == 0)
+    {
+        samples->h_jump = (rand() % samples->num_sets) * samples->num_samples;
+    }
+    vec3_copy(r, samples->hemisphere_samples[samples->h_jump + samples->shuffled_indices[samples->h_jump +
+                                                                            samples->h_count++ % samples->num_samples]]);
 }
 
 void shuffleIndices(Samples *samples)
 {
     samples->shuffled_indices = (int*)malloc(sizeof(int) * samples->num_samples * samples->num_sets);
-    for(int i = 0; i < samples->num_sets * samples->num_samples; i++)
-    {
-        samples->shuffled_indices[i] = -1;
-    }
-    srand((unsigned int)time(NULL));    
     for(int i = 0; i < samples->num_sets; i++)
     {
         int offset = i * samples->num_samples;
         for(int j = 0; j < samples->num_samples; j++)
         {
-            int random_index = rand() % samples->num_samples;
-            while(samples->shuffled_indices[offset + random_index] != -1)
-            {
-                if(random_index == samples->num_samples -1)
-                {
-                    random_index = 0;
-                }else
-                {
-                    random_index++;
-                }
-            }
-            samples->shuffled_indices[offset + random_index] = j;
+            samples->shuffled_indices[j + offset] = j;
+        }
+    }
+    for(int i = 0; i < samples->num_sets; i++)
+    {
+        int offset = i * samples->num_samples;
+        for(int j = 0; j < samples->num_samples; j++)
+        {
+            int random_index = (rand() % samples->num_samples) + offset;
+            int tmp = samples->shuffled_indices[j + offset];
+            samples->shuffled_indices[j + offset] = samples->shuffled_indices[random_index];
+            samples->shuffled_indices[random_index] = tmp;
         }        
     }    
 }
@@ -126,7 +147,8 @@ void prepSampleStruct(Samples *samples, const int num_samples, const int num_set
     {
         free(samples->shuffled_indices);
     }
-    samples->count = samples->jump = samples->disk_jump = 0;
+    samples->count = samples->jump = samples->disk_jump = samples->h_jump = 0;
+    samples->h_count  = samples->disk_count = 0;
     samples->samples = (vec2*)malloc(sizeof(vec2) * num_samples * num_sets);    
     samples->num_samples = num_samples;
     samples->num_sets = num_sets;
@@ -156,7 +178,34 @@ void genRegularSamples(Samples *samples, const int num_samples, const int num_se
         }
     }
 }
+void shuffleXCoordinates(Samples *samples)
+{
+    for(int p = 0; p < samples->num_sets; p++)
+    {
+        for(int i = 0; i < samples->num_samples - 1; i++)
+        {
+            int target = rand() % samples->num_samples + p * samples->num_samples;
+            float tmp = samples->samples[i + p * samples->num_samples + 1][0];
+            samples->samples[i + p * samples->num_samples + 1][0] = samples->samples[target][0];
+            samples->samples[target][0] = tmp;
+        }
+    }
+}
+void shuffleYCoordinates(Samples *samples)
+{
+    for(int p = 0; p < samples->num_sets; p++)
+    {
+        for(int i = 0; i < samples->num_samples - 1; i++)
+        {
+            int target = rand() % samples->num_samples + p * samples->num_samples;
+            float tmp = samples->samples[i + p * samples->num_samples + 1][1];
+            samples->samples[i + p * samples->num_samples + 1][1] = samples->samples[target][1];
+            samples->samples[target][1] = tmp;
+        }
+    }
+}
 
+// Current task: fix multijittered sampling
 void genMultijitteredSamples(Samples *samples, const int num_samples, const int num_sets)
 {
     int samples_per_row = (int)sqrt(num_samples);    
@@ -185,7 +234,9 @@ void genMultijitteredSamples(Samples *samples, const int num_samples, const int 
                 sample_index++;
             }
         }
-    }    
+    }
+    shuffleXCoordinates(samples);
+    shuffleYCoordinates(samples);
 }
 
 // Returns j reflected around the decimal point in binary
@@ -287,7 +338,7 @@ void mapSamplesToDisk(Samples *samples)
 
 void mapSamplesToHemisphere(Samples *samples, const float e)
 {
-    if(samples->samples == NULL)
+    if(samples->disk_samples == NULL)
     {
         fprintf(stderr, "No samples to be mapped to hemisphere.\n");
     }    
@@ -300,15 +351,77 @@ void mapSamplesToHemisphere(Samples *samples, const float e)
 
     for(int i = 0; i < size; i++)
     {
-        float cos_phi = cos(2.0f * (float)PI * samples->samples[i][0]);
-        float sin_phi = sin(2.0f * (float)PI * samples->samples[i][0]);
-        float cos_theta = pow((1.0f - samples->samples[i][1]), 1.0f / (e + 1.0f));
+        float cos_phi = cos(2.0f * (float)PI * samples->disk_samples[i][0]);
+        float sin_phi = sin(2.0f * (float)PI * samples->disk_samples[i][0]);
+        float cos_theta = pow((1.0f - abs(samples->disk_samples[i][1])), 1.0f / (e + 1.0f));
+        //float cos_theta = pow((1.0f - (samples->disk_samples[i][1])), 1.0f / (e + 1.0f));
         float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
         float pu = sin_theta * cos_phi;
         float pv = sin_theta * sin_phi;
         float pw = cos_theta;
-        samples->hemisphere_samples[i][0] = pu;
-        samples->hemisphere_samples[i][1] = pv;
-        samples->hemisphere_samples[i][2] = pw;        
+        vec3_assign(samples->hemisphere_samples[i], pu, pv, pw);
+    }
+}
+
+void drawSamples(unsigned char *image, Samples *samples,
+                 const int frame_res_width, const int frame_res_height, const int num_pixels)
+{
+    for(int i = 0; i < num_pixels; i++)
+    {
+        image[i*3] = (char)255;
+        image[i*3 + 1] = (char)255;
+        image[i*3 + 2] = (char)255;        
+    }
+    
+    for(int i = 0; i < samples->num_samples; i++)
+    {
+        vec2 sample;
+        getNextSample(sample, samples);
+        int x = (int)(sample[0] * frame_res_width);
+        int y = (int)((1.0f - sample[1]) * frame_res_height);        
+        int index = y * frame_res_width + x;
+        image[index*3] = 0;
+        image[index*3 + 1] = 0;
+        image[index*3 + 2] = 0;
+    }
+}
+
+void drawHemisphereSamples2D(unsigned char *image, Samples *samples,
+                             const int frame_res_width, const int frame_res_height, const int num_pixels)
+{
+    for(int i = 0; i < num_pixels; i++)
+    {
+        image[i*3] = (char)255;
+        image[i*3 + 1] = (char)255;
+        image[i*3 + 2] = (char)255;        
+    }
+    for(int i = 0; i < samples->num_samples; i++)
+    {
+        vec3 sample;
+        getNextHemisphereSample(sample, samples);
+        int x = (int)((sample[0] * 0.5f + 0.5f) * frame_res_width);
+        int y = (int)((1.0f - (sample[1] * 0.5f + 0.5f)) * frame_res_height);        
+        int index = y * frame_res_width + x;
+
+        image[index*3] = (char)(sample[2] * 255.0f);
+        image[index*3 + 1] = 0;
+        image[index*3 + 2] = 0;
+    }    
+}
+
+void printSamples(const Samples *samples)
+{
+    for(int i = 0; i < samples->num_sets * samples->num_samples; i++)
+    {
+        printf("%f\t%f\n", samples->samples[i][0], samples->samples[i][1]);
+    }
+}
+
+void printHemisphereSamples(const Samples *samples)
+{
+    for(int i = 0; i < samples->num_sets * samples->num_samples; i++)
+    {
+        printf("%f\t%f\t%f\n", samples->hemisphere_samples[i][0], samples->hemisphere_samples[i][1],
+               samples->hemisphere_samples[i][2]);
     }
 }

@@ -33,11 +33,15 @@ float intersectTest(ShadeRec *sr, SceneObjects *scene_objects, const Ray ray)
             min_sr = tmp_sr;
         }
     }    
-    
-    *sr = min_sr;
+    if(min_t < TMAX)
+    {
+        *sr = min_sr;
+    }
     return min_t;
 }
 
+
+// NOTE: return after the first intersection for certain situations?
 float shadowIntersectTest(SceneObjects *scene_objects, const Ray shadow_ray)
 {
     float tmp_t, min_t = TMAX;

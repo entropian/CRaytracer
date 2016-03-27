@@ -70,21 +70,23 @@ int initSpheres(Sphere spheres[])
 {
     // TODO: tidy up material assignment
     int sphere_count = 0;
-    vec3_assign(spheres[sphere_count].center, -1.0f, 0.0f, -4.0f);
+    vec3_assign(spheres[sphere_count].center, 0.0f, 0.0f, -4.0f);
     spheres[sphere_count].radius = 1.0f;
-    vec3_copy(spheres[sphere_count].mat.cd, PINK);
-    vec3_copy(spheres[sphere_count].mat.ca, PINK);
-    vec3_copy(spheres[sphere_count].mat.cs, PINK);    
+    spheres[sphere_count].shadow = true;        
+    vec3_copy(spheres[sphere_count].mat.cd, YELLOW);
+    vec3_copy(spheres[sphere_count].mat.ca, YELLOW);
+    vec3_copy(spheres[sphere_count].mat.cs, YELLOW);    
     spheres[sphere_count].mat.kd = 0.6f;
     spheres[sphere_count].mat.ka = 1.0f;
     spheres[sphere_count].mat.ks = 0.4f;
     spheres[sphere_count].mat.exp = 5.0f;        
-    spheres[sphere_count].mat.mat_type = Matte;
-    spheres[sphere_count].shadow = true;    
+    spheres[sphere_count].mat.mat_type = MATTE;
+    spheres[sphere_count].mat.shadow = true;    
     sphere_count++;
-
+    /*
     vec3_assign(spheres[sphere_count].center, 0.75f, 0.0f, -4.0f);
     spheres[sphere_count].radius = 1.0f;
+    spheres[sphere_count].shadow = true;            
     vec3_copy(spheres[sphere_count].mat.cd, CYAN);
     vec3_copy(spheres[sphere_count].mat.ca, CYAN);
     vec3_copy(spheres[sphere_count].mat.cs, CYAN);    
@@ -92,10 +94,10 @@ int initSpheres(Sphere spheres[])
     spheres[sphere_count].mat.ka = 1.0f;
     spheres[sphere_count].mat.ks = 0.4f;
     spheres[sphere_count].mat.exp = 10.0f;            
-    spheres[sphere_count].mat.mat_type = Phong;
-    spheres[sphere_count].shadow = true;        
+    spheres[sphere_count].mat.mat_type = PHONG;
+    spheres[sphere_count].mat.shadow = true;
     sphere_count++;
-
+    */
     return sphere_count;
 }
 
@@ -104,14 +106,15 @@ int initPlanes(Plane planes[])
     int plane_count = 0;
 
     // Current task:
-    vec3_assign(planes[plane_count].point, 0.0f, -2.0f, 0.0f);
+    planes[plane_count].shadow  = true;    
+    vec3_assign(planes[plane_count].point, 0.0f, -1.0f, 0.0f);
     vec3_copy(planes[plane_count].normal, UP);
-    vec3_copy(planes[plane_count].mat.cd, GREY);
-    vec3_copy(planes[plane_count].mat.ca, GREY);
+    vec3_copy(planes[plane_count].mat.cd, WHITE);
+    vec3_copy(planes[plane_count].mat.ca, WHITE);
     planes[plane_count].mat.kd = 0.6f;
     planes[plane_count].mat.ka = 1.0f;
-    planes[plane_count].mat.mat_type  = Matte;
-    planes[plane_count].shadow  = true;
+    planes[plane_count].mat.mat_type  = MATTE;
+    planes[plane_count].mat.shadow = true;    
     plane_count++;
     
     return plane_count;
@@ -127,7 +130,7 @@ int initLights(Light lights[])
 {
     // Directional light
     int light_count = 0;
-    float intensity = 1.0f;
+    float intensity = 3.0f;
     vec3 point;
     vec3 direction = {10.0f, 10.0f, 10.0f};
     vec3_normalize(direction, direction);    
@@ -143,17 +146,28 @@ int initLights(Light lights[])
     return light_count;
 }
 
+void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
+{
+    vec3 u_comp, v_comp, w_comp;
+    vec3_scale(u_comp, u, a[0]);
+    vec3_scale(v_comp, v, a[1]);
+    vec3_scale(w_comp, w, a[2]);
+    vec3_add(r, u_comp, v_comp);
+    vec3_add(r, r, w_comp);    
+}
+
 int main()
 {
-    int window_width = 1920, window_height = 1080;
-    GLFWwindow* window = initWindow(1920, 1080);
+    int window_width = 900, window_height = 900;
+    GLFWwindow* window = initWindow(window_width, window_height);
     glfwSetKeyCallback(window, keyCallback);
     
     GlViewport viewport;
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 720, frame_res_height = 405;
+    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
@@ -165,7 +179,8 @@ int main()
 
     // Ambient light
     vec3 amb_color = {1.0f, 1.0f, 1.0f};
-    float amb_ls = 0.05f;
+    float amb_ls = 1.0f;
+    bool amb_occlusion = true;
 
     // Directional and point light
     Light lights[MAX_LIGHTS];
@@ -173,21 +188,21 @@ int main()
     num_lights = initLights(lights);
 
     // Samples
-    int num_samples = 16;
-    int num_sets = 3;    
+    int num_samples = 64;
+    int num_sets = 83;    
     Samples samples = Samples_default;
     //genRegularSamples(&samples, num_samples, num_sets);
-    //genMultijitteredSamples(&samples, num_samples, num_sets);
-    genHammersleySamples(&samples, num_samples, num_sets);
+    genMultijitteredSamples(&samples, num_samples, num_sets);
+    //genHammersleySamples(&samples, num_samples, num_sets);
     mapSamplesToDisk(&samples);
-    //mapSamplesToHemisphere(&samples, 5);
+    mapSamplesToHemisphere(&samples, 1);
 
     // Camera
     Camera camera;
     initPinholeCameraDefault(&camera);
 
-    vec3 position = {0.0f, 0.0f, 0.0f};
-    vec3 look_point = {0.75f, 0.0f, -4.0f};
+    vec3 position = {0.0f, 2.0f, 0.0f};
+    vec3 look_point = {0.0f, 0.0f, -4.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -197,13 +212,15 @@ int main()
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
     float pixel_length = frame_length/(float)(frame_res_width);
 
+//#if 0
+    unsigned sample_index = 0;    
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
         for(int p = 0; p < num_samples; p++)
         {
             vec2 sample, disk_sample, imageplane_coord;
-            getNextSample(sample, &samples);
+            getNextShuffledSample(sample, &samples);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);            
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
             
@@ -222,19 +239,43 @@ int main()
             float min_t = TMAX,  tmp_t = TMAX;
             ShadeRec min_sr;
             min_t = intersectTest(&min_sr, &scene_objects, ray);
-            
+
             // Shading
             if(min_t < TMAX)
             {
-                vec3 radiance;
+                vec3 radiance = {0.0f, 0.0f, 0.0f};
                 // Ambient component
                 // ka*ca * amb_inc_radiance
                 vec3 amb_inc_radiance;
                 vec3_scale(amb_inc_radiance, amb_color, amb_ls);
                 vec3 reflectance;
                 vec3_scale(reflectance, min_sr.mat->ca, min_sr.mat->ka);
-                vec3_mult(radiance, amb_inc_radiance, reflectance);
-
+                //vec3_mult(radiance, amb_inc_radiance, reflectance);
+                
+                if(amb_occlusion)
+                {
+                    vec3 h_sample;
+                    getNextHemisphereSample(h_sample, &samples);
+                    vec3 u, v, w;
+                    vec3_copy(w, min_sr.normal);
+                    vec3_cross(v, w, JITTERED_UP);
+                    vec3_normalize(v, v);
+                    vec3_cross(u, v, w);
+                    Ray shadow_ray;
+                    vec3_normalize(h_sample, h_sample);
+                    orthoNormalTransform(shadow_ray.direction, u, v, w, h_sample);
+                    vec3_normalize(shadow_ray.direction, shadow_ray.direction); 
+                    vec3_copy(shadow_ray.origin, min_sr.hit_point);
+                    float t = shadowIntersectTest(&scene_objects, shadow_ray);
+                    if(t < TMAX)
+                    {
+                        vec3_assign(radiance, 0.01f, 0.01f, 0.01f);
+                    }else
+                    {
+                        vec3_mult(radiance, amb_inc_radiance, reflectance);
+                    }
+                }
+                /*
                 for(int i = 0; i < num_lights; i++)
                 {
                     vec3 light_dir;
@@ -244,7 +285,7 @@ int main()
                     {
                         // Shadow test
                         bool in_shadow = false;
-                        if(lights[i].shadow)
+                        if(lights[i].shadow && min_sr.mat->shadow)
                         {
                             Ray shadow_ray;
                             vec3_copy(shadow_ray.origin, min_sr.hit_point);
@@ -279,7 +320,7 @@ int main()
                             vec3_mult(tmp, inc_radiance_cos, f);
                             vec3_add(radiance, radiance, tmp);
 
-                            if(min_sr.mat->mat_type == Phong)
+                            if(min_sr.mat->mat_type == PHONG)
                             {
                                 // Specular component
                                 // ks*cs * cos(theta)^exp * inc_radiance_cos
@@ -300,8 +341,9 @@ int main()
                             }
                         }
                     }
-                    vec3_add(color, color, radiance);
                 }
+                */
+                vec3_add(color, color, radiance);                
             }else
             {
                 vec3_add(color, color, bg_color);
@@ -320,6 +362,7 @@ int main()
         image[i*3 + 1] = (char)(color[1] * 255.0f);
         image[i*3 + 2] = (char)(color[2] * 255.0f);
     }
+//#endif
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
     free(image);
     freeSamples(&samples);
