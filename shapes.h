@@ -4,21 +4,27 @@
 #include "materials.h"
 #include "constants.h"
 
-struct Sphere
+enum ObjectType
+{
+    SPHERE,
+    PLANE
+};
+
+typedef struct Sphere
 {
     bool shadow;
     float radius;    
     vec3 center;
     Material mat;
-};
+} Sphere;
 
-struct Plane
+typedef struct Plane
 {
     bool shadow;
     vec3 point;
     vec3 normal;
     Material mat;
-};
+} Plane;
 
 typedef struct Ray
 {

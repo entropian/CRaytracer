@@ -66,64 +66,67 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
-int initSpheres(Sphere spheres[])
+void initSpheres(SceneObjects2 *so)
 {
     // TODO: tidy up material assignment
-    int sphere_count = 0;
-    vec3_assign(spheres[sphere_count].center, 0.0f, 0.0f, -4.0f);
-    spheres[sphere_count].radius = 1.0f;
-    spheres[sphere_count].shadow = true;        
-    vec3_copy(spheres[sphere_count].mat.cd, YELLOW);
-    vec3_copy(spheres[sphere_count].mat.ca, YELLOW);
-    vec3_copy(spheres[sphere_count].mat.cs, YELLOW);    
-    spheres[sphere_count].mat.kd = 0.6f;
-    spheres[sphere_count].mat.ka = 1.0f;
-    spheres[sphere_count].mat.ks = 0.4f;
-    spheres[sphere_count].mat.exp = 5.0f;        
-    spheres[sphere_count].mat.mat_type = MATTE;
-    spheres[sphere_count].mat.shadow = true;    
-    sphere_count++;
-    /*
-    vec3_assign(spheres[sphere_count].center, 0.75f, 0.0f, -4.0f);
-    spheres[sphere_count].radius = 1.0f;
-    spheres[sphere_count].shadow = true;            
-    vec3_copy(spheres[sphere_count].mat.cd, CYAN);
-    vec3_copy(spheres[sphere_count].mat.ca, CYAN);
-    vec3_copy(spheres[sphere_count].mat.cs, CYAN);    
-    spheres[sphere_count].mat.kd = 0.6f;
-    spheres[sphere_count].mat.ka = 1.0f;
-    spheres[sphere_count].mat.ks = 0.4f;
-    spheres[sphere_count].mat.exp = 10.0f;            
-    spheres[sphere_count].mat.mat_type = PHONG;
-    spheres[sphere_count].mat.shadow = true;
-    sphere_count++;
-    */
-    return sphere_count;
-}
-
-int initPlanes(Plane planes[])
-{
-    int plane_count = 0;
-
-    // Current task:
-    planes[plane_count].shadow  = true;    
-    vec3_assign(planes[plane_count].point, 0.0f, -1.0f, 0.0f);
-    vec3_copy(planes[plane_count].normal, UP);
-    vec3_copy(planes[plane_count].mat.cd, WHITE);
-    vec3_copy(planes[plane_count].mat.ca, WHITE);
-    planes[plane_count].mat.kd = 0.6f;
-    planes[plane_count].mat.ka = 1.0f;
-    planes[plane_count].mat.mat_type  = MATTE;
-    planes[plane_count].mat.shadow = true;    
-    plane_count++;
+    Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     
-    return plane_count;
+    vec3_assign(sphere->center, 0.0f, 0.0f, -4.0f);
+    sphere->radius = 1.0f;
+    sphere->shadow = true;        
+    vec3_copy(sphere->mat.cd, PINK);
+    vec3_copy(sphere->mat.ca, PINK);
+    vec3_copy(sphere->mat.cs, PINK);    
+    sphere->mat.kd = 0.6f;
+    sphere->mat.ka = 1.0f;
+    sphere->mat.ks = 0.4f;
+    sphere->mat.exp = 5.0f;        
+    sphere->mat.mat_type = MATTE;
+    sphere->mat.shadow = true;
+    so->obj_ptrs[so->num_obj] = sphere; 
+    so->obj_types[so->num_obj] = SPHERE;
+    (so->num_obj)++;
+
+    sphere = NULL;
+    sphere = (Sphere*)malloc(sizeof(Sphere));
+    vec3_assign(sphere->center, 2.0f, 0.0f, -8.0f);
+    sphere->radius = 1.0f;
+    sphere->shadow = true;            
+    vec3_copy(sphere->mat.cd, CYAN);
+    vec3_copy(sphere->mat.ca, CYAN);
+    vec3_copy(sphere->mat.cs, CYAN);    
+    sphere->mat.kd = 0.6f;
+    sphere->mat.ka = 1.0f;
+    sphere->mat.ks = 0.4f;
+    sphere->mat.exp = 10.0f;            
+    sphere->mat.mat_type = PHONG;
+    sphere->mat.shadow = true;
+    so->obj_ptrs[so->num_obj] = sphere; 
+    so->obj_types[so->num_obj] = SPHERE;
+    (so->num_obj)++;    
 }
 
-void initSceneObjects(SceneObjects *so)
+void initPlanes(SceneObjects2 *so)
 {
-    so->num_spheres = initSpheres(so->spheres);
-    so->num_planes = initPlanes(so->planes);
+    Plane* plane = (Plane*)malloc(sizeof(Plane));
+    plane->shadow  = true;    
+    vec3_assign(plane->point, 0.0f, -1.0f, 0.0f);
+    vec3_copy(plane->normal, UP);
+    vec3_copy(plane->mat.cd, GREY);
+    vec3_copy(plane->mat.ca, GREY);
+    plane->mat.kd = 0.6f;
+    plane->mat.ka = 1.0f;
+    plane->mat.mat_type  = MATTE;
+    plane->mat.shadow = true;    
+    so->obj_ptrs[so->num_obj] = plane; 
+    so->obj_types[so->num_obj] = PLANE;
+    (so->num_obj)++;    
+}
+
+void initSceneObjects2(SceneObjects2 *so)
+{
+    initSpheres(so);
+    initPlanes(so);
 }
 
 int initLights(Light lights[])
@@ -171,11 +174,14 @@ int main()
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
-    vec3 bg_color = {35.0f/255.0f, 47.0f/255.0f, 47.0f/255.0f};
+    //vec3 bg_color = {35.0f/255.0f, 47.0f/255.0f, 47.0f/255.0f};
+    vec3 bg_color = {1.0f, 1.0f, 1.0f};
 
     // Scene Objects
-    SceneObjects scene_objects;
-    initSceneObjects(&scene_objects);
+    //SceneObjects scene_objects;
+    //initSceneObjects(&scene_objects);
+    SceneObjects2 scene_objects;
+    initSceneObjects2(&scene_objects);
 
     // Ambient light
     vec3 amb_color = {1.0f, 1.0f, 1.0f};
@@ -189,7 +195,7 @@ int main()
 
     // Samples
     srand(time(NULL));
-    int num_samples = 64;
+    int num_samples = 256;
     int num_sets = 83;    
     Samples samples = Samples_default;
     //genRegularSamples(&samples, num_samples, num_sets);
@@ -200,9 +206,14 @@ int main()
 
     // Camera
     Camera camera;
-    initPinholeCameraDefault(&camera);
+    //initPinholeCameraDefault(&camera);
 
-    vec3 position = {0.0f, 2.0f, 0.0f};
+    initThinLensCameraDefault(&camera);
+    camera.focal_length = 4.0f;
+    camera.lens_radius = 0.2f;
+
+
+    vec3 position = {0.0f, 0.5f, 0.0f};
     vec3 look_point = {0.0f, 0.0f, -4.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
@@ -213,8 +224,9 @@ int main()
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
     float pixel_length = frame_length/(float)(frame_res_width);
 
-    drawSamples(image, &samples, frame_res_width, frame_res_height, num_pixels);
 //#if 0
+    time_t startTime, endTime;
+    time(&startTime);        
     unsigned sample_index = 0;    
     for(int i = 0; i < num_pixels; i++)
     {
@@ -368,6 +380,9 @@ int main()
         image[i*3 + 1] = (char)(color[1] * 255.0f);
         image[i*3 + 2] = (char)(color[2] * 255.0f);
     }
+    time(&endTime);
+    double sec = difftime(endTime, startTime);
+    printf("%f seconds.\n", sec);        
 //#endif
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
     free(image);

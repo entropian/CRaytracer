@@ -263,7 +263,55 @@ void genMultijitteredSamples(Samples *samples, const int num_samples, const int 
         }
     }
 }
+/*
+// Book's implementation, sort of
+void genMultijitteredSamples(Samples *samples, const int num_samples, const int num_sets)
+{
+	// num_samples needs to be a perfect square			
+	int n = (int)sqrt((float)num_samples);
+	float subcell_width = 1.0f / ((float) num_samples);
+	
+	// fill the samples array with dummy points to allow us to use the [ ] notation when we set the 
+	// initial patterns
+    prepSampleStruct(samples, num_samples, num_sets);        
+		
+	// distribute points in the initial patterns
+	
+	for (int p = 0; p < num_sets; p++) 
+		for (int i = 0; i < n; i++)		
+			for (int j = 0; j < n; j++) {
+                float rand_float = (float)rand() / (float)(RAND_MAX/subcell_width);
+                samples->samples[i * n + j + p * num_samples][0] = (i * n + j) * subcell_width + rand_float;
+                rand_float = (float)rand() / (float)(RAND_MAX/subcell_width);                
+				samples->samples[i * n + j + p * num_samples][1] = (j * n + i) * subcell_width + rand_float;
+			}
+	
+	// shuffle x coordinates
+	
+	for (int p = 0; p < num_sets; p++) 
+		for (int i = 0; i < n; i++)		
+			for (int j = 0; j < n; j++) {
+				//int k = rand_int(j, n - 1);
+                int k = rand() % (n - j) + j;
+                
+				float t = samples->samples[i * n + j + p * num_samples][0];
+				samples->samples[i * n + j + p * num_samples][0] = samples->samples[i * n + k + p * num_samples][0];
+				samples->samples[i * n + k + p * num_samples][0] = t;
+			}
 
+	// shuffle y coordinates
+	
+	for (int p = 0; p < num_sets; p++)
+		for (int i = 0; i < n; i++)		
+			for (int j = 0; j < n; j++) {
+				//int k = rand_int(j, n - 1);
+                int k = rand() % (n - j) + j;
+				float t = samples->samples[j * n + i + p * num_samples][1];
+				samples->samples[j * n + i + p * num_samples][1] = samples->samples[k * n + i + p * num_samples][1];
+				samples->samples[k * n + i + p * num_samples][1] = t;
+		}
+}
+*/
 // Returns j reflected around the decimal point in binary
 float radicalInverse(unsigned int j)
 {
