@@ -5,9 +5,17 @@
 typedef struct SceneObjects
 {
     int num_obj;
-    ObjectType obj_types[MAX_SPHERES];
-    void* obj_ptrs[MAX_SPHERES];
-} SceneObjects2;
+    ObjectType obj_types[MAX_OBJECTS];
+    void* obj_ptrs[MAX_OBJECTS];
+} SceneObjects;
+
+void freeSceneObjects(SceneObjects* so)
+{
+    for(int i = 0; i < so->num_obj; i++)
+    {
+        free(so->obj_ptrs[i]);
+    }
+}
 
 float intersectTest(ShadeRec *sr, SceneObjects *scene_objects, const Ray ray)
 {
@@ -22,6 +30,9 @@ float intersectTest(ShadeRec *sr, SceneObjects *scene_objects, const Ray ray)
             break;
         case PLANE:
             tmp_t = rayIntersectPlane(&tmp_sr, (Plane*)scene_objects->obj_ptrs[i], ray);                        
+            break;
+        case RECTANGLE:
+            tmp_t = rayIntersectRect(&tmp_sr, (Rectangle*)scene_objects->obj_ptrs[i], ray);
             break;
         }
         if(tmp_t < min_t)
@@ -52,6 +63,9 @@ float shadowIntersectTest(SceneObjects *scene_objects, const Ray shadow_ray)
         case PLANE:
             tmp_t = shadowRayIntersectPlane((Plane*)scene_objects->obj_ptrs[i], shadow_ray);
             break;
+        case RECTANGLE:
+            tmp_t = shadowRayIntersectRect((Rectangle*)scene_objects->obj_ptrs[i], shadow_ray);
+            break;            
         }
         if(tmp_t < min_t)
         {

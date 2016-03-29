@@ -66,7 +66,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
-void initSpheres(SceneObjects2 *so)
+void initSpheres(SceneObjects *so)
 {
     // TODO: tidy up material assignment
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
@@ -87,7 +87,6 @@ void initSpheres(SceneObjects2 *so)
     so->obj_types[so->num_obj] = SPHERE;
     (so->num_obj)++;
 
-    sphere = NULL;
     sphere = (Sphere*)malloc(sizeof(Sphere));
     vec3_assign(sphere->center, 2.0f, 0.0f, -8.0f);
     sphere->radius = 1.0f;
@@ -106,7 +105,7 @@ void initSpheres(SceneObjects2 *so)
     (so->num_obj)++;    
 }
 
-void initPlanes(SceneObjects2 *so)
+void initPlanes(SceneObjects *so)
 {
     Plane* plane = (Plane*)malloc(sizeof(Plane));
     plane->shadow  = true;    
@@ -123,10 +122,31 @@ void initPlanes(SceneObjects2 *so)
     (so->num_obj)++;    
 }
 
-void initSceneObjects2(SceneObjects2 *so)
+void initRectangles(SceneObjects *so)
+{
+    Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
+    rect->shadow = true;
+    vec3_assign(rect->point, -2.0f, -1.0f, -6.0f);
+    // Current task: investigate how changing the width and height vector affects the rectangle's shape
+    vec3_assign(rect->width, 2.0f, 0.0f, 0.0f);
+    vec3_assign(rect->height, 0.0f, 4.0f, 0.0f);    
+    vec3_copy(rect->normal, BACKWARD);
+    vec3_copy(rect->mat.cd, YELLOW);
+    vec3_copy(rect->mat.ca, YELLOW);
+    rect->mat.kd = 0.6f;
+    rect->mat.ka = 1.0f;
+    rect->mat.mat_type  = MATTE;
+    rect->mat.shadow = true;
+    so->obj_ptrs[so->num_obj] = rect; 
+    so->obj_types[so->num_obj] = RECTANGLE;
+    (so->num_obj)++;        
+}
+
+void initSceneObjects(SceneObjects *so)
 {
     initSpheres(so);
-    initPlanes(so);
+    //initPlanes(so);
+    initRectangles(so);
 }
 
 int initLights(Light lights[])
@@ -169,19 +189,16 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 900, frame_res_height = 900;
-    //int frame_res_width = 360, frame_res_height = 360;    
+    //int frame_res_width = 900, frame_res_height = 900;
+    int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
-    //vec3 bg_color = {35.0f/255.0f, 47.0f/255.0f, 47.0f/255.0f};
     vec3 bg_color = {1.0f, 1.0f, 1.0f};
 
     // Scene Objects
-    //SceneObjects scene_objects;
-    //initSceneObjects(&scene_objects);
-    SceneObjects2 scene_objects;
-    initSceneObjects2(&scene_objects);
+    SceneObjects scene_objects;
+    initSceneObjects(&scene_objects);
 
     // Ambient light
     vec3 amb_color = {1.0f, 1.0f, 1.0f};
@@ -195,7 +212,7 @@ int main()
 
     // Samples
     srand(time(NULL));
-    int num_samples = 256;
+    int num_samples = 64;
     int num_sets = 83;    
     Samples samples = Samples_default;
     //genRegularSamples(&samples, num_samples, num_sets);
@@ -207,7 +224,6 @@ int main()
     // Camera
     Camera camera;
     //initPinholeCameraDefault(&camera);
-
     initThinLensCameraDefault(&camera);
     camera.focal_length = 4.0f;
     camera.lens_radius = 0.2f;
@@ -269,7 +285,7 @@ int main()
                 if(amb_occlusion)
                 {
                     vec3 min_amb;
-                    vec3_scale(min_amb, amb_color, 0.01);
+                    vec3_scale(min_amb, amb_color, 0.01f);
                     vec3 h_sample;
                     getNextHemisphereSample(h_sample, &samples);
                     vec3 u, v, w;
@@ -387,6 +403,7 @@ int main()
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
     free(image);
     freeSamples(&samples);
+    freeSceneObjects(&scene_objects);
 
     while(true)
     {
