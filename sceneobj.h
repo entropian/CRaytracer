@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shapes.h"
+#include "lights.h"
 
 typedef struct SceneObjects
 {
@@ -8,6 +9,14 @@ typedef struct SceneObjects
     ObjectType obj_types[MAX_OBJECTS];
     void* obj_ptrs[MAX_OBJECTS];
 } SceneObjects;
+
+typedef struct SceneLights
+{
+    int num_lights;
+    bool shadow[MAX_LIGHTS];    
+    LightType light_types[MAX_LIGHTS];
+    void* light_ptrs[MAX_LIGHTS];
+} SceneLights;
 
 void freeSceneObjects(SceneObjects* so)
 {
@@ -17,7 +26,15 @@ void freeSceneObjects(SceneObjects* so)
     }
 }
 
-float intersectTest(ShadeRec *sr, SceneObjects *scene_objects, const Ray ray)
+void freeSceneLights(SceneLights* sl)
+{
+    for(int i = 0; i < sl->num_lights; i++)
+    {
+        free(sl->light_ptrs[i]);
+    }
+}
+
+float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray ray)
 {
     float tmp_t = TMAX,  min_t = TMAX;
     ShadeRec tmp_sr, min_sr;
@@ -49,7 +66,7 @@ float intersectTest(ShadeRec *sr, SceneObjects *scene_objects, const Ray ray)
 }
 
 // NOTE: return after the first intersection for certain situations?
-float shadowIntersectTest(SceneObjects *scene_objects, const Ray shadow_ray)
+float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ray)
 {
     float tmp_t, min_t = TMAX;
 

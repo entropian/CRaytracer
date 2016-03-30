@@ -149,7 +149,6 @@ float rayIntersectPlane(ShadeRec *sr, Plane *plane, const Ray ray)
     return TMAX;
 }
 
-// Untested
 float shadowRayIntersectPlane(Plane *plane, const Ray ray)
 {
     if(!plane->shadow)

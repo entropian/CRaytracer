@@ -40,6 +40,7 @@
 #include "lights.h"
 #include "constants.h"
 #include "sceneobj.h"
+#include "lighting.h"
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -144,39 +145,39 @@ void initRectangles(SceneObjects *so)
 
 void initSceneObjects(SceneObjects *so)
 {
+    for(int i = 0; i < MAX_OBJECTS; i++)
+    {
+        so->obj_ptrs[i] = NULL;
+    }
+    so->num_obj = 0;
     initSpheres(so);
-    //initPlanes(so);
-    initRectangles(so);
+    initPlanes(so);
+    //initRectangles(so);
 }
 
-int initLights(Light lights[])
+void initSceneLights(SceneLights* sl)
 {
-    // Directional light
-    int light_count = 0;
+    for(int i = 0; i < MAX_LIGHTS; i++)
+    {
+        sl->light_ptrs[i] = NULL;
+    }
+    sl->num_lights = 0;    
+    DirLight* dir_light = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 3.0f;
-    vec3 point;
     vec3 direction = {10.0f, 10.0f, 10.0f};
-    vec3_normalize(direction, direction);    
-    assignLight(&(lights[light_count]), true, DIRECTIONAL, intensity, WHITE, direction);
-    light_count++;
+    vec3_normalize(direction, direction);
+    assignDirLight(dir_light, intensity, WHITE, direction);
+    sl->shadow[sl->num_lights] = true;
+    sl->light_ptrs[sl->num_lights] = dir_light;
+    (sl->num_lights)++;
 
-    // Point light
+    PointLight* point_light = (PointLight*)malloc(sizeof(PointLight));
     intensity = 0.5f;
-    vec3_assign(point, -3.0f, -5.0f, 0.0f);
-    assignLight(&(lights[light_count]), true, POINT, intensity, WHITE, point);
-    light_count++;
-
-    return light_count;
-}
-
-void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
-{
-    vec3 u_comp, v_comp, w_comp;
-    vec3_scale(u_comp, u, a[0]);
-    vec3_scale(v_comp, v, a[1]);
-    vec3_scale(w_comp, w, a[2]);
-    vec3_add(r, u_comp, v_comp);
-    vec3_add(r, r, w_comp);    
+    vec3 point = {-3.0f, -5.0f, 0.0f};
+    assignPointLight(point_light, intensity, WHITE, point);
+    sl->shadow[sl->num_lights] = true;    
+    sl->light_ptrs[sl->num_lights] = point_light;
+    (sl->num_lights)++;    
 }
 
 int main()
@@ -189,8 +190,8 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    //int frame_res_width = 900, frame_res_height = 900;
-    int frame_res_width = 360, frame_res_height = 360;    
+    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
@@ -205,14 +206,13 @@ int main()
     float amb_ls = 1.0f;
     bool amb_occlusion = true;
 
-    // Directional and point light
-    Light lights[MAX_LIGHTS];
-    int num_lights = 0;
-    num_lights = initLights(lights);
+    // Scene Lights
+    SceneLights scene_lights;
+    initSceneLights(&scene_lights);
 
     // Samples
     srand(time(NULL));
-    int num_samples = 64;
+    int num_samples = 256;
     int num_sets = 83;    
     Samples samples = Samples_default;
     //genRegularSamples(&samples, num_samples, num_sets);
@@ -223,10 +223,10 @@ int main()
 
     // Camera
     Camera camera;
-    //initPinholeCameraDefault(&camera);
-    initThinLensCameraDefault(&camera);
-    camera.focal_length = 4.0f;
-    camera.lens_radius = 0.2f;
+    initPinholeCameraDefault(&camera);
+    //initThinLensCameraDefault(&camera);
+    //camera.focal_length = 4.0f;
+    //camera.lens_radius = 0.2f;
 
 
     vec3 position = {0.0f, 0.5f, 0.0f};
@@ -282,57 +282,41 @@ int main()
                 vec3_scale(reflectance, min_sr.mat->ca, min_sr.mat->ka);
 
                 // Ambient Occlusion
-                if(amb_occlusion)
+                if(amb_occlusion && AOTest(&samples, &scene_objects, &min_sr) < TMAX)
                 {
                     vec3 min_amb;
                     vec3_scale(min_amb, amb_color, 0.01f);
-                    vec3 h_sample;
-                    getNextHemisphereSample(h_sample, &samples);
-                    vec3 u, v, w;
-                    vec3_copy(w, min_sr.normal);
-                    vec3_cross(v, w, JITTERED_UP);
-                    vec3_normalize(v, v);
-                    vec3_cross(u, v, w);
-                    Ray shadow_ray;
-                    orthoNormalTransform(shadow_ray.direction, u, v, w, h_sample);
-                    vec3_copy(shadow_ray.origin, min_sr.hit_point);
-                    float t = shadowIntersectTest(&scene_objects, shadow_ray);
-                    if(t < TMAX)
-                    {
-                        vec3_copy(radiance, min_amb);
-                    }else
-                    {
-                        vec3_mult(radiance, amb_inc_radiance, reflectance);
-                    }
+                    vec3_copy(radiance, min_amb);
                 }else
                 {
                     vec3_mult(radiance, amb_inc_radiance, reflectance);
                 }
                 
                 /*
-                for(int i = 0; i < num_lights; i++)
+                for(int i = 0; i < scene_lights.num_lights; i++)
                 {
                     vec3 light_dir;
-                    getLightDirection(light_dir, &(lights[i]), min_sr.hit_point);
+                    getLightDir(light_dir, scene_lights.light_types[i], scene_lights.light_ptrs[i], min_sr.hit_point);
                     float ndotwi = vec3_dot(light_dir, min_sr.normal);
                     if(ndotwi >= 0)
                     {
                         // Shadow test
                         bool in_shadow = false;
-                        if(lights[i].shadow && min_sr.mat->shadow)
+                        if(scene_lights.shadow[i] && min_sr.mat->shadow)
                         {
                             Ray shadow_ray;
                             vec3_copy(shadow_ray.origin, min_sr.hit_point);
                             vec3_copy(shadow_ray.direction, light_dir);
                             min_t = shadowIntersectTest(&scene_objects, shadow_ray);                            
                             float t;                            
-                            if(lights[i].light_type == DIRECTIONAL)
+                            if(scene_lights.light_types[i] == DIRECTIONAL)
                             {
                                 t = TMAX;                                
-                            }else if(lights[i].light_type == POINT)
+                            }else if(scene_lights.light_types[i] == POINT)
                             {
                                 vec3 light_to_hit_point;
-                                vec3_sub(light_to_hit_point, lights[i].position, min_sr.hit_point);
+                                PointLight* point_light_ptr = (PointLight*)(scene_lights.light_ptrs[i]);
+                                vec3_sub(light_to_hit_point, point_light_ptr->point, min_sr.hit_point);
                                 t = vec3_length(light_to_hit_point);
                             }
                             if(min_t < t)
@@ -340,43 +324,26 @@ int main()
                                 in_shadow = true;
                             }                            
                         }
-
                         if(!in_shadow)
                         {
                             // Diffuse component
                             // kd*cd/PI * inc_radiance_cos
-                            vec3_scale(reflectance, min_sr.mat->cd, min_sr.mat->kd);
-                            vec3 f;
-                            vec3_scale(f, reflectance, 1.0f/(float)PI);
-                            vec3 tmp, inc_radiance_cos;                                    
-                            vec3_scale(tmp, lights[i].color, lights[i].intensity);
+                            vec3 inc_radiance_cos, tmp;
+                            getIncRadiance(tmp, scene_lights.light_types[i], scene_lights.light_ptrs[i]);
                             vec3_scale(inc_radiance_cos, tmp, ndotwi);
-                            vec3_mult(tmp, inc_radiance_cos, f);
-                            vec3_add(radiance, radiance, tmp);
-
+                            diffuseShading(radiance, ndotwi, inc_radiance_cos,  &min_sr);
                             if(min_sr.mat->mat_type == PHONG)
                             {
                                 // Specular component
-                                // ks*cs * cos(theta)^exp * inc_radiance_cos
-                                // theta = angle between light and reflected view vector
-                                vec3 reflect_dir;
-                                // TODO: add wo to ShadeRec, optimize
-                                // reflect vector: 2*dot(n, v)*n - v
+                                // TODO: add wo to ShadeRec
                                 vec3 wo;
                                 vec3_negate(wo, ray.direction);
-                                float ndotwo = vec3_dot(min_sr.normal, wo);
-                                vec3_scale(tmp, min_sr.normal, ndotwo * 2);
-                                vec3_add(reflect_dir, ray.direction, tmp);
-                                vec3_normalize(reflect_dir, reflect_dir);
-                                float rdotwi = vec3_dot(reflect_dir, light_dir);
-                                vec3_scale(tmp, min_sr.mat->cs, min_sr.mat->ks * pow(rdotwi, min_sr.mat->exp));
-                                vec3_mult(tmp, inc_radiance_cos, tmp);
-                                vec3_add(radiance, radiance, tmp);
+                                specularShading(radiance, wo, light_dir, inc_radiance_cos, &min_sr);
                             }
                         }
                     }
                 }
-                */
+                */                
                 vec3_add(color, color, radiance);                
             }else
             {
@@ -404,6 +371,7 @@ int main()
     free(image);
     freeSamples(&samples);
     freeSceneObjects(&scene_objects);
+    freeSceneLights(&scene_lights);
 
     while(true)
     {
