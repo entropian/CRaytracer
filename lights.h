@@ -5,7 +5,7 @@
 enum LightType
 {
     DIRECTIONAL,
-    POINT
+    POINTLIGHT
 };
 
 typedef struct DirLight
@@ -45,7 +45,7 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
     case DIRECTIONAL:
         vec3_copy(r, ((DirLight*)light_ptr)->direction);
         break;
-    case POINT:
+    case POINTLIGHT:
         vec3 displacement;
         vec3_sub(displacement, ((PointLight*)light_ptr)->point, hit_point);
         vec3_normalize(r, displacement);        
@@ -60,7 +60,7 @@ void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr)
     case DIRECTIONAL:
         vec3_scale(r, ((DirLight*)light_ptr)->color, ((DirLight*)light_ptr)->intensity);
         break;
-    case POINT:
+    case POINTLIGHT:
         vec3_scale(r, ((PointLight*)light_ptr)->color, ((PointLight*)light_ptr)->intensity);
         break;
     }

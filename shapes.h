@@ -27,6 +27,7 @@ typedef struct Plane
     Material mat;
 } Plane;
 
+
 typedef struct Rectangle
 {
     bool shadow;

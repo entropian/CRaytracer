@@ -37,7 +37,7 @@ void specularShading(vec3 radiance, const vec3 wo, const vec3 light_dir,
     vec3_mult(tmp, inc_radiance_cos, tmp);
     vec3_add(radiance, radiance, tmp);
 }
-
+/*
 float AOTest(Samples* samples, const SceneObjects *so, const ShadeRec* sr)
 {
     vec3 h_sample;
@@ -52,3 +52,19 @@ float AOTest(Samples* samples, const SceneObjects *so, const ShadeRec* sr)
     vec3_copy(shadow_ray.origin, sr->hit_point);
     return shadowIntersectTest(so, shadow_ray);
 }
+*/
+float AOTest(Samples3D* samples, const SceneObjects *so, const ShadeRec* sr)
+{
+    vec3 h_sample;
+    getNextSample3D(h_sample, samples);
+    vec3 u, v, w;
+    vec3_copy(w, sr->normal);
+    vec3_cross(v, w, JITTERED_UP);
+    vec3_normalize(v, v);
+    vec3_cross(u, v, w);
+    Ray shadow_ray;
+    orthoNormalTransform(shadow_ray.direction, u, v, w, h_sample);
+    vec3_copy(shadow_ray.origin, sr->hit_point);
+    return shadowIntersectTest(so, shadow_ray);
+}
+

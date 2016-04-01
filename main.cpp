@@ -70,8 +70,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 void initSpheres(SceneObjects *so)
 {
     // TODO: tidy up material assignment
+    if(so->num_obj == MAX_OBJECTS){return;}    
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
-    
     vec3_assign(sphere->center, 0.0f, 0.0f, -4.0f);
     sphere->radius = 1.0f;
     sphere->shadow = true;        
@@ -88,6 +88,7 @@ void initSpheres(SceneObjects *so)
     so->obj_types[so->num_obj] = SPHERE;
     (so->num_obj)++;
 
+    if(so->num_obj == MAX_OBJECTS){return;}    
     sphere = (Sphere*)malloc(sizeof(Sphere));
     vec3_assign(sphere->center, 2.0f, 0.0f, -8.0f);
     sphere->radius = 1.0f;
@@ -108,6 +109,7 @@ void initSpheres(SceneObjects *so)
 
 void initPlanes(SceneObjects *so)
 {
+    if(so->num_obj == MAX_OBJECTS){return;}    
     Plane* plane = (Plane*)malloc(sizeof(Plane));
     plane->shadow  = true;    
     vec3_assign(plane->point, 0.0f, -1.0f, 0.0f);
@@ -125,10 +127,10 @@ void initPlanes(SceneObjects *so)
 
 void initRectangles(SceneObjects *so)
 {
+    if(so->num_obj == MAX_OBJECTS){return;}
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->shadow = true;
     vec3_assign(rect->point, -2.0f, -1.0f, -6.0f);
-    // Current task: investigate how changing the width and height vector affects the rectangle's shape
     vec3_assign(rect->width, 2.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 4.0f, 0.0f);    
     vec3_copy(rect->normal, BACKWARD);
@@ -161,7 +163,8 @@ void initSceneLights(SceneLights* sl)
     {
         sl->light_ptrs[i] = NULL;
     }
-    sl->num_lights = 0;    
+    sl->num_lights = 0;
+    if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 3.0f;
     vec3 direction = {10.0f, 10.0f, 10.0f};
@@ -171,6 +174,7 @@ void initSceneLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = dir_light;
     (sl->num_lights)++;
 
+    if(sl->num_lights == MAX_LIGHTS){return;}
     PointLight* point_light = (PointLight*)malloc(sizeof(PointLight));
     intensity = 0.5f;
     vec3 point = {-3.0f, -5.0f, 0.0f};
@@ -211,15 +215,15 @@ int main()
     initSceneLights(&scene_lights);
 
     // Samples
-    srand(time(NULL));
-    int num_samples = 256;
-    int num_sets = 83;    
-    Samples samples = Samples_default;
-    //genRegularSamples(&samples, num_samples, num_sets);
-    genMultijitteredSamples(&samples, num_samples, num_sets);
-    //genHammersleySamples(&samples, num_samples, num_sets);
-    mapSamplesToDisk(&samples);
-    mapSamplesToHemisphere(&samples, 1);
+    srand(time(NULL));    
+    const int num_samples = 256;
+    const int num_sets = 83;
+    Samples2D unit_square_samples = Samples2D_default;
+    Samples2D disk_samples = Samples2D_default;
+    Samples3D h_samples = Samples3D_default;
+    genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
+    mapSamplesToDisk(&disk_samples, &unit_square_samples);
+    mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
 
     // Camera
     Camera camera;
@@ -240,7 +244,6 @@ int main()
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
     float pixel_length = frame_length/(float)(frame_res_width);
 
-//#if 0
     time_t startTime, endTime;
     time(&startTime);        
     unsigned sample_index = 0;    
@@ -250,7 +253,7 @@ int main()
         for(int p = 0; p < num_samples; p++)
         {
             vec2 sample, disk_sample, imageplane_coord;
-            getNextShuffledSample(sample, &samples);
+            getNextSample2D(sample, &unit_square_samples);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);            
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
             
@@ -261,7 +264,7 @@ int main()
                 calcRayPinhole(&ray, imageplane_coord, &camera);
                 break;
             case ThinLens:
-                getNextDiskSample(disk_sample, &samples);            
+                getNextSample2D(disk_sample, &disk_samples);            
                 calcRayThinLens(&ray, imageplane_coord, disk_sample, &camera);
                 break;
             }
@@ -282,7 +285,7 @@ int main()
                 vec3_scale(reflectance, min_sr.mat->ca, min_sr.mat->ka);
 
                 // Ambient Occlusion
-                if(amb_occlusion && AOTest(&samples, &scene_objects, &min_sr) < TMAX)
+                if(amb_occlusion && AOTest(&h_samples, &scene_objects, &min_sr) < TMAX)
                 {
                     vec3 min_amb;
                     vec3_scale(min_amb, amb_color, 0.01f);
@@ -291,7 +294,6 @@ int main()
                 {
                     vec3_mult(radiance, amb_inc_radiance, reflectance);
                 }
-                
                 /*
                 for(int i = 0; i < scene_lights.num_lights; i++)
                 {
@@ -343,7 +345,7 @@ int main()
                         }
                     }
                 }
-                */                
+                */
                 vec3_add(color, color, radiance);                
             }else
             {
@@ -365,11 +367,13 @@ int main()
     }
     time(&endTime);
     double sec = difftime(endTime, startTime);
-    printf("%f seconds.\n", sec);        
-//#endif
+    printf("%f seconds.\n", sec);
+    
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
     free(image);
-    freeSamples(&samples);
+    freeSamples2D(&unit_square_samples);
+    freeSamples2D(&disk_samples);
+    freeSamples3D(&h_samples);
     freeSceneObjects(&scene_objects);
     freeSceneLights(&scene_lights);
 
