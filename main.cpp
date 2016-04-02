@@ -2,7 +2,6 @@
   Things that can be swapped:
   camera --  perspective vs orthographic
   objects -- implicit surfaces vs explicit surfaces
-  sampling -- different sampling algorithms
 
   Features to consider:
   being able to scale the camera and viewplane 
@@ -10,6 +9,9 @@
   TODO:
   gamma correction
   consider how variables should be grouped into objects?
+
+  Potential optimization:
+  use float sample_x, sample_y instead of vec2 sample?
  */
 
     /*
@@ -32,7 +34,6 @@
 #include <cmath>
 #include <ctime>
 #include "vec.h"
-#include "shaders.h"
 #include "shapes.h"
 #include "glcode.h"
 #include "sampling.h"
@@ -40,7 +41,7 @@
 #include "lights.h"
 #include "constants.h"
 #include "sceneobj.h"
-#include "lighting.h"
+#include "shading.h"
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -176,31 +177,33 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
         sl->light_ptrs[i] = NULL;
     }
     sl->num_lights = 0;
+    // Directional light
     if(sl->num_lights == MAX_LIGHTS){return;}
-    DirLight* dir_light = (DirLight*)malloc(sizeof(DirLight));
+    DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 0.0f;
     vec3 direction = {10.0f, 10.0f, 10.0f};
     vec3_normalize(direction, direction);
-    assignDirLight(dir_light, intensity, WHITE, direction);
+    assignDirLight(dir_light_ptr, intensity, WHITE, direction);
     sl->shadow[sl->num_lights] = true;
-    sl->light_ptrs[sl->num_lights] = dir_light;
+    sl->light_ptrs[sl->num_lights] = dir_light_ptr;
     (sl->num_lights)++;
-
+    
+    // Point light
     if(sl->num_lights == MAX_LIGHTS){return;}
-    PointLight* point_light = (PointLight*)malloc(sizeof(PointLight));
+    PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
     intensity = 0.1f;
     vec3 point = {-3.0f, -5.0f, 0.0f};
-    assignPointLight(point_light, intensity, WHITE, point);
+    assignPointLight(point_light_ptr, intensity, WHITE, point);
     sl->shadow[sl->num_lights] = true;    
-    sl->light_ptrs[sl->num_lights] = point_light;
+    sl->light_ptrs[sl->num_lights] = point_light_ptr;
     (sl->num_lights)++;
 
     // Area light
     if(sl->num_lights == MAX_LIGHTS){return;}
-    AreaLight* area_light = (AreaLight*)malloc(sizeof(AreaLight));
-    area_light->intensity = 10.0f;
-    vec3_copy(area_light->color, WHITE);
-    vec3_assign(area_light->sample_point, 0.0f, 0.0f, 0.0f);
+    AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
+    area_light_ptr->intensity = 10.0f;
+    vec3_copy(area_light_ptr->color, WHITE);
+    vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
     
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->shadow = false;
@@ -208,8 +211,8 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     vec3_assign(rect->width, 2.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 4.0f, 0.0f);    
     vec3_copy(rect->normal, BACKWARD);
-    vec3_copy(rect->mat.ce, area_light->color);
-    rect->mat.ke = area_light->intensity;    
+    vec3_copy(rect->mat.ce, area_light_ptr->color);
+    rect->mat.ke = area_light_ptr->intensity;    
     rect->mat.mat_type = EMISSIVE;
     float width = sqrt(vec3_dot(rect->width, rect->width));
     float height = sqrt(vec3_dot(rect->height, rect->height));        
@@ -220,12 +223,12 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     prepSample2DStruct(samples, num_samples, num_sets);
     genMultijitteredSamples(samples, num_samples, num_sets);
 
-    area_light->inverse_area = 1.0f/(width * height);
-    area_light->samples = samples;
-    area_light->obj_ptr = rect;
-    area_light->obj_type = RECTANGLE;
+    area_light_ptr->inverse_area = 1.0f/(width * height);
+    area_light_ptr->samples = samples;
+    area_light_ptr->obj_ptr = rect;
+    area_light_ptr->obj_type = RECTANGLE;
     sl->shadow[sl->num_lights] = true;    
-    sl->light_ptrs[sl->num_lights] = area_light;
+    sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;    
 }
@@ -240,8 +243,8 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    //int frame_res_width = 900, frame_res_height = 900;
-    int frame_res_width = 360, frame_res_height = 360;    
+    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
@@ -261,15 +264,13 @@ int main()
     
     // Ambient light
     vec3 amb_color = {1.0f, 1.0f, 1.0f};
-    float amb_ls = 0.2f;
+    float amb_ls = 0.1f;
     bool amb_occlusion = true;
 
-    // Area light affected -- implemnted
     // Scene Lights
     SceneLights scene_lights;
     initSceneLights(&scene_lights, num_samples, num_sets);
 
-    // Area light affected -- implemented
     // Scene Objects
     SceneObjects scene_objects;
     initSceneObjects(&scene_objects, &scene_lights);    
@@ -280,8 +281,7 @@ int main()
     //initThinLensCameraDefault(&camera);
     //camera.focal_length = 4.0f;
     //camera.lens_radius = 0.2f;
-
-
+    
     vec3 position = {0.0f, 0.5f, 0.0f};
     vec3 look_point = {0.0f, 0.0f, -4.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
@@ -301,7 +301,7 @@ int main()
         vec3 color = {0.0f, 0.0f, 0.0f};
         for(int p = 0; p < num_samples; p++)
         {
-            vec2 sample, disk_sample, imageplane_coord;
+            vec2 sample, imageplane_coord;
             getNextSample2D(sample, &unit_square_samples);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);            
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
@@ -310,21 +310,24 @@ int main()
             switch(camera.camera_type)
             {
             case Pinhole:
+            {
                 calcRayPinhole(&ray, imageplane_coord, &camera);
-                break;
+            } break;
             case ThinLens:
+            {
+                vec2 disk_sample;
                 getNextSample2D(disk_sample, &disk_samples);            
                 calcRayThinLens(&ray, imageplane_coord, disk_sample, &camera);
-                break;
+            } break;
             }
 
-            float min_t = TMAX,  tmp_t = TMAX;
+            float min_t = TMAX;
             ShadeRec min_sr;
             min_t = intersectTest(&min_sr, &scene_objects, ray);
 
             // Shading
             if(min_t < TMAX)
-            {
+            {                
                 vec3 radiance = {0.0f, 0.0f, 0.0f};                
                 if(min_sr.mat->mat_type == EMISSIVE)
                 {
@@ -366,30 +369,9 @@ int main()
                                 vec3_copy(shadow_ray.origin, min_sr.hit_point);
                                 vec3_copy(shadow_ray.direction, light_dir);
                                 min_t = shadowIntersectTest(&scene_objects, shadow_ray);                            
-                                float t;
                                 // Area light affected
-                                // Data needed: object location and sampling point
-                                switch(scene_lights.light_types[i])
-                                {
-                                case DIRECTIONAL:
-                                {
-                                    t = TMAX;                                                                    
-                                } break;
-                                case POINTLIGHT:
-                                {
-                                    vec3 light_to_hit_point;
-                                    PointLight* point_light_ptr = (PointLight*)(scene_lights.light_ptrs[i]);
-                                    vec3_sub(light_to_hit_point, point_light_ptr->point, min_sr.hit_point);
-                                    t = vec3_length(light_to_hit_point);
-                                }break;
-                                case AREALIGHT:
-                                {
-                                    vec3 light_to_hit_point;
-                                    AreaLight* area_light_ptr = (AreaLight*)(scene_lights.light_ptrs[i]);
-                                    vec3_sub(light_to_hit_point, area_light_ptr->sample_point, min_sr.hit_point);
-                                    t = vec3_length(light_to_hit_point);
-                                } break;
-                                }
+                                float t = calcLightDistance(scene_lights.light_types[i],
+                                                            scene_lights.light_ptrs[i], min_sr.hit_point);
                                 if(min_t < t)
                                 {
                                     in_shadow = true;
@@ -397,36 +379,10 @@ int main()
                             }
                             if(!in_shadow)
                             {
-                                // Area light affected
                                 if(scene_lights.light_types[i] == AREALIGHT)
                                 {
                                     AreaLight* area_light_ptr = (AreaLight*)(scene_lights.light_ptrs[i]);
-                                    // diffuse brdf
-                                    vec3 reflectance;
-                                    vec3_scale(reflectance, min_sr.mat->cd, min_sr.mat->kd);
-                                    vec3 f;
-                                    vec3_scale(f, reflectance, 1.0f/(float)PI);
-
-                                    // Incident radiance
-                                    vec3 inc_radiance = {0.0f, 0.0f, 0.0f}, neg_wi, displacement;;
-                                    vec3_sub(displacement, min_sr.hit_point, area_light_ptr->sample_point);
-                                    vec3_normalize(neg_wi, displacement);
-                                    Rectangle* rect_ptr = (Rectangle*)(area_light_ptr->obj_ptr);
-                                    if(vec3_dot(neg_wi, rect_ptr->normal) > 0.0f)
-                                    {
-                                        vec3_scale(inc_radiance, area_light_ptr->color, area_light_ptr->intensity);
-                                    }
-
-                                    // Geometry term                                    
-                                    float geo_term = vec3_dot(rect_ptr->normal, neg_wi) * ndotwi /
-                                        vec3_dot(displacement, displacement);
-
-                                    // f * L * G / PDF
-                                    vec3 tmp;
-                                    vec3_mult(tmp, f, inc_radiance);
-                                    vec3_scale(tmp, tmp, geo_term);
-                                    vec3_scale(tmp, tmp, 1.0f/area_light_ptr->inverse_area);
-                                    vec3_add(radiance, radiance, tmp);
+                                    areaLightShading(radiance, ndotwi, area_light_ptr, &min_sr);
                                 }else
                                 {
                                     // Diffuse component

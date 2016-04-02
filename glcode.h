@@ -9,7 +9,7 @@
 #endif
 
 #include <cstdio>
-#include "shaders.h"
+#include "glshaders.h"
 
 struct GlViewport
 {

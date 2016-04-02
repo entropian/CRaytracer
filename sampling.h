@@ -318,7 +318,7 @@ void mapSamplesToDisk(Samples2D *dest_samples, const Samples2D *src_samples)
     float r, phi;    
     float x, y;
     unsigned int size = src_samples->num_samples * src_samples->num_sets;
-    for(int i = 0; i < size; i++)
+    for(unsigned int i = 0; i < size; i++)
     {
         // map sample point from [0,1] to [-1,1]
         x = 2.0f * src_samples->samples[i][0] - 1.0f;
@@ -367,7 +367,7 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
     }
     prepSample3DStruct(dest_samples, src_samples->num_samples, src_samples->num_sets);
     unsigned int size = src_samples->num_samples * src_samples->num_sets;    
-    for(int i = 0; i < size; i++)
+    for(unsigned int i = 0; i < size; i++)
     {
         float cos_phi = cos(2.0f * (float)PI * src_samples->samples[i][0]);
         float sin_phi = sin(2.0f * (float)PI * src_samples->samples[i][0]);

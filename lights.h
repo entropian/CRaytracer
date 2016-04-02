@@ -34,6 +34,17 @@ typedef struct AreaLight
     vec3 color;
 } AreaLight;
 
+void getAreaLightNormal(vec3 r, const AreaLight* area_light_ptr)
+{
+    switch(area_light_ptr->obj_type)
+    {
+    case RECTANGLE:
+    {
+        vec3_copy(r, ((Rectangle*)(area_light_ptr->obj_ptr))->normal);
+    } break;
+    }
+}
+
 void assignDirLight(DirLight *dir_light, const float intensity, const vec3 color, const vec3 direction)
 {
     dir_light->intensity = intensity;
@@ -48,6 +59,7 @@ void assignPointLight(PointLight *point_light, const float intensity, const vec3
     vec3_copy(point_light->point, point);
 }
 
+// Calculate and store light direction vector in r
 void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, const vec3 hit_point)
 {
     switch(light_type)
@@ -66,30 +78,67 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
     {
         // Side effect: calculates and stores the surface sample point 
         AreaLight* area_light_ptr = (AreaLight*)light_ptr;
-        vec2 sample;
-        getNextSample2D(sample, area_light_ptr->samples);
-        vec3 displacement;
-        // Assuming area light is rectangle
-        Rectangle* rect = (Rectangle*)(area_light_ptr->obj_ptr);
-        vec3_scale(displacement, rect->width, sample[0]);
-        vec3_add(area_light_ptr->sample_point, rect->point, displacement);
-        vec3_scale(displacement, rect->height, sample[1]);
-        vec3_add(area_light_ptr->sample_point, area_light_ptr->sample_point, displacement);
-        vec3_sub(displacement, area_light_ptr->sample_point, hit_point);
-        vec3_normalize(r, displacement);
+        switch(area_light_ptr->obj_type)
+        {
+        case RECTANGLE:
+        {
+            vec2 sample;
+            getNextSample2D(sample, area_light_ptr->samples);
+            vec3 displacement;
+            // Assuming area light is rectangle
+            Rectangle* rect = (Rectangle*)(area_light_ptr->obj_ptr);
+            vec3_scale(displacement, rect->width, sample[0]);
+            vec3_add(area_light_ptr->sample_point, rect->point, displacement);
+            vec3_scale(displacement, rect->height, sample[1]);
+            vec3_add(area_light_ptr->sample_point, area_light_ptr->sample_point, displacement);            
+            vec3_sub(displacement, area_light_ptr->sample_point, hit_point);
+            vec3_normalize(r, displacement);
+        } break;
+        }
     }  break;
     }
 }
 
+// Calculate and store incident radiance in r
 void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr)
 {
     switch(light_type)
     {
     case DIRECTIONAL:
+    {
         vec3_scale(r, ((DirLight*)light_ptr)->color, ((DirLight*)light_ptr)->intensity);
-        break;
+    } break;
     case POINTLIGHT:
+    {
         vec3_scale(r, ((PointLight*)light_ptr)->color, ((PointLight*)light_ptr)->intensity);
-        break;
+    } break;
     }
 }
+
+float calcLightDistance(const LightType light_type, const void* light_ptr, const vec3 hit_point)
+{
+    float t;
+    switch(light_type)
+    {
+    case DIRECTIONAL:
+    {
+        t = TMAX;                                                                    
+    } break;
+    case POINTLIGHT:
+    {
+        vec3 light_to_hit_point;
+        PointLight* point_light_ptr = (PointLight*)(light_ptr);
+        vec3_sub(light_to_hit_point, point_light_ptr->point, hit_point);
+        t = vec3_length(light_to_hit_point);
+    }break;
+    case AREALIGHT:
+    {
+        vec3 light_to_hit_point;
+        AreaLight* area_light_ptr = (AreaLight*)(light_ptr);
+        vec3_sub(light_to_hit_point, area_light_ptr->sample_point, hit_point);
+        t = vec3_length(light_to_hit_point);
+    } break;
+    }
+    return t;
+}
+

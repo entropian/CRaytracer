@@ -7,17 +7,22 @@
 #include "lights.h"
 #include "sceneobj.h"
 #include "sampling.h"
+
+void diffuseBRDF(vec3 f, const ShadeRec* sr)
+{
+    vec3 reflectance;
+    vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
+    vec3_scale(f, reflectance, 1.0f/(float)PI);
+}
  
 void diffuseShading(vec3 radiance, const float ndotwi, const vec3 inc_radiance_cos,
                     const ShadeRec* sr)
 {
-    vec3 reflectance;
-    vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
     vec3 f;
-    vec3_scale(f, reflectance, 1.0f/(float)PI);
-    vec3 tmp;
-    vec3_mult(tmp, inc_radiance_cos, f);
-    vec3_add(radiance, radiance, tmp);
+    diffuseBRDF(f, sr);
+    vec3 diffuse_comp;
+    vec3_mult(diffuse_comp, inc_radiance_cos, f);
+    vec3_add(radiance, radiance, diffuse_comp);
 }
 
 void specularShading(vec3 radiance, const vec3 wo, const vec3 light_dir,
@@ -68,3 +73,29 @@ float AOTest(Samples3D* samples, const SceneObjects *so, const ShadeRec* sr)
     return shadowIntersectTest(so, shadow_ray);
 }
 
+void areaLightShading(vec3 radiance, const float ndotwi, const AreaLight* area_light_ptr, const ShadeRec* sr)
+{
+    // diffuse brdf
+    vec3 f;
+    diffuseBRDF(f, sr);    
+
+    // Incident radiance
+    vec3 inc_radiance = {0.0f, 0.0f, 0.0f}, neg_wi, displacement, light_normal;
+    vec3_sub(displacement, sr->hit_point, area_light_ptr->sample_point);
+    vec3_normalize(neg_wi, displacement);
+    getAreaLightNormal(light_normal, area_light_ptr);
+    if(vec3_dot(neg_wi, light_normal) > 0.0f)
+    {
+        vec3_scale(inc_radiance, area_light_ptr->color, area_light_ptr->intensity);
+    }
+
+    // Geometry term                                    
+    float geo_term = vec3_dot(light_normal, neg_wi) * ndotwi /
+        vec3_dot(displacement, displacement);
+
+    // f * L * G / PDF
+    vec3 tmp;
+    vec3_mult(tmp, f, inc_radiance);
+    vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->inverse_area);
+    vec3_add(radiance, radiance, tmp);    
+}

@@ -6,7 +6,7 @@ enum MatType
     PHONG,
     EMISSIVE
 };
-
+// NOTE: this looks like it sucks
 typedef struct Material
 {
     bool shadow;

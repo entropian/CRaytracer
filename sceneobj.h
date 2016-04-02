@@ -22,7 +22,11 @@ void freeSceneObjects(SceneObjects* so)
 {
     for(int i = 0; i < so->num_obj; i++)
     {
-        free(so->obj_ptrs[i]);
+        if(so->obj_ptrs[i] != NULL)
+        {
+            free(so->obj_ptrs[i]);
+            so->obj_ptrs[i] = NULL;
+        }
     }
 }
 
@@ -30,7 +34,16 @@ void freeSceneLights(SceneLights* sl)
 {
     for(int i = 0; i < sl->num_lights; i++)
     {
-        free(sl->light_ptrs[i]);
+        if(sl->light_ptrs[i] != NULL)
+        {
+            if(sl->light_types[i] == AREALIGHT)
+            {
+                AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
+                freeSamples2D(area_light_ptr->samples);
+            }                
+            free(sl->light_ptrs[i]);
+            sl->light_ptrs[i] = NULL;
+        }
     }
 }
 
@@ -91,5 +104,6 @@ float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ra
     }
     return min_t;
 }
+
 
 
