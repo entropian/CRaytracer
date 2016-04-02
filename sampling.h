@@ -380,3 +380,49 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
         vec3_assign(dest_samples->samples[i], pu, pv, pw);
     }
 }
+
+void drawSamples(unsigned char *image, Samples2D *samples,
+                 const int frame_res_width, const int frame_res_height, const int num_pixels)
+{
+    for(int i = 0; i < num_pixels; i++)
+    {
+        image[i*3] = (char)255;
+        image[i*3 + 1] = (char)255;
+        image[i*3 + 2] = (char)255;        
+    }
+    
+    for(int i = 0; i < samples->num_samples; i++)
+    {
+        vec2 sample;
+        getNextSample2D(sample, samples);
+        int x = (int)(sample[0] * frame_res_width);
+        int y = (int)((1.0f - sample[1]) * frame_res_height);        
+        int index = y * frame_res_width + x;
+        image[index*3] = 0;
+        image[index*3 + 1] = 0;
+        image[index*3 + 2] = 0;
+    }
+}
+
+void drawHemisphereSamples2D(unsigned char *image, Samples3D *samples,
+                             const int frame_res_width, const int frame_res_height, const int num_pixels)
+{
+    for(int i = 0; i < num_pixels; i++)
+    {
+        image[i*3] = (char)255;
+        image[i*3 + 1] = (char)255;
+        image[i*3 + 2] = (char)255;        
+    }
+    for(int i = 0; i < samples->num_samples; i++)
+    {
+        vec3 sample;
+        getNextSample3D(sample, samples);
+        int x = (int)((sample[0] * 0.5f + 0.5f) * frame_res_width);
+        int y = (int)((1.0f - (sample[1] * 0.5f + 0.5f)) * frame_res_height);        
+        int index = y * frame_res_width + x;
+
+        image[index*3] = (char)(sample[2] * 255.0f);
+        image[index*3 + 1] = 0;
+        image[index*3 + 2] = 0;
+    }    
+}
