@@ -204,10 +204,11 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     area_light_ptr->intensity = 10.0f;
     vec3_copy(area_light_ptr->color, WHITE);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
-    
+
+
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->shadow = false;
-    vec3_assign(rect->point, -2.0f, -1.0f, -6.0f);
+    vec3_assign(rect->point, -2.0f, 0.0f, -6.0f);
     vec3_assign(rect->width, 2.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 4.0f, 0.0f);    
     vec3_copy(rect->normal, BACKWARD);
@@ -223,14 +224,51 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     prepSample2DStruct(samples, num_samples, num_sets);
     genMultijitteredSamples(samples, num_samples, num_sets);
 
-    area_light_ptr->inverse_area = 1.0f/(width * height);
-    area_light_ptr->samples = samples;
+    /*
+    // Sphere
+    Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
+    sphere->shadow = false;
+    vec3_assign(sphere->center, -2.0f, 0.0f, -6.0f);
+    sphere->radius = 1.0f;
+    sphere->mat.ke = area_light_ptr->intensity;    
+    sphere->mat.mat_type = EMISSIVE;
+
+    
+    Samples3D *samples = (Samples3D*)malloc(sizeof(Samples3D));
+    samples->samples = NULL;
+    samples->shuffled_indices = NULL;
+    prep3DSampleStruct(samples, num_samples, num_sets);
+    
+    Samples2D unit_square_samples = Samples2D_default;
+    Samples2D disk_samples = Samples2D_default;
+    genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
+    mapSamplesToDisk(&disk_samples, &unit_square_samples);
+    mapSamplesToHemisphere(samples, &disk_samples, 1);
+    freeSamplesSamples2D(unit_square_samples);
+    freeSamplesSamples2D(disk_samples);
+
+    area_light_ptr->pdf = 1.0f/(width * height); // ? for sphere?
+    area_light_ptr->samples2D = NULL;
+    area_light_ptr->samples3D = smaples;
+    area_light_ptr->obj_ptr = sphere;
+    area_light_ptr->obj_type = SPHERE;
+    sl->shadow[sl->num_lights] = true;    
+    sl->light_ptrs[sl->num_lights] = area_light_ptr;
+    sl->light_types[sl->num_lights] = AREALIGHT;
+    (sl->num_lights)++;
+    */
+
+
+    area_light_ptr->pdf = 1.0f/(width * height);
+    area_light_ptr->samples2D = samples;
+    area_light_ptr->samples3D = NULL;
     area_light_ptr->obj_ptr = rect;
     area_light_ptr->obj_type = RECTANGLE;
     sl->shadow[sl->num_lights] = true;    
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
-    (sl->num_lights)++;    
+    (sl->num_lights)++;
+
 }
 
 int main()
@@ -432,7 +470,6 @@ int main()
     freeSamples2D(&unit_square_samples);
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
-    // Area light affected
     freeSceneObjects(&scene_objects);
     freeSceneLights(&scene_lights);
 

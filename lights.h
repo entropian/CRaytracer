@@ -27,9 +27,10 @@ typedef struct AreaLight
 {
     ObjectType obj_type;
     void* obj_ptr;
-    Samples2D* samples;
+    Samples2D* samples2D;
+    Samples3D* samples3D;
     float intensity;
-    float inverse_area;
+    float pdf;
     vec3 sample_point;
     vec3 color;
 } AreaLight;
@@ -83,9 +84,8 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         case RECTANGLE:
         {
             vec2 sample;
-            getNextSample2D(sample, area_light_ptr->samples);
+            getNextSample2D(sample, area_light_ptr->samples2D);
             vec3 displacement;
-            // Assuming area light is rectangle
             Rectangle* rect = (Rectangle*)(area_light_ptr->obj_ptr);
             vec3_scale(displacement, rect->width, sample[0]);
             vec3_add(area_light_ptr->sample_point, rect->point, displacement);

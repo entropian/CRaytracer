@@ -96,6 +96,6 @@ void areaLightShading(vec3 radiance, const float ndotwi, const AreaLight* area_l
     // f * L * G / PDF
     vec3 tmp;
     vec3_mult(tmp, f, inc_radiance);
-    vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->inverse_area);
+    vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
     vec3_add(radiance, radiance, tmp);    
 }

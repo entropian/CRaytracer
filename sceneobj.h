@@ -39,7 +39,14 @@ void freeSceneLights(SceneLights* sl)
             if(sl->light_types[i] == AREALIGHT)
             {
                 AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
-                freeSamples2D(area_light_ptr->samples);
+                if(area_light_ptr->samples2D != NULL)
+                {
+                    freeSamples2D(area_light_ptr->samples2D);
+                }
+                if(area_light_ptr->samples3D != NULL)
+                {
+                    freeSamples3D(area_light_ptr->samples3D);
+                }
             }                
             free(sl->light_ptrs[i]);
             sl->light_ptrs[i] = NULL;
