@@ -201,11 +201,11 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     // Area light
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-    area_light_ptr->intensity = 10.0f;
+    area_light_ptr->intensity = 4.0f;
     vec3_copy(area_light_ptr->color, WHITE);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
-
+/*
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->shadow = false;
     vec3_assign(rect->point, -2.0f, 0.0f, -6.0f);
@@ -224,34 +224,11 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     prepSample2DStruct(samples, num_samples, num_sets);
     genMultijitteredSamples(samples, num_samples, num_sets);
 
-    /*
-    // Sphere
-    Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
-    sphere->shadow = false;
-    vec3_assign(sphere->center, -2.0f, 0.0f, -6.0f);
-    sphere->radius = 1.0f;
-    sphere->mat.ke = area_light_ptr->intensity;    
-    sphere->mat.mat_type = EMISSIVE;
-
-    
-    Samples3D *samples = (Samples3D*)malloc(sizeof(Samples3D));
-    samples->samples = NULL;
-    samples->shuffled_indices = NULL;
-    prep3DSampleStruct(samples, num_samples, num_sets);
-    
-    Samples2D unit_square_samples = Samples2D_default;
-    Samples2D disk_samples = Samples2D_default;
-    genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
-    mapSamplesToDisk(&disk_samples, &unit_square_samples);
-    mapSamplesToHemisphere(samples, &disk_samples, 1);
-    freeSamplesSamples2D(unit_square_samples);
-    freeSamplesSamples2D(disk_samples);
-
-    area_light_ptr->pdf = 1.0f/(width * height); // ? for sphere?
-    area_light_ptr->samples2D = NULL;
-    area_light_ptr->samples3D = smaples;
-    area_light_ptr->obj_ptr = sphere;
-    area_light_ptr->obj_type = SPHERE;
+    area_light_ptr->pdf = 1.0f/(width * height);
+    area_light_ptr->samples2D = samples;
+    area_light_ptr->samples3D = NULL;
+    area_light_ptr->obj_ptr = rect;
+    area_light_ptr->obj_type = RECTANGLE;
     sl->shadow[sl->num_lights] = true;    
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
@@ -259,11 +236,33 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     */
 
 
-    area_light_ptr->pdf = 1.0f/(width * height);
-    area_light_ptr->samples2D = samples;
-    area_light_ptr->samples3D = NULL;
-    area_light_ptr->obj_ptr = rect;
-    area_light_ptr->obj_type = RECTANGLE;
+    // Sphere
+    Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
+    sphere->shadow = false;
+    vec3_assign(sphere->center, -2.0f, 0.0f, -6.0f);
+    sphere->radius = 1.0f;
+    vec3_copy(sphere->mat.ce, area_light_ptr->color);    
+    sphere->mat.ke = area_light_ptr->intensity;    
+    sphere->mat.mat_type = EMISSIVE;
+    
+    Samples3D *samples = (Samples3D*)malloc(sizeof(Samples3D));
+    samples->samples = NULL;
+    samples->shuffled_indices = NULL;
+    prepSample3DStruct(samples, num_samples, num_sets);
+    
+    Samples2D unit_square_samples = Samples2D_default;
+    Samples2D disk_samples = Samples2D_default;
+    genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
+    mapSamplesToDisk(&disk_samples, &unit_square_samples);
+    mapSamplesToHemisphere(samples, &disk_samples, 1);
+    freeSamples2D(&unit_square_samples);
+    freeSamples2D(&disk_samples);
+
+    area_light_ptr->pdf = 1.0f / (4 * PI * sphere->radius * sphere->radius);
+    area_light_ptr->samples2D = NULL;
+    area_light_ptr->samples3D = samples;
+    area_light_ptr->obj_ptr = sphere;
+    area_light_ptr->obj_type = SPHERE;
     sl->shadow[sl->num_lights] = true;    
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
@@ -281,8 +280,8 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 900, frame_res_height = 900;
-    //int frame_res_width = 360, frame_res_height = 360;    
+    //int frame_res_width = 900, frame_res_height = 900;
+    int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
@@ -369,7 +368,8 @@ int main()
                 vec3 radiance = {0.0f, 0.0f, 0.0f};                
                 if(min_sr.mat->mat_type == EMISSIVE)
                 {
-                    vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke);
+                    // TODO: max to one?
+                    vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
                 }else
                 {
                     // Ambient component
@@ -395,7 +395,7 @@ int main()
                         vec3 light_dir;
                         // Area light affected -- half implemented
                         // Data needed: object location and sampling point
-                        getLightDir(light_dir, scene_lights.light_types[i], scene_lights.light_ptrs[i], min_sr.hit_point);
+                        getLightDir(light_dir, scene_lights.light_types[i], scene_lights.light_ptrs[i], &min_sr);
                         float ndotwi = vec3_dot(light_dir, min_sr.normal);
                         if(ndotwi >= 0)
                         {

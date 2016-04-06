@@ -83,7 +83,7 @@ void areaLightShading(vec3 radiance, const float ndotwi, const AreaLight* area_l
     vec3 inc_radiance = {0.0f, 0.0f, 0.0f}, neg_wi, displacement, light_normal;
     vec3_sub(displacement, sr->hit_point, area_light_ptr->sample_point);
     vec3_normalize(neg_wi, displacement);
-    getAreaLightNormal(light_normal, area_light_ptr);
+    getAreaLightNormal(light_normal, area_light_ptr, sr->hit_point);
     if(vec3_dot(neg_wi, light_normal) > 0.0f)
     {
         vec3_scale(inc_radiance, area_light_ptr->color, area_light_ptr->intensity);
