@@ -260,14 +260,3 @@ inline void vec4_negate(vec4 r, const vec4 a)
     r[3] = -a[3];    
 }
 
-
-// Stuff to be added to vec.cpp?
-void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
-{
-    vec3 u_comp, v_comp, w_comp;
-    vec3_scale(u_comp, u, a[0]);
-    vec3_scale(v_comp, v, a[1]);
-    vec3_scale(w_comp, w, a[2]);
-    vec3_add(r, u_comp, v_comp);
-    vec3_add(r, r, w_comp);    
-}

@@ -1,12 +1,14 @@
 #pragma once
 
 #include "vec.h"
+#include "math.h"
 
 enum LightType
 {
     DIRECTIONAL,
     POINTLIGHT,
-    AREALIGHT
+    AREALIGHT,
+    ENVLIGHT
 };
 
 typedef struct DirLight
@@ -27,13 +29,20 @@ typedef struct AreaLight
 {
     ObjectType obj_type;
     void* obj_ptr;
-    Samples2D* samples2D;
-    Samples3D* samples3D;
     float intensity;
     float pdf;
+    Samples2D* samples2D;
+    Samples3D* samples3D;
     vec3 sample_point;
     vec3 color;
 } AreaLight;
+
+typedef struct EnvLight
+{
+    float intensity;
+    Samples3D* samples3D;
+    vec3 color;
+} EnvLight;
 
 void getAreaLightNormal(vec3 r, const AreaLight* area_light_ptr, const vec3 hit_point)
 {
@@ -104,12 +113,7 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         {
             vec3 h_sample;
             getNextSample3D(h_sample, area_light_ptr->samples3D);
-            vec3 u, v, w;
-            vec3_copy(w, sr->normal);
-            vec3_cross(v, w, JITTERED_UP);
-            vec3_normalize(v, v);
-            vec3_cross(u, v, w);
-            orthoNormalTransform(area_light_ptr->sample_point, u, v, w, h_sample);
+            getVec3InLocalBasis(area_light_ptr->sample_point, h_sample, sr->normal);
             vec3_add(area_light_ptr->sample_point, area_light_ptr->sample_point,
                      ((Sphere*)(area_light_ptr->obj_ptr))->center);
             vec3 displacement;
@@ -118,6 +122,16 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         } break;
         }
     }  break;
+    case ENVLIGHT:
+    {
+        // get sample
+        // calculate orthonormal basis based on the hit point and hit normal
+        // transform sample by orthonormal basis
+        EnvLight* env_light_ptr = (EnvLight*)light_ptr;
+        vec3 h_sample;
+        getNextSample3D(h_sample, env_light_ptr->samples3D);
+        getVec3InLocalBasis(r, h_sample, sr->normal);        
+    } break;
     }
 }
 
@@ -133,6 +147,10 @@ void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr)
     case POINTLIGHT:
     {
         vec3_scale(r, ((PointLight*)light_ptr)->color, ((PointLight*)light_ptr)->intensity);
+    } break;
+    case ENVLIGHT:
+    {
+        vec3_scale(r, ((EnvLight*)light_ptr)->color, ((EnvLight*)light_ptr)->intensity);
     } break;
     }
 }
@@ -159,6 +177,10 @@ float calcLightDistance(const LightType light_type, const void* light_ptr, const
         AreaLight* area_light_ptr = (AreaLight*)(light_ptr);
         vec3_sub(light_to_hit_point, area_light_ptr->sample_point, hit_point);
         t = vec3_length(light_to_hit_point);
+    } break;
+    case ENVLIGHT:
+    {
+        t = TMAX;
     } break;
     }
     return t;

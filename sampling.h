@@ -5,6 +5,13 @@
 #include <cstdio>
 #include "vec.h"
 
+enum SamplesType
+{
+    REGULAR,
+    MULTIJITTERED,
+    HAMMERSLEY
+};
+
 struct Samples2D_s
 {
     int num_samples;
@@ -379,6 +386,35 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
         float pw = cos_theta;
         vec3_assign(dest_samples->samples[i], pu, pv, pw);
     }
+}
+
+Samples3D* genHemisphereSamples(const SamplesType st, const int num_samples, const int num_sets)
+{
+    Samples3D *samples = (Samples3D*)malloc(sizeof(Samples3D));    
+    Samples2D unit_square_samples = Samples2D_default;
+    Samples2D disk_samples = Samples2D_default;
+    Samples3D hemisphere_samples = Samples3D_default;
+    switch(st)
+    {
+    case REGULAR:
+    {
+    genRegularSamples(&unit_square_samples, num_samples, num_sets);
+    }break;
+    case MULTIJITTERED:
+    {
+        genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
+    }break;
+    case HAMMERSLEY:
+    {
+        genHammersleySamples(&unit_square_samples, num_samples, num_sets);
+    }break;    
+    }
+    mapSamplesToDisk(&disk_samples, &unit_square_samples);
+    mapSamplesToHemisphere(&hemisphere_samples, &disk_samples, 1);
+    *samples = hemisphere_samples;
+    freeSamples2D(&unit_square_samples);
+    freeSamples2D(&disk_samples);    
+    return samples;    
 }
 
 void drawSamples(unsigned char *image, Samples2D *samples,

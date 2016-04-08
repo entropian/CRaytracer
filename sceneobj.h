@@ -16,6 +16,7 @@ typedef struct SceneLights
     bool shadow[MAX_LIGHTS];    
     LightType light_types[MAX_LIGHTS];
     void* light_ptrs[MAX_LIGHTS];
+    EnvLight* env_light_ptr;
 } SceneLights;
 
 void freeSceneObjects(SceneObjects* so)
@@ -42,12 +43,22 @@ void freeSceneLights(SceneLights* sl)
                 if(area_light_ptr->samples2D != NULL)
                 {
                     freeSamples2D(area_light_ptr->samples2D);
+                    area_light_ptr->samples2D = NULL;
                 }
                 if(area_light_ptr->samples3D != NULL)
                 {
                     freeSamples3D(area_light_ptr->samples3D);
+                    area_light_ptr->samples3D = NULL;
                 }
-            }                
+            }else if(sl->light_types[i] == ENVLIGHT)
+            {
+                EnvLight* env_light_ptr = (EnvLight*)(sl->light_ptrs[i]);
+                if(env_light_ptr->samples3D != NULL)
+                {
+                    freeSamples3D(env_light_ptr->samples3D);
+                    env_light_ptr->samples3D != NULL;
+                }
+            }
             free(sl->light_ptrs[i]);
             sl->light_ptrs[i] = NULL;
         }
@@ -85,31 +96,30 @@ float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray r
     return min_t;
 }
 
-// NOTE: return after the first intersection for certain situations?
 float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ray)
 {
-    float tmp_t, min_t = TMAX;
+    float t = TMAX;
 
     for(int i = 0; i < scene_objects->num_obj; i++)
     {
         switch(scene_objects->obj_types[i])
         {
         case SPHERE:
-            tmp_t = shadowRayIntersectSphere((Sphere*)scene_objects->obj_ptrs[i], shadow_ray);
+            t = shadowRayIntersectSphere((Sphere*)scene_objects->obj_ptrs[i], shadow_ray);
             break;
         case PLANE:
-            tmp_t = shadowRayIntersectPlane((Plane*)scene_objects->obj_ptrs[i], shadow_ray);
+            t = shadowRayIntersectPlane((Plane*)scene_objects->obj_ptrs[i], shadow_ray);
             break;
         case RECTANGLE:
-            tmp_t = shadowRayIntersectRect((Rectangle*)scene_objects->obj_ptrs[i], shadow_ray);
+            t = shadowRayIntersectRect((Rectangle*)scene_objects->obj_ptrs[i], shadow_ray);
             break;            
         }
-        if(tmp_t < min_t)
+        if(t < TMAX)
         {
-            min_t = tmp_t;
+            return t;
         }
     }
-    return min_t;
+    return t;
 }
 
 

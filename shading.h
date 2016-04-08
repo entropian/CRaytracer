@@ -15,7 +15,7 @@ void diffuseBRDF(vec3 f, const ShadeRec* sr)
     vec3_scale(f, reflectance, 1.0f/(float)PI);
 }
  
-void diffuseShading(vec3 radiance, const float ndotwi, const vec3 inc_radiance_cos,
+void diffuseShading(vec3 radiance, const vec3 inc_radiance_cos,
                     const ShadeRec* sr)
 {
     vec3 f;
@@ -62,13 +62,8 @@ float AOTest(Samples3D* samples, const SceneObjects *so, const ShadeRec* sr)
 {
     vec3 h_sample;
     getNextSample3D(h_sample, samples);
-    vec3 u, v, w;
-    vec3_copy(w, sr->normal);
-    vec3_cross(v, w, JITTERED_UP);
-    vec3_normalize(v, v);
-    vec3_cross(u, v, w);
     Ray shadow_ray;
-    orthoNormalTransform(shadow_ray.direction, u, v, w, h_sample);
+    getVec3InLocalBasis(shadow_ray.direction, h_sample, sr->normal);
     vec3_copy(shadow_ray.origin, sr->hit_point);
     return shadowIntersectTest(so, shadow_ray);
 }
@@ -98,4 +93,16 @@ void areaLightShading(vec3 radiance, const float ndotwi, const AreaLight* area_l
     vec3_mult(tmp, f, inc_radiance);
     vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
     vec3_add(radiance, radiance, tmp);    
+}
+
+// divide vec3 a by its max component if max component > 1
+void maxToOne(vec3 r, const vec3 a)
+{
+    float max;
+    max = (a[0] > a[1]) ? a[0] : a[1];
+    max = (max > a[2]) ? max : a[2];
+    if(max > 1.0f)
+    {
+        vec3_scale(r, a, 1.0f/max);
+    }
 }
