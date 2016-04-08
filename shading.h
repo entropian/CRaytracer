@@ -14,7 +14,7 @@ void diffuseBRDF(vec3 f, const ShadeRec* sr)
     vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
     vec3_scale(f, reflectance, 1.0f/(float)PI);
 }
- 
+
 void diffuseShading(vec3 radiance, const vec3 inc_radiance_cos,
                     const ShadeRec* sr)
 {
@@ -25,20 +25,19 @@ void diffuseShading(vec3 radiance, const vec3 inc_radiance_cos,
     vec3_add(radiance, radiance, diffuse_comp);
 }
 
-void specularShading(vec3 radiance, const vec3 wo, const vec3 light_dir,
+void specularShading(vec3 radiance, const vec3 light_dir,
                      const vec3 inc_radiance_cos, const ShadeRec* sr)
 {
     // ks*cs * cos(theta)^exp * inc_radiance_cos
     // theta = angle between light and reflected view vector
-    // reflect vector: 2*dot(n, v)*n - v    
-    float ndotwo = vec3_dot(sr->normal, wo);
+    // reflect vector: 2*dot(n, v)*n - v
     vec3 tmp, wo_neg, reflect_dir;
-    vec3_negate(wo_neg, wo);
-    vec3_scale(tmp, sr->normal, ndotwo * 2);
+    vec3_negate(wo_neg, sr->wo);
+    float ndotwo = vec3_dot(sr->normal, sr->wo);
+    vec3_scale(tmp, sr->normal, ndotwo * 2.0f);
     vec3_add(reflect_dir, wo_neg, tmp);    
-    vec3_normalize(reflect_dir, reflect_dir);
-    float rdotwi = vec3_dot(reflect_dir, light_dir);
-    vec3_scale(tmp, sr->mat->cs, sr->mat->ks * pow(rdotwi, sr->mat->exp));
+    float rdotl = vec3_dot(reflect_dir, light_dir);
+    vec3_scale(tmp, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
     vec3_mult(tmp, inc_radiance_cos, tmp);
     vec3_add(radiance, radiance, tmp);
 }
@@ -68,7 +67,7 @@ float AOTest(Samples3D* samples, const SceneObjects *so, const ShadeRec* sr)
     return shadowIntersectTest(so, shadow_ray);
 }
 
-void areaLightShading(vec3 radiance, const float ndotwi, const AreaLight* area_light_ptr, const ShadeRec* sr)
+void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const AreaLight* area_light_ptr, const ShadeRec* sr)
 {
     // diffuse brdf
     vec3 f;
@@ -92,7 +91,42 @@ void areaLightShading(vec3 radiance, const float ndotwi, const AreaLight* area_l
     vec3 tmp;
     vec3_mult(tmp, f, inc_radiance);
     vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
-    vec3_add(radiance, radiance, tmp);    
+    vec3_add(radiance, radiance, tmp);
+
+    // Specular component
+    if(sr->mat->mat_type == PHONG)
+    {
+        vec3 reflect_dir, wo_neg;
+        vec3_negate(wo_neg, sr->wo);
+        float ndotwo = vec3_dot(sr->normal, sr->wo);
+        vec3_scale(tmp, sr->normal, 2.0f * ndotwo);
+        vec3_add(reflect_dir, wo_neg, tmp);
+        float rdotl = vec3_dot(reflect_dir, light_dir);
+
+        vec3_scale(f, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        vec3_mult(tmp, f, inc_radiance);
+        vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
+        vec3_add(radiance, radiance, tmp);
+    }
+}
+
+void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const EnvLight* env_light_ptr, const ShadeRec* sr)
+{
+    vec3 f, inc_radiance_cos, tmp;
+    diffuseBRDF(f, sr);
+    getIncRadiance(tmp, ENVLIGHT, env_light_ptr);
+    vec3_scale(inc_radiance_cos, tmp, ndotwi);
+    diffuseShading(radiance, inc_radiance_cos, sr);
+    float pdf = ndotwi / (float)PI;
+    vec3_scale(radiance, radiance, 1.0f/pdf);
+
+    if(sr->mat->mat_type == PHONG)
+    {
+        vec3 spec_radiance = {0.0f, 0.0f, 0.0f};
+        specularShading(spec_radiance, light_dir, inc_radiance_cos, sr);
+        vec3_scale(spec_radiance, spec_radiance, 1.0f/pdf);
+        vec3_add(radiance, radiance, spec_radiance);
+    }
 }
 
 // divide vec3 a by its max component if max component > 1

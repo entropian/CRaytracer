@@ -49,6 +49,7 @@ typedef struct ShadeRec
     Material *mat;                // Points to the material member of an object
     vec3 hit_point;
     vec3 normal;
+    vec3 wo;
 } ShadeRec;
 
 void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const Ray ray, const float t)
@@ -59,6 +60,7 @@ void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const Ray ray, const float
     vec3_add(sr->hit_point, ray.origin, displacement);
     vec3_sub(displacement, sr->hit_point, sphere->center);
     vec3_normalize(sr->normal, displacement);
+    vec3_negate(sr->wo, ray.direction);
     sr->mat = &(sphere->mat);
 }
 
@@ -144,6 +146,7 @@ float rayIntersectPlane(ShadeRec *sr, Plane *plane, const Ray ray)
         vec3_copy(sr->normal, plane->normal);
         vec3_scale(displacement, ray.direction, t);
         vec3_add(sr->hit_point, ray.origin, displacement);
+        vec3_negate(sr->wo, ray.direction);
         sr->mat = &(plane->mat);
         return t;
     }
@@ -186,6 +189,7 @@ float rayIntersectRect(ShadeRec *sr, Rectangle *rect, const Ray ray)
                 vec3_copy(sr->normal, rect->normal);
                 vec3_scale(displacement, ray.direction, t);
                 vec3_copy(sr->hit_point, point);
+                vec3_negate(sr->wo, ray.direction);
                 sr->mat = &(rect->mat);                
                 return t;
             }

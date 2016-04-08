@@ -69,7 +69,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
-
 int main()
 {
     int window_width = 900, window_height = 900;
@@ -86,7 +85,7 @@ int main()
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
     // Samples
-    srand(time(NULL));    
+    srand((unsigned int)time(NULL));    
     const int num_samples = 64;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;
@@ -220,17 +219,12 @@ int main()
                                 {
                                     // TODO: Specular shading for area lights
                                     AreaLight* area_light_ptr = (AreaLight*)(scene_lights.light_ptrs[i]);
-                                    areaLightShading(radiance, ndotwi, area_light_ptr, &min_sr);
+                                    areaLightShading(radiance, ndotwi, light_dir, area_light_ptr, &min_sr);
                                 }else if(scene_lights.light_types[i] == ENVLIGHT)
                                 {
+                                    // TODO: Specular shading for environment lights                                    
                                     EnvLight* env_light_ptr = (EnvLight*)(scene_lights.light_ptrs[i]);
-                                    vec3 f, inc_radiance_cos, tmp;
-                                    diffuseBRDF(f, &min_sr);
-                                    getIncRadiance(tmp, scene_lights.light_types[i], scene_lights.light_ptrs[i]);
-                                    vec3_scale(inc_radiance_cos, tmp, ndotwi);
-                                    diffuseShading(radiance, inc_radiance_cos, &min_sr);
-                                    float pdf = ndotwi / PI;
-                                    vec3_scale(radiance, radiance, 1.0f/pdf);
+                                    envLightShading(radiance, ndotwi, light_dir, env_light_ptr, &min_sr);
                                 }else
                                 {
                                     // Diffuse component
@@ -243,9 +237,9 @@ int main()
                                     {
                                         // Specular component
                                         // TODO: add wo to ShadeRec
-                                        vec3 wo;
-                                        vec3_negate(wo, ray.direction);
-                                        specularShading(radiance, wo, light_dir, inc_radiance_cos, &min_sr);
+                                        //vec3 wo;
+                                        //vec3_negate(wo, ray.direction);
+                                        specularShading(radiance, light_dir, inc_radiance_cos, &min_sr);
                                     }
                                 }
                             }

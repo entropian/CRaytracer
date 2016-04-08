@@ -56,7 +56,7 @@ void freeSceneLights(SceneLights* sl)
                 if(env_light_ptr->samples3D != NULL)
                 {
                     freeSamples3D(env_light_ptr->samples3D);
-                    env_light_ptr->samples3D != NULL;
+                    env_light_ptr->samples3D = NULL;
                 }
             }
             free(sl->light_ptrs[i]);

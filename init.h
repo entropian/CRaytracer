@@ -28,8 +28,8 @@ void initSpheres(SceneObjects *so)
     sphere->mat.kd = 0.6f;
     sphere->mat.ka = 1.0f;
     sphere->mat.ks = 0.4f;
-    sphere->mat.exp = 5.0f;        
-    sphere->mat.mat_type = MATTE;
+    sphere->mat.exp = 10.0f;        
+    sphere->mat.mat_type = PHONG;
     sphere->mat.shadow = true;
     so->obj_ptrs[so->num_obj] = sphere; 
     so->obj_types[so->num_obj] = SPHERE;
@@ -122,7 +122,7 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     // Area light
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-    area_light_ptr->intensity = 10.0f;
+    area_light_ptr->intensity = 5.0f;
     vec3_copy(area_light_ptr->color, WHITE);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
@@ -159,7 +159,7 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     // Sphere
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
-    vec3_assign(sphere->center, -2.0f, 2.0f, -6.0f);
+    vec3_assign(sphere->center, -2.0f, 2.0f, -3.0f);
     sphere->radius = 1.0f;
     vec3_copy(sphere->mat.ce, area_light_ptr->color);    
     sphere->mat.ke = area_light_ptr->intensity;    
@@ -167,7 +167,7 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, num_samples, num_sets);    
 
-    area_light_ptr->pdf = 1.0f / (4.0f * PI * sphere->radius * sphere->radius);
+    area_light_ptr->pdf = 1.0f / (4.0f * (float)PI * sphere->radius * sphere->radius);
     area_light_ptr->samples2D = NULL;
     area_light_ptr->samples3D = samples;
     area_light_ptr->obj_ptr = sphere;
