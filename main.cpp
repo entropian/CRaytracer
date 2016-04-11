@@ -34,7 +34,7 @@
 #include <cmath>
 #include <ctime>
 #include "vec.h"
-#include "shapes.h"
+#include "ray.h"
 #include "glcode.h"
 #include "sampling.h"
 #include "camera.h"
@@ -177,10 +177,9 @@ int main()
                     vec3_scale(amb_inc_radiance, amb_color, amb_ls);
                     vec3 reflectance;
                     vec3_scale(reflectance, min_sr.mat->ca, min_sr.mat->ka);
-
-                    // Ambient Occlusion
                     if(amb_occlusion && AOTest(&h_samples, &scene_objects, &min_sr) < TMAX)
                     {
+                        // Ambient Occlusion                        
                         vec3 min_amb;
                         vec3_scale(min_amb, amb_color, 0.01f);
                         vec3_copy(radiance, min_amb);
@@ -192,7 +191,6 @@ int main()
                     for(int i = 0; i < scene_lights.num_lights; i++)
                     {
                         vec3 light_dir;
-                        // Area light affected -- half implemented
                         getLightDir(light_dir, scene_lights.light_types[i], scene_lights.light_ptrs[i], &min_sr);
                         float ndotwi = vec3_dot(light_dir, min_sr.normal);
                         if(ndotwi > 0)
@@ -205,7 +203,6 @@ int main()
                                 vec3_copy(shadow_ray.origin, min_sr.hit_point);
                                 vec3_copy(shadow_ray.direction, light_dir);
                                 min_t = shadowIntersectTest(&scene_objects, shadow_ray);                            
-                                // Area light affected
                                 float t = calcLightDistance(scene_lights.light_types[i],
                                                             scene_lights.light_ptrs[i], min_sr.hit_point);
                                 if(min_t < t)
@@ -217,12 +214,10 @@ int main()
                             {
                                 if(scene_lights.light_types[i] == AREALIGHT)
                                 {
-                                    // TODO: Specular shading for area lights
                                     AreaLight* area_light_ptr = (AreaLight*)(scene_lights.light_ptrs[i]);
                                     areaLightShading(radiance, ndotwi, light_dir, area_light_ptr, &min_sr);
                                 }else if(scene_lights.light_types[i] == ENVLIGHT)
                                 {
-                                    // TODO: Specular shading for environment lights                                    
                                     EnvLight* env_light_ptr = (EnvLight*)(scene_lights.light_ptrs[i]);
                                     envLightShading(radiance, ndotwi, light_dir, env_light_ptr, &min_sr);
                                 }else
@@ -236,9 +231,6 @@ int main()
                                     if(min_sr.mat->mat_type == PHONG)
                                     {
                                         // Specular component
-                                        // TODO: add wo to ShadeRec
-                                        //vec3 wo;
-                                        //vec3_negate(wo, ray.direction);
                                         specularShading(radiance, light_dir, inc_radiance_cos, &min_sr);
                                     }
                                 }
