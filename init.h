@@ -4,14 +4,14 @@
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
-#include "vec.h"
+#include "util/vec.h"
+#include "util/constants.h"
 #include "shapes/shapes.h"
 #include "shapes/aabox.h"
-#include "glcode.h"
+#include "gl/glcode.h"
 #include "sampling.h"
 #include "camera.h"
 #include "lights.h"
-#include "constants.h"
 #include "sceneobj.h"
 #include "shading.h"
 

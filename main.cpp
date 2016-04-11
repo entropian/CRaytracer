@@ -33,13 +33,13 @@
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
-#include "vec.h"
-#include "ray.h"
-#include "glcode.h"
+#include "util/vec.h"
+#include "util/ray.h"
+#include "util/constants.h"
+#include "gl/glcode.h"
 #include "sampling.h"
 #include "camera.h"
 #include "lights.h"
-#include "constants.h"
 #include "sceneobj.h"
 #include "shading.h"
 #include "init.h"

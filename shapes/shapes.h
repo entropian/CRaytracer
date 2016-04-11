@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../vec.h"
+#include "../util/vec.h"
+#include "../util/constants.h"
 #include "../materials.h"
-#include "../constants.h"
 
 enum ObjectType
 {

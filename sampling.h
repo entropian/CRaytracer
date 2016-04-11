@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <cstdio>
-#include "vec.h"
+#include "util/vec.h"
 
 enum SamplesType
 {

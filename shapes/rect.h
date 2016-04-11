@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../vec.h"
+#include "../util/vec.h"
+#include "../util/ray.h"
+#include "../util/shaderec.h"
+#include "../util/constants.h"
 #include "../materials.h"
-#include "../constants.h"
-#include "../ray.h"
-#include "../shaderec.h"
 
 typedef struct Rectangle
 {
