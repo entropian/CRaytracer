@@ -20,7 +20,7 @@ float rayIntersectRect(ShadeRec *sr, Rectangle *rect, const Ray ray)
     vec3 displacement;
     vec3_sub(displacement, rect->point, ray.origin);
     float t = vec3_dot(displacement, rect->normal) / vec3_dot(ray.direction, rect->normal);
-    if(t > k_epsilon)
+    if(t > K_EPSILON)
     {
         vec3 point;
         vec3_scale(displacement, ray.direction, t);
@@ -53,7 +53,7 @@ float shadowRayIntersectRect(Rectangle *rect, const Ray ray)
     vec3 displacement;
     vec3_sub(displacement, rect->point, ray.origin);
     float t = vec3_dot(displacement, rect->normal) / vec3_dot(ray.direction, rect->normal);
-    if(t > k_epsilon)
+    if(t > K_EPSILON)
     {
         vec3 point;
         vec3_scale(displacement, ray.direction, t);

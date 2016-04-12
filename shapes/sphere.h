@@ -46,14 +46,14 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
         float e = sqrt(disc);
         float denom = 2*a;
         float t = (-b - e)/denom;
-        if(t > k_epsilon)
+        if(t > K_EPSILON)
         {
             fillShadeRecSphere(sr, sphere, ray, t);            
             return t;
         }
 
         t = (-b + e)/denom;
-        if(t > k_epsilon)
+        if(t > K_EPSILON)
         {
             fillShadeRecSphere(sr, sphere, ray, t);            
             return t;
@@ -84,13 +84,13 @@ float shadowRayIntersectSphere(Sphere *sphere, const Ray ray)
         float e = sqrt(disc);
         float denom = 2*a;
         float t = (-b - e)/denom;
-        if(t > k_epsilon)
+        if(t > K_EPSILON)
         {
             return t;
         }
 
         t = (-b + e)/denom;
-        if(t > k_epsilon)
+        if(t > K_EPSILON)
         {
             return t;
         }

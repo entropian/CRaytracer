@@ -20,7 +20,7 @@ void initSpheres(SceneObjects *so)
     if(so->num_obj == MAX_OBJECTS){return;}    
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     vec3_assign(sphere->center, 2.0f, 0.0f, -4.0f);
-    sphere->radius = 1.0f;
+     sphere->radius = 1.0f;
     sphere->shadow = true;        
     vec3_copy(sphere->mat.cd, PINK);
     vec3_copy(sphere->mat.ca, PINK);
@@ -133,6 +133,27 @@ void initAABox(SceneObjects* so)
     (so->num_obj)++;            
 }
 
+void initOpenCylinder(SceneObjects* so)
+{
+    if(so->num_obj == MAX_OBJECTS){return;}
+    OpenCylinder* oc = (OpenCylinder*)malloc(sizeof(OpenCylinder));
+    oc->shadow = true;
+    oc->half_height = .9f;
+    oc->radius = 1.0f;
+    vec3_copy(oc->mat.cd, YELLOW);
+    vec3_copy(oc->mat.ca, YELLOW);
+    vec3_copy(oc->mat.cs, YELLOW);    
+    oc->mat.kd = 0.6f;
+    oc->mat.ka = 1.0f;
+    oc->mat.ks = 0.4f;
+    oc->mat.exp = 10.0f;
+    oc->mat.mat_type  = PHONG;
+    oc->mat.shadow = true;
+    so->obj_ptrs[so->num_obj] = oc; 
+    so->obj_types[so->num_obj] = OPENCYLINDER;
+    (so->num_obj)++;            
+}
+
 void initSceneObjects(SceneObjects *so, const SceneLights *sl)
 {
     for(int i = 0; i < MAX_OBJECTS; i++)
@@ -145,6 +166,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl)
     //initRectangles(so);
     //initAABox(so);
     initTriangle(so);
+    initOpenCylinder(so);
     
     for(int i = 0; i < sl->num_lights; i++)
     {

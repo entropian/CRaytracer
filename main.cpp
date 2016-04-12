@@ -79,8 +79,8 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    //int frame_res_width = 900, frame_res_height = 900;
-    int frame_res_width = 360, frame_res_height = 360;    
+    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
@@ -118,7 +118,7 @@ int main()
     //camera.focal_length = 4.0f;
     //camera.lens_radius = 0.2f;
     
-    vec3 position = {0.0f, 0.5f, 0.0f};
+    vec3 position = {0.0f, 0.5f, 5.0f};
     vec3 look_point = {0.0f, 0.0f, -4.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);

@@ -65,6 +65,7 @@ void freeSceneLights(SceneLights* sl)
     }
 }
 
+// NOTE: try using function pointer to condense the code?
 float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray ray)
 {
     float tmp_t = TMAX,  min_t = TMAX;
@@ -87,6 +88,9 @@ float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray r
             break;
         case TRIANGLE:
             tmp_t = rayIntersectTriangle(&tmp_sr, (Triangle*)scene_objects->obj_ptrs[i], ray);
+            break;
+        case OPENCYLINDER:
+            tmp_t = rayIntersectOpenCylinder(&tmp_sr, (OpenCylinder*)scene_objects->obj_ptrs[i], ray);            
             break;
         }
         if(tmp_t < min_t)
@@ -124,7 +128,10 @@ float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ra
             break;
         case TRIANGLE:
             t = shadowRayIntersectTriangle((Triangle*)scene_objects->obj_ptrs[i], shadow_ray);
-            break;            
+            break;
+        case OPENCYLINDER:
+            t = shadowRayIntersectOpenCylinder((OpenCylinder*)scene_objects->obj_ptrs[i], shadow_ray);            
+            break;
         }
         if(t < TMAX)
         {

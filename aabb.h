@@ -74,5 +74,5 @@ bool rayIntersectAABB(const AABB* aabb, const Ray ray)
         t1 = tz_max;
     }
 
-    return (t0 < t1 && t1 > k_epsilon);
+    return (t0 < t1 && t1 > K_EPSILON);
 }

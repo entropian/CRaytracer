@@ -48,7 +48,8 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
 {    
     float tx_min, ty_min, tz_min;
     float tx_max, ty_max, tz_max;
-    // TODO: put the code below into a fuction
+    
+    // NOTE: put the code below into a fuction
     float a = 1.0f/ray.direction[0];
     if(a >= 0)
     {
@@ -80,7 +81,7 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
     {
         tz_min = -(aabox->max[2] - ray.origin[2]) * c;
         tz_max = -(aabox->min[2] - ray.origin[2]) * c;
-    }    
+    }
 
     float t0, t1;
     int face_in, face_out;
@@ -115,9 +116,9 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
     }
 
     float t_min = TMAX;
-    if(t0 < t1 && t1 > k_epsilon)
+    if(t0 < t1 && t1 > K_EPSILON)
     {
-        if(t0 > k_epsilon)
+        if(t0 > K_EPSILON)
         {
             t_min = t0;
             getAABoxNormal(sr->normal, face_in);
@@ -211,9 +212,9 @@ float shadowRayIntersectAABox(const AABox* aabox, const Ray ray)
     }
 
     float t_min = TMAX;
-    if(t0 < t1 && t1 > k_epsilon)
+    if(t0 < t1 && t1 > K_EPSILON)
     {
-        if(t0 > k_epsilon)
+        if(t0 > K_EPSILON)
         {
             t_min = t0;
         }else

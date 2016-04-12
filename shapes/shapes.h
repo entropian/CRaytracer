@@ -5,6 +5,7 @@
 #include "rect.h"
 #include "sphere.h"
 #include "triangle.h"
+#include "cylinder.h"
 
 enum ObjectType
 {
@@ -12,7 +13,8 @@ enum ObjectType
     PLANE,
     RECTANGLE,
     AABOX,
-    TRIANGLE
+    TRIANGLE,
+    OPENCYLINDER
 };
 
 

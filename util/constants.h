@@ -1,4 +1,5 @@
 #pragma once
+#include <float.h>
 
 const int MAX_OBJECTS = 1000;
 const int MAX_LIGHTS = 10;
@@ -24,5 +25,5 @@ const vec3 GREY = {0.5f, 0.5f, 0.5f};
 const float DEFAULT_FOCAL_LENGTH = 3.0f;
 const float DEFAULT_LENS_RADIUS = 0.2f;
 
-const float k_epsilon = 0.00001f;
-const float TMAX = 1000.0f;
+const float K_EPSILON = 0.00001f;
+const float TMAX = FLT_MAX;
