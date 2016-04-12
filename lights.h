@@ -3,8 +3,6 @@
 #include "util/vec.h"
 #include "util/math.h"
 #include "shapes/shapes.h"
-#include "shapes/rect.h"
-#include "shapes/sphere.h"
 
 enum LightType
 {

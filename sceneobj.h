@@ -1,10 +1,6 @@
 #pragma once
 
 #include "shapes/shapes.h"
-#include "shapes/aabox.h"
-#include "shapes/rect.h"
-#include "shapes/plane.h"
-#include "shapes/sphere.h"
 #include "lights.h"
 
 typedef struct SceneObjects
@@ -89,6 +85,9 @@ float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray r
         case AABOX:
             tmp_t = rayIntersectAABox(&tmp_sr, (AABox*)scene_objects->obj_ptrs[i], ray);
             break;
+        case TRIANGLE:
+            tmp_t = rayIntersectTriangle(&tmp_sr, (Triangle*)scene_objects->obj_ptrs[i], ray);
+            break;
         }
         if(tmp_t < min_t)
         {
@@ -122,6 +121,9 @@ float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ra
             break;
         case AABOX:
             t = shadowRayIntersectAABox((AABox*)scene_objects->obj_ptrs[i], shadow_ray);
+            break;
+        case TRIANGLE:
+            t = shadowRayIntersectTriangle((Triangle*)scene_objects->obj_ptrs[i], shadow_ray);
             break;            
         }
         if(t < TMAX)

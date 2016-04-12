@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vec.h"
+#include "../materials.h"
 
 typedef struct ShadeRec
 {

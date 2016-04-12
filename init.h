@@ -7,7 +7,6 @@
 #include "util/vec.h"
 #include "util/constants.h"
 #include "shapes/shapes.h"
-#include "shapes/aabox.h"
 #include "gl/glcode.h"
 #include "sampling.h"
 #include "camera.h"
@@ -93,6 +92,26 @@ void initRectangles(SceneObjects *so)
     (so->num_obj)++;        
 }
 
+void initTriangle(SceneObjects *so)
+{
+    if(so->num_obj == MAX_OBJECTS){return;}
+    Triangle* triangle = (Triangle*)malloc(sizeof(Triangle));
+    triangle->shadow = true;
+    vec3_assign(triangle->v0, -3.0f, -1.0f, -6.0f);
+    vec3_assign(triangle->v1, 0.0f, -1.0f, -6.0f);
+    vec3_assign(triangle->v2, -1.0f, 2.0f, -6.0f);    
+    calcTriangleNormal(triangle);
+    vec3_copy(triangle->mat.cd, YELLOW);
+    vec3_copy(triangle->mat.ca, YELLOW);
+    triangle->mat.kd = 0.6f;
+    triangle->mat.ka = 1.0f;
+    triangle->mat.mat_type  = MATTE;
+    triangle->mat.shadow = true;
+    so->obj_ptrs[so->num_obj] = triangle; 
+    so->obj_types[so->num_obj] = TRIANGLE;
+    (so->num_obj)++;        
+}
+
 void initAABox(SceneObjects* so)
 {
     if(so->num_obj == MAX_OBJECTS){return;}
@@ -124,7 +143,8 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl)
     initSpheres(so);
     initPlanes(so);
     //initRectangles(so);
-    initAABox(so);
+    //initAABox(so);
+    initTriangle(so);
     
     for(int i = 0; i < sl->num_lights; i++)
     {
