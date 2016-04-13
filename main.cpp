@@ -79,8 +79,8 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 900, frame_res_height = 900;
-    //int frame_res_width = 360, frame_res_height = 360;    
+    //int frame_res_width = 900, frame_res_height = 900;
+    int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
@@ -137,6 +137,7 @@ int main()
         vec3 color = {0.0f, 0.0f, 0.0f};
         for(int p = 0; p < num_samples; p++)
         {
+            // NOTE: put the code below into a function
             vec2 sample, imageplane_coord;
             getNextSample2D(sample, &unit_square_samples);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);

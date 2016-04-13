@@ -92,6 +92,12 @@ float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray r
         case OPENCYLINDER:
             tmp_t = rayIntersectOpenCylinder(&tmp_sr, (OpenCylinder*)scene_objects->obj_ptrs[i], ray);            
             break;
+        case DISK:
+            tmp_t = rayIntersectDisk(&tmp_sr, (Disk*)scene_objects->obj_ptrs[i], ray);
+            break;
+        case TORUS:
+            tmp_t = rayIntersectTorus(&tmp_sr, (Torus*)scene_objects->obj_ptrs[i], ray);
+            break;            
         }
         if(tmp_t < min_t)
         {
@@ -132,6 +138,12 @@ float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ra
         case OPENCYLINDER:
             t = shadowRayIntersectOpenCylinder((OpenCylinder*)scene_objects->obj_ptrs[i], shadow_ray);            
             break;
+        case DISK:
+            t = shadowRayIntersectDisk((Disk*)scene_objects->obj_ptrs[i], shadow_ray);
+            break;
+        case TORUS:
+            t = shadowRayIntersectTorus((Torus*)scene_objects->obj_ptrs[i], shadow_ray);
+            break;                        
         }
         if(t < TMAX)
         {

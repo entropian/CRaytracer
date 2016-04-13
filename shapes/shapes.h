@@ -6,6 +6,8 @@
 #include "sphere.h"
 #include "triangle.h"
 #include "cylinder.h"
+#include "disk.h"
+#include "torus.h"
 
 enum ObjectType
 {
@@ -14,7 +16,9 @@ enum ObjectType
     RECTANGLE,
     AABOX,
     TRIANGLE,
-    OPENCYLINDER
+    OPENCYLINDER,
+    DISK,
+    TORUS
 };
 
 

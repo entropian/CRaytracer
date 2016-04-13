@@ -119,3 +119,4 @@ void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const vec2 disk_sampl
     vec3_add(tmp_vec_1, tmp_vec_1, tmp_vec_3);
     vec3_add(ray->origin, tmp_vec_1, camera->position);
 }
+

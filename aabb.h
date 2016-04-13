@@ -1,13 +1,13 @@
 #pragma once
 
-#include "constants.h"
-#include "vec.h"
+#include "util/constants.h"
+#include "util/vec.h"
 
 typedef struct AABB
 {
     vec3 min;
     vec3 max;
-} BBox;
+} AABB;
 
 bool rayIntersectAABB(const AABB* aabb, const Ray ray)
 {
@@ -17,34 +17,34 @@ bool rayIntersectAABB(const AABB* aabb, const Ray ray)
     float a = 1.0f/ray.direction[0];
     if(a >= 0)
     {
-        tx_min = (aabox->min[0] - ray.origin[0]) * a;
-        tx_max = (aabox->max[0] - ray.origin[1]) * a;
+        tx_min = (aabb->min[0] - ray.origin[0]) * a;
+        tx_max = (aabb->max[0] - ray.origin[1]) * a;
     }else
     {
-        tx_min = (aabox->max[0] - ray.origin[0]) * a;
-        tx_max = (aabox->min[0] - ray.origin[0]) * a;        
+        tx_min = (aabb->max[0] - ray.origin[0]) * a;
+        tx_max = (aabb->min[0] - ray.origin[0]) * a;        
     }
 
     float b = 1.0f/ray.direction[1];
     if(b >= 0)
     {
-        ty_min = (aabox->min[1] - ray.origin[1]) * b;
-        ty_max = (aabox->max[1] - ray.origin[1]) * b;        
+        ty_min = (aabb->min[1] - ray.origin[1]) * b;
+        ty_max = (aabb->max[1] - ray.origin[1]) * b;        
     }else
     {
-        ty_min = (aabox->max[1] - ray.origin[1]) * b;
-        ty_max = (aabox->min[1] - ray.origin[1]) * b;        
+        ty_min = (aabb->max[1] - ray.origin[1]) * b;
+        ty_max = (aabb->min[1] - ray.origin[1]) * b;        
     }
 
     float c = 1.0f/-ray.direction[2];
     if(c >= 0)
     {
-        tz_min = -(aabox->min[2] - ray.origin[2]) * c;
-        tz_max = -(aabox->max[2] - ray.origin[2]) * c;
+        tz_min = -(aabb->min[2] - ray.origin[2]) * c;
+        tz_max = -(aabb->max[2] - ray.origin[2]) * c;
     }else
     {
-        tz_min = -(aabox->max[2] - ray.origin[2]) * c;
-        tz_max = -(aabox->min[2] - ray.origin[2]) * c;
+        tz_min = -(aabb->max[2] - ray.origin[2]) * c;
+        tz_max = -(aabb->min[2] - ray.origin[2]) * c;
     }
     
     float t0, t1;

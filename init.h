@@ -154,6 +154,50 @@ void initOpenCylinder(SceneObjects* so)
     (so->num_obj)++;            
 }
 
+void initDisk(SceneObjects* so)
+{
+    if(so->num_obj == MAX_OBJECTS){return;}
+    Disk* disk = (Disk*)malloc(sizeof(Disk));
+    disk->shadow = true;
+    vec3_assign(disk->center, 0.0f, 0.0f, 0.0f);
+    vec3_assign(disk->normal, 0.0f, 0.0f, -1.0f);
+    disk->radius = 1.0f;
+    vec3_copy(disk->mat.cd, YELLOW);
+    vec3_copy(disk->mat.ca, YELLOW);
+    vec3_copy(disk->mat.cs, YELLOW);    
+    disk->mat.kd = 0.6f;
+    disk->mat.ka = 1.0f;
+    disk->mat.ks = 0.4f;
+    disk->mat.exp = 10.0f;
+    disk->mat.mat_type  = PHONG;
+    disk->mat.shadow = true;
+    so->obj_ptrs[so->num_obj] = disk; 
+    so->obj_types[so->num_obj] = DISK;
+    (so->num_obj)++;            
+}
+
+void initTorus(SceneObjects* so)
+{
+    if(so->num_obj == MAX_OBJECTS){return;}
+    Torus* torus = (Torus*)malloc(sizeof(Torus));
+    torus->shadow = true;
+    torus->swept_radius = 2.0f;
+    torus->tube_radius = 0.5f;
+    vec3_copy(torus->mat.cd, YELLOW);
+    vec3_copy(torus->mat.ca, YELLOW);
+    vec3_copy(torus->mat.cs, YELLOW);    
+    torus->mat.kd = 0.6f;
+    torus->mat.ka = 1.0f;
+    torus->mat.ks = 0.4f;
+    torus->mat.exp = 10.0f;
+    torus->mat.mat_type  = PHONG;
+    torus->mat.shadow = true;
+    calcAABBTorus(torus);
+    so->obj_ptrs[so->num_obj] = torus; 
+    so->obj_types[so->num_obj] = TORUS;
+    (so->num_obj)++;            
+}
+
 void initSceneObjects(SceneObjects *so, const SceneLights *sl)
 {
     for(int i = 0; i < MAX_OBJECTS; i++)
@@ -165,8 +209,10 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl)
     initPlanes(so);
     //initRectangles(so);
     //initAABox(so);
-    initTriangle(so);
-    initOpenCylinder(so);
+    //initTriangle(so);
+    //initOpenCylinder(so);
+    //initDisk(so);
+    initTorus(so);
     
     for(int i = 0; i < sl->num_lights; i++)
     {
