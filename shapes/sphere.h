@@ -9,6 +9,8 @@
 typedef struct Sphere
 {
     bool shadow;
+    bool partial;        // NOTE: Maybe worth it, maybe not
+    float theta, phi; // For setting how much of the sphere is visible if partial is true
     float radius;    
     vec3 center;
     Material mat;
@@ -17,9 +19,8 @@ typedef struct Sphere
 void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const Ray ray, const float t)
 {
     sr->hit_status = true;
+    getPointOnRay(sr->hit_point, ray, t);
     vec3 displacement;
-    vec3_scale(displacement, ray.direction, t);
-    vec3_add(sr->hit_point, ray.origin, displacement);
     vec3_sub(displacement, sr->hit_point, sphere->center);
     vec3_normalize(sr->normal, displacement);
     vec3_negate(sr->wo, ray.direction);

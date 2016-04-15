@@ -23,8 +23,7 @@ float rayIntersectDisk(ShadeRec* sr, Disk* disk, const Ray ray)
     if(t > K_EPSILON)
     {
         vec3 hit_point;
-        vec3_scale(displacement, ray.direction, t);
-        vec3_add(hit_point, ray.origin, displacement);
+        getPointOnRay(hit_point, ray, t);
         vec3_sub(displacement, hit_point, disk->center);
         if(vec3_length(displacement) <= disk->radius)
         {
@@ -52,8 +51,7 @@ float shadowRayIntersectDisk(const Disk* disk, const Ray ray)
     if(t > K_EPSILON)
     {
         vec3 hit_point;
-        vec3_scale(displacement, ray.direction, t);
-        vec3_add(hit_point, ray.origin, displacement);
+        getPointOnRay(hit_point, ray, t);        
         vec3_sub(displacement, hit_point, disk->center);
         if(vec3_length(displacement) <= disk->radius)
         {

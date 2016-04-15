@@ -18,7 +18,8 @@ enum ObjectType
     TRIANGLE,
     OPENCYLINDER,
     DISK,
-    TORUS
+    TORUS,
+    PARTOPENCYL
 };
 
 

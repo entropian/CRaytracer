@@ -6,12 +6,21 @@
 #include "../util/constants.h"
 #include "../materials.h"
 
+enum NormalType
+{
+    OPEN,
+    CONVEX,
+    CONCAVE
+};
+
 typedef struct OpenCylinder
 {
     bool shadow;
+    NormalType normal_type;
     float half_height;
     float radius;
-    Material mat;
+    float phi; // for setting how much the cylinder is visible
+    Material mat;    
 } OpenCylinder;
 
 void fillShadeRecOpenCylinder(ShadeRec *sr, OpenCylinder* oc, const Ray ray, const vec3 hit_point)
@@ -19,10 +28,24 @@ void fillShadeRecOpenCylinder(ShadeRec *sr, OpenCylinder* oc, const Ray ray, con
     sr->hit_status = true;
     vec3_negate(sr->wo, ray.direction);
     vec3_copy(sr->hit_point, hit_point);
-    vec3_assign(sr->normal, hit_point[0]/oc->radius, 0.0f, hit_point[2]/oc->radius);
-    if(vec3_dot(sr->wo, sr->normal) < 0)
+    switch(oc->normal_type)
     {
-        vec3_negate(sr->normal, sr->normal);
+    case OPEN:
+    {
+        vec3_assign(sr->normal, hit_point[0]/oc->radius, 0.0f, hit_point[2]/oc->radius);
+        if(vec3_dot(sr->wo, sr->normal) < 0)
+        {
+            vec3_negate(sr->normal, sr->normal);
+        }
+    } break;
+    case CONVEX:
+    {
+        vec3_assign(sr->normal, hit_point[0]/oc->radius, 0.0f, hit_point[2]/oc->radius);        
+    } break;
+    case CONCAVE:
+    {
+        vec3_assign(sr->normal, (-hit_point[0])/oc->radius, 0.0f, (-hit_point[2])/oc->radius);        
+    } break;
     }
     sr->mat = &(oc->mat);
 }
@@ -43,26 +66,32 @@ float rayIntersectOpenCylinder(ShadeRec* sr, OpenCylinder* oc, const Ray ray)
         float e = sqrt(disc);
         float denom = 2*a;
         float t = (-b - e)/denom;
-        vec3 displacement, hit_point;        
+        vec3 hit_point;        
         if(t > K_EPSILON)
         {
-            vec3_scale(displacement, ray.direction, t);
-            vec3_add(hit_point, ray.origin, displacement);
+            getPointOnRay(hit_point, ray, t);
             if((float)abs(hit_point[1]) <= oc->half_height)
             {
-                fillShadeRecOpenCylinder(sr, oc, ray, hit_point);
-                return t;
+                float phi = (float)atan2(hit_point[0], hit_point[2]);
+                if((float)abs(phi) <= oc->phi)
+                {
+                    fillShadeRecOpenCylinder(sr, oc, ray, hit_point);
+                    return t;                                        
+                }
             }
         }
         t = (-b + e)/denom;
         if(t > K_EPSILON)
         {
-            vec3_scale(displacement, ray.direction, t);
-            vec3_add(hit_point, ray.origin, displacement);
+            getPointOnRay(hit_point, ray, t);
             if((float)abs(hit_point[1]) <= oc->half_height)
             {
-                fillShadeRecOpenCylinder(sr, oc, ray, hit_point);
-                return t;
+                float phi = (float)atan2(hit_point[0], hit_point[2]);
+                if((float)abs(phi) <= oc->phi)
+                {
+                    fillShadeRecOpenCylinder(sr, oc, ray, hit_point);
+                    return t;                    
+                }
             }
         }
     }
@@ -84,24 +113,30 @@ float shadowRayIntersectOpenCylinder(const OpenCylinder* oc, const Ray ray)
         float e = sqrt(disc);
         float denom = 2*a;
         float t = (-b - e)/denom;
-        vec3 displacement, hit_point;        
+        vec3 hit_point;        
         if(t > K_EPSILON)
         {
-            vec3_scale(displacement, ray.direction, t);
-            vec3_add(hit_point, ray.origin, displacement);
+            getPointOnRay(hit_point, ray, t);            
             if((float)abs(hit_point[1]) <= oc->half_height)
             {
-                return t;
+                float phi = (float)atan2(hit_point[0], hit_point[2]);
+                if((float)abs(phi) <= oc->phi)
+                {
+                    return t;
+                }
             }
         }
         t = (-b + e)/denom;
         if(t > K_EPSILON)
         {
-            vec3_scale(displacement, ray.direction, t);
-            vec3_add(hit_point, ray.origin, displacement);
+            getPointOnRay(hit_point, ray, t);            
             if((float)abs(hit_point[1]) <= oc->half_height)
             {
-                return t;
+                float phi = (float)atan2(hit_point[0], hit_point[2]);
+                if((float)abs(phi) <= oc->phi)
+                {
+                    return t;
+                }
             }
         }
     }

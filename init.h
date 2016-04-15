@@ -19,8 +19,9 @@ void initSpheres(SceneObjects *so)
     // TODO: tidy up material assignment
     if(so->num_obj == MAX_OBJECTS){return;}    
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
-    vec3_assign(sphere->center, 2.0f, 0.0f, -4.0f);
-     sphere->radius = 1.0f;
+    //vec3_assign(sphere->center, 2.0f, 0.0f, -4.0f);
+    vec3_assign(sphere->center, 0.0f, 2.0f, 0.0f);
+    sphere->radius = .0f;
     sphere->shadow = true;        
     vec3_copy(sphere->mat.cd, PINK);
     vec3_copy(sphere->mat.ca, PINK);
@@ -140,6 +141,8 @@ void initOpenCylinder(SceneObjects* so)
     oc->shadow = true;
     oc->half_height = .9f;
     oc->radius = 1.0f;
+    oc->phi = 2.0f * PI;
+    oc->normal_type = OPEN;
     vec3_copy(oc->mat.cd, YELLOW);
     vec3_copy(oc->mat.ca, YELLOW);
     vec3_copy(oc->mat.cs, YELLOW);    
@@ -151,7 +154,7 @@ void initOpenCylinder(SceneObjects* so)
     oc->mat.shadow = true;
     so->obj_ptrs[so->num_obj] = oc; 
     so->obj_types[so->num_obj] = OPENCYLINDER;
-    (so->num_obj)++;            
+    (so->num_obj)++;      
 }
 
 void initDisk(SceneObjects* so)
@@ -205,7 +208,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl)
         so->obj_ptrs[i] = NULL;
     }
     so->num_obj = 0;
-    initSpheres(so);
+    //initSpheres(so);
     initPlanes(so);
     //initRectangles(so);
     //initAABox(so);

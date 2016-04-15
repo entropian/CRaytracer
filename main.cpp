@@ -118,7 +118,8 @@ int main()
     //camera.focal_length = 4.0f;
     //camera.lens_radius = 0.2f;
     
-    vec3 position = {0.0f, 0.5f, 5.0f};
+    //vec3 position = {0.0f, 0.5f, 5.0f};
+    vec3 position = {0.0f, 4.0f, 5.0f};
     vec3 look_point = {0.0f, 0.0f, -4.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);

@@ -97,7 +97,7 @@ float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray r
             break;
         case TORUS:
             tmp_t = rayIntersectTorus(&tmp_sr, (Torus*)scene_objects->obj_ptrs[i], ray);
-            break;            
+            break;
         }
         if(tmp_t < min_t)
         {
@@ -143,7 +143,7 @@ float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ra
             break;
         case TORUS:
             t = shadowRayIntersectTorus((Torus*)scene_objects->obj_ptrs[i], shadow_ray);
-            break;                        
+            break;
         }
         if(t < TMAX)
         {

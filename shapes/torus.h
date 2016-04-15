@@ -93,9 +93,7 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
     {
         return TMAX;
     }    
-    vec3 displacement;
-    vec3_scale(displacement, ray.direction, t);
-    vec3_add(sr->hit_point, ray.origin, displacement);
+    getPointOnRay(sr->hit_point, ray, t);
     computeTorusNormal(sr->normal, torus, sr->hit_point);
     vec3_negate(sr->wo, ray.direction);
     sr->mat = &(torus->mat);

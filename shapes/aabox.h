@@ -54,7 +54,7 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
     if(a >= 0)
     {
         tx_min = (aabox->min[0] - ray.origin[0]) * a;
-        tx_max = (aabox->max[0] - ray.origin[1]) * a;
+        tx_max = (aabox->max[0] - ray.origin[0]) * a;
     }else
     {
         tx_min = (aabox->max[0] - ray.origin[0]) * a;
@@ -127,9 +127,7 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
             t_min = t1;
             getAABoxNormal(sr->normal, face_out);
         }
-        vec3 displacement;
-        vec3_scale(displacement, ray.direction, t_min);
-        vec3_add(sr->hit_point, ray.origin, displacement);
+        getPointOnRay(sr->hit_point, ray, t_min);
         sr->mat = &(aabox->mat);
         sr->hit_status = true;
         vec3_negate(sr->wo, ray.direction);
@@ -150,7 +148,7 @@ float shadowRayIntersectAABox(const AABox* aabox, const Ray ray)
     if(a >= 0)
     {
         tx_min = (aabox->min[0] - ray.origin[0]) * a;
-        tx_max = (aabox->max[0] - ray.origin[1]) * a;
+        tx_max = (aabox->max[0] - ray.origin[0]) * a;
     }else
     {
         tx_min = (aabox->max[0] - ray.origin[0]) * a;

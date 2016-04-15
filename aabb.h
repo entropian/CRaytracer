@@ -18,7 +18,7 @@ bool rayIntersectAABB(const AABB* aabb, const Ray ray)
     if(a >= 0)
     {
         tx_min = (aabb->min[0] - ray.origin[0]) * a;
-        tx_max = (aabb->max[0] - ray.origin[1]) * a;
+        tx_max = (aabb->max[0] - ray.origin[0]) * a;
     }else
     {
         tx_min = (aabb->max[0] - ray.origin[0]) * a;
