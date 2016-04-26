@@ -153,6 +153,10 @@ void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr)
     {
         vec3_scale(r, ((EnvLight*)light_ptr)->color, ((EnvLight*)light_ptr)->intensity);
     } break;
+    case AREALIGHT:
+    {
+        vec3_scale(r, ((AreaLight*)light_ptr)->color, ((AreaLight*)light_ptr)->intensity);
+    } break;
     }
 }
 

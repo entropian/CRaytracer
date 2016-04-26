@@ -25,8 +25,14 @@ void freeSceneObjects(SceneObjects* so)
     {
         if(so->obj_ptrs[i] != NULL)
         {
-            free(so->obj_ptrs[i]);
-            so->obj_ptrs[i] = NULL;
+            if(so->obj_types[i] == SOLIDCYLINDER)
+            {
+                freeSolidCylinder((SolidCylinder*)so->obj_ptrs[i]);
+            }else
+            {
+                free(so->obj_ptrs[i]);
+                so->obj_ptrs[i] = NULL;
+            }
         }
     }
 }
@@ -98,6 +104,9 @@ float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray r
         case TORUS:
             tmp_t = rayIntersectTorus(&tmp_sr, (Torus*)scene_objects->obj_ptrs[i], ray);
             break;
+        case SOLIDCYLINDER:
+            tmp_t = rayIntersectSolidCylinder(&tmp_sr, (SolidCylinder*)scene_objects->obj_ptrs[i], ray);
+            break;
         }
         if(tmp_t < min_t)
         {
@@ -144,6 +153,9 @@ float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ra
         case TORUS:
             t = shadowRayIntersectTorus((Torus*)scene_objects->obj_ptrs[i], shadow_ray);
             break;
+        case SOLIDCYLINDER:
+            t = shadowRayIntersectSolidCylinder((SolidCylinder*)scene_objects->obj_ptrs[i], shadow_ray);
+            break;            
         }
         if(t < TMAX)
         {

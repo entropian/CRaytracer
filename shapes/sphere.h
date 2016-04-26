@@ -10,19 +10,19 @@ typedef struct Sphere
 {
     bool shadow;
     bool partial;        // NOTE: Maybe worth it, maybe not
-    float theta, phi; // For setting how much of the sphere is visible if partial is true
+    float min_theta, max_theta, phi; // For setting how much of the sphere is visible if partial is true
     float radius;    
     vec3 center;
     Material mat;
 } Sphere;
 
-void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const Ray ray, const float t)
+void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, const Ray ray, const float t)
 {
     sr->hit_status = true;
-    getPointOnRay(sr->hit_point, ray, t);
-    vec3 displacement;
-    vec3_sub(displacement, sr->hit_point, sphere->center);
-    vec3_normalize(sr->normal, displacement);
+    vec3_copy(sr->hit_point, hit_point);
+    vec3 hit_point_to_center;
+    vec3_sub(hit_point_to_center, sr->hit_point, sphere->center);
+    vec3_normalize(sr->normal, hit_point_to_center);
     vec3_negate(sr->wo, ray.direction);
     sr->mat = &(sphere->mat);
 }
@@ -49,15 +49,31 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
         float t = (-b - e)/denom;
         if(t > K_EPSILON)
         {
-            fillShadeRecSphere(sr, sphere, ray, t);            
-            return t;
+            vec3 hit_point;            
+            getPointOnRay(hit_point, ray, t);                        
+            float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
+            float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
+            if((float)abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
+               theta <= sphere->max_theta)            
+            {
+                fillShadeRecSphere(sr, sphere, hit_point, ray, t);            
+                return t;
+            }
         }
 
         t = (-b + e)/denom;
         if(t > K_EPSILON)
         {
-            fillShadeRecSphere(sr, sphere, ray, t);            
-            return t;
+            vec3 hit_point;            
+            getPointOnRay(hit_point, ray, t);
+            float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
+            float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));            
+            if((float)abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
+               theta <= sphere->max_theta)                            
+            {
+                fillShadeRecSphere(sr, sphere, hit_point, ray, t);
+                return t;
+            }
         }
     }
     return TMAX;
@@ -87,13 +103,29 @@ float shadowRayIntersectSphere(Sphere *sphere, const Ray ray)
         float t = (-b - e)/denom;
         if(t > K_EPSILON)
         {
-            return t;
+            vec3 hit_point;            
+            getPointOnRay(hit_point, ray, t);
+            float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
+            float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
+            if((float)abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
+               theta <= sphere->max_theta)                        
+            {
+                return t;
+            }
         }
 
         t = (-b + e)/denom;
         if(t > K_EPSILON)
         {
-            return t;
+            vec3 hit_point;            
+            getPointOnRay(hit_point, ray, t);
+            float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
+            float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
+            if((float)abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
+               theta <= sphere->max_theta)                        
+            {
+                return t;
+            }            
         }
     }
     return TMAX;

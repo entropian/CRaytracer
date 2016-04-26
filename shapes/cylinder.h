@@ -5,6 +5,8 @@
 #include "../util/shaderec.h"
 #include "../util/constants.h"
 #include "../materials.h"
+#include "../aabb.h"
+#include "disk.h"
 
 enum NormalType
 {
@@ -142,4 +144,107 @@ float shadowRayIntersectOpenCylinder(const OpenCylinder* oc, const Ray ray)
     }
     return TMAX;
 }
- 
+
+typedef struct SolidCylinder
+{
+    bool shadow;
+    Disk* top;
+    Disk* bottom;
+    OpenCylinder* tube;
+    AABB aabb;
+} SolidCylinder;
+
+void calcAABBSolidCylinder(SolidCylinder* sc)
+{
+    AABB* aabb = &(sc->aabb);
+    aabb->min[0] = -(sc->tube->radius);
+    aabb->min[1] = -(sc->tube->half_height);
+    aabb->min[2] = sc->tube->radius;
+
+    aabb->max[0] = sc->tube->radius;
+    aabb->max[1] = sc->tube->half_height;
+    aabb->max[2] = -(sc->tube->radius);
+}
+
+SolidCylinder* initSolidCylinder(const float radius, const float half_height,
+                       const float phi, const Material* mat, bool shadow)
+{
+    SolidCylinder* sc = (SolidCylinder*)malloc(sizeof(SolidCylinder));
+    sc->shadow = shadow;
+    Disk* top = (Disk*)malloc(sizeof(Disk));
+    Disk* bottom = (Disk*)malloc(sizeof(Disk));
+    OpenCylinder* tube = (OpenCylinder*)malloc(sizeof(OpenCylinder));
+    top->radius = bottom->radius = tube->radius = radius;
+    tube->half_height = half_height;
+    vec3_assign(top->center, 0.0f, half_height, 0.0f);
+    vec3_assign(bottom->center, 0.0f, -half_height, 0.0f);
+    vec3_assign(top->normal, 0.0f, 1.0f, 0.0f);
+    vec3_assign(bottom->normal, 0.0f, -1.0f, 0.0f);
+    tube->phi = phi;
+    tube->normal_type = OPEN;
+    top->mat = bottom->mat = tube->mat = *mat;
+    sc->top = top;
+    sc->bottom = bottom;
+    sc->tube = tube;
+    calcAABBSolidCylinder(sc);
+    return sc;
+}
+
+void freeSolidCylinder(SolidCylinder* sc)
+{
+    if(sc != NULL)
+    {
+        if(sc->top){free(sc->top);}
+        if(sc->bottom){free(sc->bottom);}
+        if(sc->tube){free(sc->tube);}
+        free(sc);
+    }
+}
+
+float rayIntersectSolidCylinder(ShadeRec* sr, SolidCylinder* sc, const Ray ray)
+{
+    if(!rayIntersectAABB(&(sc->aabb), ray))
+    {
+        return TMAX;
+    }
+    float min_t = TMAX, tmp_t = TMAX;
+    ShadeRec min_sr, tmp_sr;
+
+    min_t = rayIntersectDisk(&min_sr, sc->top, ray);
+    tmp_t = rayIntersectDisk(&tmp_sr, sc->bottom, ray);
+    if(tmp_t < min_t)
+    {
+        min_t = tmp_t;
+        min_sr = tmp_sr;
+    }
+    tmp_t = rayIntersectOpenCylinder(&tmp_sr, sc->tube, ray);
+    if(tmp_t < min_t)
+    {
+        min_t = tmp_t;
+        min_sr = tmp_sr;
+    }
+    *sr = min_sr;
+    return min_t;
+}
+
+float shadowRayIntersectSolidCylinder(const SolidCylinder* sc, const Ray ray)
+{
+    if(!rayIntersectAABB(&(sc->aabb), ray))
+    {
+        return TMAX;
+    }    
+    float min_t = TMAX, tmp_t = TMAX;
+
+    min_t = shadowRayIntersectDisk(sc->top, ray);
+    tmp_t = shadowRayIntersectDisk(sc->bottom, ray);
+    if(tmp_t < min_t)
+    {
+        min_t = tmp_t;
+    }
+    tmp_t = shadowRayIntersectOpenCylinder(sc->tube, ray);
+    if(tmp_t < min_t)
+    {
+        min_t = tmp_t;
+    }
+    return min_t;
+}

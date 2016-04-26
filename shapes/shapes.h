@@ -19,7 +19,7 @@ enum ObjectType
     OPENCYLINDER,
     DISK,
     TORUS,
-    PARTOPENCYL
+    SOLIDCYLINDER
 };
 
 

@@ -21,17 +21,12 @@ void initSpheres(SceneObjects *so)
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     //vec3_assign(sphere->center, 2.0f, 0.0f, -4.0f);
     vec3_assign(sphere->center, 0.0f, 2.0f, 0.0f);
-    sphere->radius = .0f;
-    sphere->shadow = true;        
-    vec3_copy(sphere->mat.cd, PINK);
-    vec3_copy(sphere->mat.ca, PINK);
-    vec3_copy(sphere->mat.cs, PINK);    
-    sphere->mat.kd = 0.6f;
-    sphere->mat.ka = 1.0f;
-    sphere->mat.ks = 0.4f;
-    sphere->mat.exp = 10.0f;        
-    sphere->mat.mat_type = PHONG;
-    sphere->mat.shadow = true;
+    sphere->radius = 1.0f;
+    sphere->phi = PI;
+    sphere->min_theta = PI / 4.0f;
+    sphere->max_theta = 0.5 * PI;
+    sphere->shadow = true;
+    initDefaultPhongMat(&(sphere->mat), PINK);
     so->obj_ptrs[so->num_obj] = sphere; 
     so->obj_types[so->num_obj] = SPHERE;
     (so->num_obj)++;
@@ -40,16 +35,11 @@ void initSpheres(SceneObjects *so)
     sphere = (Sphere*)malloc(sizeof(Sphere));
     vec3_assign(sphere->center, 2.0f, 0.0f, -8.0f);
     sphere->radius = 1.0f;
-    sphere->shadow = true;            
-    vec3_copy(sphere->mat.cd, CYAN);
-    vec3_copy(sphere->mat.ca, CYAN);
-    vec3_copy(sphere->mat.cs, CYAN);    
-    sphere->mat.kd = 0.6f;
-    sphere->mat.ka = 1.0f;
-    sphere->mat.ks = 0.4f;
-    sphere->mat.exp = 10.0f;            
-    sphere->mat.mat_type = PHONG;
-    sphere->mat.shadow = true;
+    sphere->phi = PI;
+    sphere->min_theta = 0.0f;
+    sphere->max_theta = PI;
+    sphere->shadow = true;
+    initDefaultPhongMat(&(sphere->mat), CYAN);
     so->obj_ptrs[so->num_obj] = sphere; 
     so->obj_types[so->num_obj] = SPHERE;
     (so->num_obj)++;    
@@ -62,12 +52,7 @@ void initPlanes(SceneObjects *so)
     plane->shadow  = true;    
     vec3_assign(plane->point, 0.0f, -1.0f, 0.0f);
     vec3_copy(plane->normal, UP);
-    vec3_copy(plane->mat.cd, GREY);
-    vec3_copy(plane->mat.ca, GREY);
-    plane->mat.kd = 0.6f;
-    plane->mat.ka = 1.0f;
-    plane->mat.mat_type  = MATTE;
-    plane->mat.shadow = true;    
+    initDefaultMatteMat(&(plane->mat), GREY);
     so->obj_ptrs[so->num_obj] = plane; 
     so->obj_types[so->num_obj] = PLANE;
     (so->num_obj)++;    
@@ -82,12 +67,7 @@ void initRectangles(SceneObjects *so)
     vec3_assign(rect->width, 2.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 4.0f, 0.0f);    
     vec3_copy(rect->normal, BACKWARD);
-    vec3_copy(rect->mat.cd, YELLOW);
-    vec3_copy(rect->mat.ca, YELLOW);
-    rect->mat.kd = 0.6f;
-    rect->mat.ka = 1.0f;
-    rect->mat.mat_type  = MATTE;
-    rect->mat.shadow = true;
+    initDefaultMatteMat(&(rect->mat), YELLOW);
     so->obj_ptrs[so->num_obj] = rect; 
     so->obj_types[so->num_obj] = RECTANGLE;
     (so->num_obj)++;        
@@ -102,12 +82,7 @@ void initTriangle(SceneObjects *so)
     vec3_assign(triangle->v1, 0.0f, -1.0f, -6.0f);
     vec3_assign(triangle->v2, -1.0f, 2.0f, -6.0f);    
     calcTriangleNormal(triangle);
-    vec3_copy(triangle->mat.cd, YELLOW);
-    vec3_copy(triangle->mat.ca, YELLOW);
-    triangle->mat.kd = 0.6f;
-    triangle->mat.ka = 1.0f;
-    triangle->mat.mat_type  = MATTE;
-    triangle->mat.shadow = true;
+    initDefaultMatteMat(&(triangle->mat), YELLOW);
     so->obj_ptrs[so->num_obj] = triangle; 
     so->obj_types[so->num_obj] = TRIANGLE;
     (so->num_obj)++;        
@@ -119,16 +94,8 @@ void initAABox(SceneObjects* so)
     AABox* aabox = (AABox*)malloc(sizeof(AABox));
     aabox->shadow = true;
     vec3_assign(aabox->min, -1.0f, 1.0f, -4.0f);
-    vec3_assign(aabox->max, -0.0f, 3.0f, -5.0f);        
-    vec3_copy(aabox->mat.cd, YELLOW);
-    vec3_copy(aabox->mat.ca, YELLOW);
-    vec3_copy(aabox->mat.cs, YELLOW);    
-    aabox->mat.kd = 0.6f;
-    aabox->mat.ka = 1.0f;
-    aabox->mat.ks = 0.4f;
-    aabox->mat.exp = 10.0f;
-    aabox->mat.mat_type  = PHONG;
-    aabox->mat.shadow = true;
+    vec3_assign(aabox->max, -0.0f, 3.0f, -5.0f);
+    initDefaultPhongMat(&(aabox->mat), YELLOW);
     so->obj_ptrs[so->num_obj] = aabox; 
     so->obj_types[so->num_obj] = AABOX;
     (so->num_obj)++;            
@@ -141,17 +108,9 @@ void initOpenCylinder(SceneObjects* so)
     oc->shadow = true;
     oc->half_height = .9f;
     oc->radius = 1.0f;
-    oc->phi = 2.0f * PI;
+    oc->phi = PI;
     oc->normal_type = OPEN;
-    vec3_copy(oc->mat.cd, YELLOW);
-    vec3_copy(oc->mat.ca, YELLOW);
-    vec3_copy(oc->mat.cs, YELLOW);    
-    oc->mat.kd = 0.6f;
-    oc->mat.ka = 1.0f;
-    oc->mat.ks = 0.4f;
-    oc->mat.exp = 10.0f;
-    oc->mat.mat_type  = PHONG;
-    oc->mat.shadow = true;
+    initDefaultPhongMat(&(oc->mat), YELLOW);
     so->obj_ptrs[so->num_obj] = oc; 
     so->obj_types[so->num_obj] = OPENCYLINDER;
     (so->num_obj)++;      
@@ -165,15 +124,7 @@ void initDisk(SceneObjects* so)
     vec3_assign(disk->center, 0.0f, 0.0f, 0.0f);
     vec3_assign(disk->normal, 0.0f, 0.0f, -1.0f);
     disk->radius = 1.0f;
-    vec3_copy(disk->mat.cd, YELLOW);
-    vec3_copy(disk->mat.ca, YELLOW);
-    vec3_copy(disk->mat.cs, YELLOW);    
-    disk->mat.kd = 0.6f;
-    disk->mat.ka = 1.0f;
-    disk->mat.ks = 0.4f;
-    disk->mat.exp = 10.0f;
-    disk->mat.mat_type  = PHONG;
-    disk->mat.shadow = true;
+    initDefaultPhongMat(&(disk->mat), YELLOW);
     so->obj_ptrs[so->num_obj] = disk; 
     so->obj_types[so->num_obj] = DISK;
     (so->num_obj)++;            
@@ -186,19 +137,24 @@ void initTorus(SceneObjects* so)
     torus->shadow = true;
     torus->swept_radius = 2.0f;
     torus->tube_radius = 0.5f;
-    vec3_copy(torus->mat.cd, YELLOW);
-    vec3_copy(torus->mat.ca, YELLOW);
-    vec3_copy(torus->mat.cs, YELLOW);    
-    torus->mat.kd = 0.6f;
-    torus->mat.ka = 1.0f;
-    torus->mat.ks = 0.4f;
-    torus->mat.exp = 10.0f;
-    torus->mat.mat_type  = PHONG;
-    torus->mat.shadow = true;
+    torus->phi = PI;
+    initDefaultPhongMat(&(torus->mat), YELLOW);
     calcAABBTorus(torus);
     so->obj_ptrs[so->num_obj] = torus; 
     so->obj_types[so->num_obj] = TORUS;
     (so->num_obj)++;            
+}
+
+void initSolidCylinder(SceneObjects* so)
+{
+    if(so->num_obj == MAX_OBJECTS){return;}
+    Material mat;
+    initDefaultPhongMat(&mat, YELLOW);
+    float radius = 1.0f, half_height = 0.5f, phi = PI;
+    SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
+    so->obj_ptrs[so->num_obj] = sc;
+    so->obj_types[so->num_obj] = SOLIDCYLINDER;
+    (so->num_obj)++;    
 }
 
 void initSceneObjects(SceneObjects *so, const SceneLights *sl)
@@ -215,7 +171,8 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl)
     //initTriangle(so);
     //initOpenCylinder(so);
     //initDisk(so);
-    initTorus(so);
+    //initTorus(so);
+    initSolidCylinder(so);
     
     for(int i = 0; i < sl->num_lights; i++)
     {
@@ -273,8 +230,11 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     // Sphere
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
-    vec3_assign(sphere->center, -2.0f, 2.0f, -3.0f);
+    vec3_assign(sphere->center, -2.0f, 3.0f, -0.0f);
     sphere->radius = 1.0f;
+    sphere->min_theta = 0.0f;
+    sphere->max_theta = PI;
+    sphere->phi = PI;
     vec3_copy(sphere->mat.ce, area_light_ptr->color);    
     sphere->mat.ke = area_light_ptr->intensity;    
     sphere->mat.mat_type = EMISSIVE;
@@ -328,6 +288,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     (sl->num_lights)++;
     
     // Point light
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
     intensity = 0.1f;
@@ -336,10 +297,11 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     sl->shadow[sl->num_lights] = true;    
     sl->light_ptrs[sl->num_lights] = point_light_ptr;
     (sl->num_lights)++;
+    */
 
     sl->env_light_ptr = NULL;
-    //initAreaLights(sl, num_samples, num_sets);
-    initEnvLight(sl, num_samples, num_sets);
+    initAreaLights(sl, num_samples, num_sets);
+    //initEnvLight(sl, num_samples, num_sets);
 }
 
 void initScene(SceneObjects* so, SceneLights* sl, const int num_samples, const int num_sets)

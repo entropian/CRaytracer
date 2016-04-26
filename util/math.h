@@ -23,6 +23,16 @@ void getVec3InLocalBasis(vec3 r, const vec3 a, const vec3 normal)
     orthoNormalTransform(r, u, v, w, a);
 }
 
+inline float min(float a, float b)
+{
+    return (a < b) ? a : b;
+}
+
+inline float max(float a, float b)
+{
+    return (a > b) ? a : b;
+}
+
 /*
   Utility functions to find cubic and quartic roots.
   Copied from code for Ray Tracing from the Ground up.
@@ -44,13 +54,13 @@ void getVec3InLocalBasis(vec3 r, const vec3 a, const vec3 normal)
 #define	IsZero(x)	((x) > -EQN_EPS && (x) < EQN_EPS)
 
 #ifndef CBRT
-#define     cbrt(x)  ((x) > 0.0 ? pow((float)(x), 1.0/3.0) : \
-			  		 ((x) < 0.0 ? -pow((float)-(x), 1.0/3.0) : 0.0))
+#define     cbrt(x)  ((x) > 0.0 ? pow((double)(x), 1.0/3.0) : \
+			  		 ((x) < 0.0 ? -pow((double)-(x), 1.0/3.0) : 0.0))
 #endif
 
-int solveQuadric(float c[3], float s[2])
+int solveQuadric(double c[3], double s[2])
 {
-    float p, q, D;
+    double p, q, D;
 
     /* normal form: x^2 + px + q = 0 */
 
@@ -65,7 +75,7 @@ int solveQuadric(float c[3], float s[2])
         return 1;
     }else if (D > 0)
     {
-        float sqrt_D = (float)sqrt(D);
+        double sqrt_D = (double)sqrt(D);
 
         s[ 0 ] =   sqrt_D - p;
         s[ 1 ] = - sqrt_D - p;
@@ -77,13 +87,13 @@ int solveQuadric(float c[3], float s[2])
     }
 }
 
-int solveCubic(float c[4], float s[3])
+int solveCubic(double c[4], double s[3])
 {
     int     i, num;
-    float  sub;
-    float  A, B, C;
-    float  sq_A, p, q;
-    float  cb_p, D;
+    double  sub;
+    double  A, B, C;
+    double  sq_A, p, q;
+    double  cb_p, D;
 
     /* normal form: x^3 + Ax^2 + Bx + C = 0 */
 
@@ -109,25 +119,25 @@ int solveCubic(float c[4], float s[3])
 		    num = 1;
 		}
         else { /* one single and one double solution */
-            float u = (float)cbrt(-q);
+            double u = (double)cbrt(-q);
             s[ 0 ] = 2 * u;
             s[ 1 ] = - u;
             num = 2;
         }
     }
     else if (D < 0) { /* Casus irreducibilis: three real solutions */
-		float phi = 1.0f/3 * (float)acos(-q / (float)sqrt(-cb_p));
-		float t = 2.0f * (float)sqrt(-p);
+		double phi = 1.0f/3 * (double)acos(-q / (double)sqrt(-cb_p));
+		double t = 2.0f * (double)sqrt(-p);
 
-		s[ 0 ] =   t * (float)cos(phi);
-		s[ 1 ] = - t * (float)cos(phi + M_PI / 3);
-		s[ 2 ] = - t * (float)cos(phi - M_PI / 3);
+		s[ 0 ] =   t * (double)cos(phi);
+		s[ 1 ] = - t * (double)cos(phi + M_PI / 3);
+		s[ 2 ] = - t * (double)cos(phi - M_PI / 3);
 		num = 3;
     }
     else { /* one real solution */
-		float sqrt_D = (float)sqrt(D);
-		float u = (float)cbrt(sqrt_D - q);
-		float v = - (float)cbrt(sqrt_D + q);
+		double sqrt_D = (double)sqrt(D);
+		double u = (double)cbrt(sqrt_D - q);
+		double v = - (double)cbrt(sqrt_D + q);
 
 		s[ 0 ] = u + v;
 		num = 1;
@@ -143,12 +153,12 @@ int solveCubic(float c[4], float s[3])
     return num;
 }
 
-int solveQuartic(float c[5], float s[4])
+int solveQuartic(double c[5], double s[4])
 {
-    float  coeffs[4];
-    float  z, u, v, sub;
-    float  A, B, C, D;
-    float  sq_A, p, q, r;
+    double  coeffs[4];
+    double  z, u, v, sub;
+    double  A, B, C, D;
+    double  sq_A, p, q, r;
     int     i, num;
 
     /* normal form: x^4 + Ax^3 + Bx^2 + Cx + D = 0 */

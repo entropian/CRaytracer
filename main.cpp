@@ -79,8 +79,8 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    //int frame_res_width = 900, frame_res_height = 900;
-    int frame_res_width = 360, frame_res_height = 360;    
+    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
@@ -88,10 +88,11 @@ int main()
     srand((unsigned int)time(NULL));    
     const int num_samples = 64;
     const int num_sets = 83;
-    Samples2D unit_square_samples = Samples2D_default;
+    Samples2D unit_square_samples = Samples2D_default;                                                          
     Samples2D disk_samples = Samples2D_default;
     Samples3D h_samples = Samples3D_default;
     genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
+    //genHammersleySamples(&unit_square_samples, num_samples, num_sets);
     //genRegularSamples(&unit_square_samples, num_samples, num_sets);
     mapSamplesToDisk(&disk_samples, &unit_square_samples);
     mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
@@ -119,8 +120,9 @@ int main()
     //camera.lens_radius = 0.2f;
     
     //vec3 position = {0.0f, 0.5f, 5.0f};
-    vec3 position = {0.0f, 4.0f, 5.0f};
+    vec3 position = {0.0f, 3.0f, 5.0f};
     vec3 look_point = {0.0f, 0.0f, -4.0f};
+    //vec3 look_point = {0.0f, 0.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -162,10 +164,10 @@ int main()
             float min_t = TMAX;
             ShadeRec min_sr;
             min_t = intersectTest(&min_sr, &scene_objects, ray);
-
+            
             // Shading
             if(min_t < TMAX)
-            {                
+            {
                 vec3 radiance = {0.0f, 0.0f, 0.0f};                
                 if(min_sr.mat->mat_type == EMISSIVE)
                 {
@@ -173,6 +175,7 @@ int main()
                     maxToOne(radiance, radiance);
                 }else
                 {
+            
                     // Ambient component
                     // ka*ca * amb_inc_radiance
                     vec3 amb_inc_radiance;
@@ -204,7 +207,7 @@ int main()
                                 Ray shadow_ray;
                                 vec3_copy(shadow_ray.origin, min_sr.hit_point);
                                 vec3_copy(shadow_ray.direction, light_dir);
-                                min_t = shadowIntersectTest(&scene_objects, shadow_ray);                            
+                                float min_t = shadowIntersectTest(&scene_objects, shadow_ray);                            
                                 float t = calcLightDistance(scene_lights.light_types[i],
                                                             scene_lights.light_ptrs[i], min_sr.hit_point);
                                 if(min_t < t)
@@ -238,13 +241,21 @@ int main()
                                 }
                             }
                         }
-                    }                    
+                    }
                 }
                 vec3_add(color, color, radiance);
+                //vec3_add(color, color, min_sr.normal);
+                /*
+                float factor = 8.0f;
+                vec3 depth = {min_t/factor, min_t/factor, min_t/factor};
+                vec3_add(color, color, depth);
+                */
             }else
             {
                 vec3_add(color, color, bg_color);
             }
+            //vec3 depth = {min_t/factor, min_t/factor, min_t/factor};
+            //vec3_add(color, color, depth);
         }
         vec3_scale(color, color, 1.0f/num_samples);
         maxToOne(color, color);
