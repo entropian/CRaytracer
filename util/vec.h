@@ -12,6 +12,21 @@ typedef float vec2[2];
 typedef float vec3[3];
 typedef float vec4[4];
 
+inline void vec3FromVec2(vec3 r, const vec2 a, const float b)
+{
+    r[0] = a[0];
+    r[1] = a[1];
+    r[2] = b;
+}
+
+inline void vec4FromVec3(vec4 r, const vec3 a, const float b)
+{
+    r[0] = a[0];
+    r[1] = a[1];
+    r[2] = a[2];
+    r[3] = b;
+}
+
 inline void vec2_add(vec2 r, vec2 a, vec2 b)
 {
     r[0] = a[0] + b[0];    

@@ -72,7 +72,7 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
     int num_real_roots = solveQuartic(coeffs, roots);
 
     bool intersected = false;
-    double t = FLT_MAX;
+    float t = FLT_MAX;
 
     if(num_real_roots == 0)
     {
@@ -86,7 +86,7 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
             intersected = true;
             if(roots[i] < t)
             {
-                t = roots[i];
+                t = (float)roots[i];
             }
         }
     }
@@ -98,7 +98,6 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
     vec3 hit_point;
     getPointOnRay(hit_point, ray, t);
     float phi = (float)atan2(hit_point[0], hit_point[2]);
-    // NOTE: needed to clamp the input to 1 due to potential precision problem(?)
     vec3 horizontal_comp = {hit_point[0], 0.0f, hit_point[2]};
     float x = vec3_length(horizontal_comp) - torus->swept_radius;
     float theta = (float)atan2(hit_point[1], x);
@@ -109,7 +108,6 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
         vec3_negate(sr->wo, ray.direction);
         if(vec3_dot(sr->wo, sr->normal) < 0)
         {
-            //printf("here\n");
             vec3_negate(sr->normal, sr->normal);
         }
         sr->mat = &(torus->mat);
@@ -117,13 +115,6 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
     }
 
     return (float)t;
-    /*
-    getPointOnRay(sr->hit_point, ray, t);
-    computeTorusNormal(sr->normal, torus, sr->hit_point);
-    vec3_negate(sr->wo, ray.direction);
-    sr->mat = &(torus->mat);
-    return (float)t;
-    */    
 }
 
 float shadowRayIntersectTorus(const Torus* torus, const Ray ray)
@@ -143,7 +134,6 @@ float shadowRayIntersectTorus(const Torus* torus, const Ray ray)
     float f = x1*d1 + y1*d2 + z1*d3;
     float four_a_sqrd = 4.0f * torus->swept_radius * torus->swept_radius;    
 
-    //coeffs[0] = e*e - four_a_sqrd*(b*b - y1*y1);
     coeffs[0] = e*e - four_a_sqrd*(torus->tube_radius * torus->tube_radius - y1*y1);    
     coeffs[1] = 4.0f*f*e + 2.0f*four_a_sqrd*y1*d2;
     coeffs[2] = 2.0f*sum_d_sqrd*e + 4.0f*f*f + four_a_sqrd*d2*d2;
@@ -167,7 +157,7 @@ float shadowRayIntersectTorus(const Torus* torus, const Ray ray)
             intersected = true;
             if(roots[i] < t)
             {
-                t = roots[i];
+                t = (float)roots[i];
             }
         }
     }

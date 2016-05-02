@@ -22,9 +22,9 @@ void initSpheres(SceneObjects *so)
     //vec3_assign(sphere->center, 2.0f, 0.0f, -4.0f);
     vec3_assign(sphere->center, 0.0f, 2.0f, 0.0f);
     sphere->radius = 1.0f;
-    sphere->phi = PI;
-    sphere->min_theta = PI / 4.0f;
-    sphere->max_theta = 0.5 * PI;
+    sphere->phi = (float)PI;
+    sphere->min_theta = (float)PI / 4.0f;
+    sphere->max_theta = 0.5f * (float)PI;
     sphere->shadow = true;
     initDefaultPhongMat(&(sphere->mat), PINK);
     so->obj_ptrs[so->num_obj] = sphere; 
@@ -35,9 +35,9 @@ void initSpheres(SceneObjects *so)
     sphere = (Sphere*)malloc(sizeof(Sphere));
     vec3_assign(sphere->center, 2.0f, 0.0f, -8.0f);
     sphere->radius = 1.0f;
-    sphere->phi = PI;
+    sphere->phi = (float)PI;
     sphere->min_theta = 0.0f;
-    sphere->max_theta = PI;
+    sphere->max_theta = (float)PI;
     sphere->shadow = true;
     initDefaultPhongMat(&(sphere->mat), CYAN);
     so->obj_ptrs[so->num_obj] = sphere; 
@@ -108,7 +108,7 @@ void initOpenCylinder(SceneObjects* so)
     oc->shadow = true;
     oc->half_height = .9f;
     oc->radius = 1.0f;
-    oc->phi = PI;
+    oc->phi = (float)PI;
     oc->normal_type = OPEN;
     initDefaultPhongMat(&(oc->mat), YELLOW);
     so->obj_ptrs[so->num_obj] = oc; 
@@ -137,7 +137,7 @@ void initTorus(SceneObjects* so)
     torus->shadow = true;
     torus->swept_radius = 2.0f;
     torus->tube_radius = 0.5f;
-    torus->phi = PI;
+    torus->phi = (float)PI;
     initDefaultPhongMat(&(torus->mat), YELLOW);
     calcAABBTorus(torus);
     so->obj_ptrs[so->num_obj] = torus; 
@@ -150,7 +150,7 @@ void initSolidCylinder(SceneObjects* so)
     if(so->num_obj == MAX_OBJECTS){return;}
     Material mat;
     initDefaultPhongMat(&mat, YELLOW);
-    float radius = 1.0f, half_height = 0.5f, phi = PI;
+    float radius = 1.0f, half_height = 0.5f, phi = (float)PI;
     SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
     so->obj_ptrs[so->num_obj] = sc;
     so->obj_types[so->num_obj] = SOLIDCYLINDER;
@@ -233,8 +233,8 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     vec3_assign(sphere->center, -2.0f, 3.0f, -0.0f);
     sphere->radius = 1.0f;
     sphere->min_theta = 0.0f;
-    sphere->max_theta = PI;
-    sphere->phi = PI;
+    sphere->max_theta = (float)PI;
+    sphere->phi = (float)PI;
     vec3_copy(sphere->mat.ce, area_light_ptr->color);    
     sphere->mat.ke = area_light_ptr->intensity;    
     sphere->mat.mat_type = EMISSIVE;

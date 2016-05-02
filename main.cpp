@@ -35,6 +35,7 @@
 #include <ctime>
 #include "util/vec.h"
 #include "util/ray.h"
+#include "util/mat.h"
 #include "util/constants.h"
 #include "gl/glcode.h"
 #include "sampling.h"
@@ -42,7 +43,7 @@
 #include "lights.h"
 #include "sceneobj.h"
 #include "shading.h"
-#include "init.h"
+#include "buildscene.h"
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -134,7 +135,8 @@ int main()
 
     time_t startTime, endTime;
     time(&startTime);        
-    unsigned sample_index = 0;    
+    unsigned sample_index = 0;
+    /*
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
@@ -245,11 +247,9 @@ int main()
                 }
                 vec3_add(color, color, radiance);
                 //vec3_add(color, color, min_sr.normal);
-                /*
-                float factor = 8.0f;
-                vec3 depth = {min_t/factor, min_t/factor, min_t/factor};
-                vec3_add(color, color, depth);
-                */
+                //float factor = 8.0f;
+                //vec3 depth = {min_t/factor, min_t/factor, min_t/factor};
+                //vec3_add(color, color, depth);
             }else
             {
                 vec3_add(color, color, bg_color);
@@ -263,11 +263,27 @@ int main()
         image[i*3 + 1] = (char)(color[1] * 255.0f);
         image[i*3 + 2] = (char)(color[2] * 255.0f);
     }
+    */
     time(&endTime);
     double sec = difftime(endTime, startTime);
     printf("%f seconds.\n", sec);
+
+    vec4 a = {1.0f, 2.0f, 3.0f, 4.0f};
+    mat4 matrix;
     
-    displayImage(window, viewport, image, frame_res_width, frame_res_height);
+    //mat4_identity(m4);
+    mat4_scale(matrix, 2.0f, 5.5f, 11.0f);
+    for(int i = 0; i < 4; i++)
+    {
+        for(int j = 0; j < 4; j++)
+        {
+            printf("%f ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+    
+    //displayImage(window, viewport, image, frame_res_width, frame_res_height);
 
     // Clean up
     free(image);
