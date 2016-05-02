@@ -171,8 +171,8 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl)
     //initTriangle(so);
     //initOpenCylinder(so);
     //initDisk(so);
-    //initTorus(so);
-    initSolidCylinder(so);
+    initTorus(so);
+    //initSolidCylinder(so);
     
     for(int i = 0; i < sl->num_lights; i++)
     {

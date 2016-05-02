@@ -2,6 +2,7 @@
 
 #include "util/constants.h"
 #include "util/vec.h"
+#include "util/ray.h"
 
 typedef struct AABB
 {

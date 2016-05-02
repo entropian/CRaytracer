@@ -1,7 +1,8 @@
 #pragma once
 
-#include "util\vec.h"
-#include "util\constants.h"
+#include "util/vec.h"
+#include "util/constants.h"
+#include "util/ray.h"
 
 enum CameraType
 {

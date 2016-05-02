@@ -1,3 +1,5 @@
+#pragma once
+
 #include "math.h"
 #include "vec.h"
 
@@ -71,7 +73,7 @@ void mat2_transpose(mat2 r, const mat2 a)
     r[0][0] = a[0][0];
     r[0][1] = a[1][0];
     r[1][0] = a[0][1];
-    a[1][1] = a[1][1];
+    r[1][1] = a[1][1];
 }
 
 void mat3_transpose(mat3 r, const mat3 a)
@@ -263,7 +265,7 @@ void mat4_scale(mat4 r, const float x, const float y, const float z)
 void mat2_scale_inverse(mat2 r, const mat2 a)
 {
     r[0][0] = 1.0f / a[0][0];
-    a[1][1] = 1.0f / a[1][1];
+    r[1][1] = 1.0f / a[1][1];
     r[0][1] = r[1][0] = 0.0f;
 }
 

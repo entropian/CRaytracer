@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/vec.h"
+
 enum MatType
 {
     MATTE,

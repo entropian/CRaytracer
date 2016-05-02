@@ -1,5 +1,6 @@
 #pragma once
 #include <float.h>
+#include "vec.h"
 
 const int MAX_OBJECTS = 1000;
 const int MAX_LIGHTS = 10;

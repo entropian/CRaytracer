@@ -80,8 +80,8 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 900, frame_res_height = 900;
-    //int frame_res_width = 360, frame_res_height = 360;    
+    //int frame_res_width = 900, frame_res_height = 900;
+    int frame_res_width = 360, frame_res_height = 360;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
@@ -136,7 +136,7 @@ int main()
     time_t startTime, endTime;
     time(&startTime);        
     unsigned sample_index = 0;
-    /*
+
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
@@ -263,7 +263,7 @@ int main()
         image[i*3 + 1] = (char)(color[1] * 255.0f);
         image[i*3 + 2] = (char)(color[2] * 255.0f);
     }
-    */
+
     time(&endTime);
     double sec = difftime(endTime, startTime);
     printf("%f seconds.\n", sec);
@@ -283,7 +283,7 @@ int main()
     }
     printf("\n");
     
-    //displayImage(window, viewport, image, frame_res_width, frame_res_height);
+    displayImage(window, viewport, image, frame_res_width, frame_res_height);
 
     // Clean up
     free(image);

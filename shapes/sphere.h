@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdlib.h>
 #include "../util/vec.h"
 #include "../util/ray.h"
 #include "../util/shaderec.h"
