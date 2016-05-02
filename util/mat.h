@@ -286,14 +286,14 @@ void mat4_scale_inverse(mat4 r, const mat4 a)
     }
 }
 
-void mat3_translate(mat3 r, const x, const y)
+void mat3_translate(mat3 r, const float x, const float y)
 {
     mat3_identity(r);
     r[0][2] = x;
     r[1][2] = y;
 }
 
-void mat4_translate(mat4 r, const x, const y, const z)
+void mat4_translate(mat4 r, const float x, const float y, const float z)
 {
     mat4_identity(r);
     r[0][2] = x;
