@@ -27,6 +27,19 @@ inline void vec4FromVec3(vec4 r, const vec3 a, const float b)
     r[3] = b;
 }
 
+inline void vec2FromVec3(vec2 r, const vec3 a)
+{
+    r[0] = a[0];
+    r[1] = a[1];
+}
+
+inline void vec3FromVec4(vec3 r, const vec4 a)
+{
+    r[0] = a[0];
+    r[1] = a[1];
+    r[2] = a[2];
+}
+
 inline void vec2_add(vec2 r, vec2 a, vec2 b)
 {
     r[0] = a[0] + b[0];    

@@ -4,6 +4,7 @@
 #include <ctime>
 #include <cstdio>
 #include "util/vec.h"
+#include "util/util.h"
 
 enum SamplesType
 {
@@ -379,7 +380,7 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
         float cos_phi = cos(2.0f * (float)PI * src_samples->samples[i][0]);
         float sin_phi = sin(2.0f * (float)PI * src_samples->samples[i][0]);
         float cos_theta = pow((1.0f - abs(src_samples->samples[i][1])), 1.0f / (e + 1.0f));
-        //float cos_theta = pow((1.0f - (samples->disk_samples[i][1])), 1.0f / (e + 1.0f));
+        //float cos_theta = pow((1.0f - (src_samples->samples[i][1])), 1.0f / (e + 1.0f));
         float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
         float pu = sin_theta * cos_phi;
         float pv = sin_theta * sin_phi;

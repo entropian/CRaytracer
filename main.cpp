@@ -87,7 +87,7 @@ int main()
     
     // Samples
     srand((unsigned int)time(NULL));    
-    const int num_samples = 64;
+    const int num_samples = 16;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;                                                          
     Samples2D disk_samples = Samples2D_default;
@@ -137,6 +137,9 @@ int main()
     time(&startTime);        
     unsigned sample_index = 0;
 
+    //drawSamples(image, &disk_samples, frame_res_width, frame_res_height, num_pixels);
+    //drawHemisphereSamples2D(image, &h_samples, frame_res_width, frame_res_height, num_pixels);
+//#if 0
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
@@ -170,6 +173,13 @@ int main()
             // Shading
             if(min_t < TMAX)
             {
+                /*
+                if(p == 0)
+                {
+                    printf("new set\n");
+                }
+                */
+
                 vec3 radiance = {0.0f, 0.0f, 0.0f};                
                 if(min_sr.mat->mat_type == EMISSIVE)
                 {
@@ -177,7 +187,7 @@ int main()
                     maxToOne(radiance, radiance);
                 }else
                 {
-            
+                    
                     // Ambient component
                     // ka*ca * amb_inc_radiance
                     vec3 amb_inc_radiance;
@@ -209,7 +219,7 @@ int main()
                                 Ray shadow_ray;
                                 vec3_copy(shadow_ray.origin, min_sr.hit_point);
                                 vec3_copy(shadow_ray.direction, light_dir);
-                                float min_t = shadowIntersectTest(&scene_objects, shadow_ray);                            
+                                float min_t = shadowIntersectTest(&scene_objects, shadow_ray);     
                                 float t = calcLightDistance(scene_lights.light_types[i],
                                                             scene_lights.light_ptrs[i], min_sr.hit_point);
                                 if(min_t < t)
@@ -221,6 +231,7 @@ int main()
                             {
                                 if(scene_lights.light_types[i] == AREALIGHT)
                                 {
+                                    //printf("light_dir = %f, %f, %f\n", light_dir[0], light_dir[1], light_dir[2]);
                                     AreaLight* area_light_ptr = (AreaLight*)(scene_lights.light_ptrs[i]);
                                     areaLightShading(radiance, ndotwi, light_dir, area_light_ptr, &min_sr);
                                 }else if(scene_lights.light_types[i] == ENVLIGHT)
@@ -263,26 +274,59 @@ int main()
         image[i*3 + 1] = (char)(color[1] * 255.0f);
         image[i*3 + 2] = (char)(color[2] * 255.0f);
     }
-
+//#endif 
     time(&endTime);
     double sec = difftime(endTime, startTime);
     printf("%f seconds.\n", sec);
 
-    vec4 a = {1.0f, 2.0f, 3.0f, 4.0f};
-    mat4 matrix;
-    
-    //mat4_identity(m4);
-    mat4_scale(matrix, 2.0f, 5.5f, 11.0f);
-    for(int i = 0; i < 4; i++)
+    /*
     {
-        for(int j = 0; j < 4; j++)
+        vec4 a = {1.0f, 2.0f, 3.0f, 4.0f};
+        mat4 matrix;
+    
+        //mat4_identity(m4);
+        mat4_scale(matrix, 2.0f, 5.5f, 11.0f);
+        for(int i = 0; i < 4; i++)
         {
-            printf("%f ", matrix[i][j]);
+            for(int j = 0; j < 4; j++)
+            {
+                printf("%f ", matrix[i][j]);
+            }
+            printf("\n");
         }
         printf("\n");
+        
+        Ray src_ray, dest_ray;
+        vec3_assign(src_ray.origin, 0.0f, 0.0f, 0.0f);
+        vec3_assign(src_ray.direction, 0.0f, 0.0f, -1.0f);
+        mat4 translation, inv_translation;
+        mat4_translate(translation, 1.0f, 0.0f, 0.0f);
+        for(int i = 0; i < 4; i++)
+        {
+            for(int j = 0; j < 4; j++)
+            {
+                printf("%f ", translation[i][j]);
+            }
+            printf("\n");
+        }    
+        mat4_invert_translation(inv_translation, translation);
+        mat4_scale(matrix, 2.0f, 5.5f, 11.0f);
+        for(int i = 0; i < 4; i++)
+        {
+            for(int j = 0; j < 4; j++)
+            {
+                printf("%f ", inv_translation[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");    
+        transformRay(&dest_ray, inv_translation, src_ray);
+        printf("src origin = %f, %f, %f\n", src_ray.origin[0], src_ray.origin[1], src_ray.origin[2]);
+        printf("src direction = %f, %f, %f\n", src_ray.direction[0], src_ray.direction[1], src_ray.direction[2]);
+        printf("dest origin = %f, %f, %f\n", dest_ray.origin[0], dest_ray.origin[1], dest_ray.origin[2]);
+        printf("dest direction = %f, %f, %f\n", dest_ray.direction[0], dest_ray.direction[1], dest_ray.direction[2]);
     }
-    printf("\n");
-    
+    */
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
 
     // Clean up

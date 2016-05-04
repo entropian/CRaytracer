@@ -2,6 +2,7 @@
 
 #include "vec.h"
 #include "constants.h"
+#include "mat.h"
 
 void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
 {
@@ -23,15 +24,29 @@ void getVec3InLocalBasis(vec3 r, const vec3 a, const vec3 normal)
     orthoNormalTransform(r, u, v, w, a);
 }
 
-inline float min(float a, float b)
+void transformRay(Ray* dest_ray, const mat4 mat, const Ray src_ray)
 {
-    return (a < b) ? a : b;
+    vec4 src_origin, src_direction;
+    vec4 dest_origin, dest_direction;
+    vec4FromVec3(src_origin, src_ray.origin, 1.0f);
+    vec4FromVec3(src_direction, src_ray.direction, 0.0f);
+    mat4_mult_vec4(dest_origin, mat, src_origin);
+    mat4_mult_vec4(dest_direction, mat, src_direction);
+    vec3FromVec4(dest_ray->origin, dest_origin);
+    vec3FromVec4(dest_ray->direction, dest_direction);
 }
 
-inline float max(float a, float b)
+void defaultInvTransform(mat4 r, const vec3 scaling, const vec3 axis, const float theta,
+                         const vec3 translation)
 {
-    return (a > b) ? a : b;
+    mat4 inv_translation, inv_rotation, inv_scale, tmp;
+    mat4_translate(inv_translation, -translation[0], -translation[1], -translation[2]);
+    mat4_scale_inverse(inv_scale, scaling);
+    mat4_rotate(inv_rotation, axis, theta);
+    mat4_mult(tmp, inv_rotation, inv_scale);
+    mat4_mult(r, inv_translation, tmp);
 }
+
 
 /*
   Utility functions to find cubic and quartic roots.

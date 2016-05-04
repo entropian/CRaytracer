@@ -1,6 +1,7 @@
 #pragma once
 
-#include <stdlib.h>
+#include <cstdlib>
+#include "../util/util.h"
 #include "../util/vec.h"
 #include "../util/ray.h"
 #include "../util/math.h"
@@ -102,7 +103,7 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
     vec3 horizontal_comp = {hit_point[0], 0.0f, hit_point[2]};
     float x = vec3_length(horizontal_comp) - torus->swept_radius;
     float theta = (float)atan2(hit_point[1], x);
-    if((float)abs(phi) <= torus->phi)
+    if(abs(phi) <= torus->phi)
     {
         vec3_copy(sr->hit_point, hit_point);
         computeTorusNormal(sr->normal, torus, sr->hit_point);
@@ -171,7 +172,7 @@ float shadowRayIntersectTorus(const Torus* torus, const Ray ray)
     getPointOnRay(hit_point, ray, t);
     float phi = (float)atan2(hit_point[0], hit_point[2]);
     float theta = (float)acos(min(hit_point[1] / torus->tube_radius, 1.0f));
-    if((float)abs(phi) <= torus->phi)        
+    if(abs(phi) <= torus->phi)        
     {
         return t;
     }

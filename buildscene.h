@@ -7,6 +7,7 @@
 #include "util/vec.h"
 #include "util/constants.h"
 #include "shapes/shapes.h"
+#include "shapes/instanced.h"
 #include "gl/glcode.h"
 #include "sampling.h"
 #include "camera.h"
@@ -157,6 +158,41 @@ void initSolidCylinder(SceneObjects* so)
     (so->num_obj)++;    
 }
 
+void initInstanced(SceneObjects* so)
+{
+    if(so->num_obj == MAX_OBJECTS){return;}
+    Material mat;
+    InstancedShape* is = (InstancedShape*)malloc(sizeof(InstancedShape));
+
+    initDefaultPhongMat(&mat, YELLOW);
+    float radius = 1.0f, half_height = 0.5f, phi = (float)PI;
+    SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
+    is->obj_ptr = sc;
+    is->obj_type = SOLIDCYLINDER;        
+
+    /*
+    Torus* torus = (Torus*)malloc(sizeof(Torus));
+    torus->shadow = true;
+    torus->swept_radius = 2.0f;
+    torus->tube_radius = 0.5f;
+    torus->phi = (float)PI;
+    initDefaultPhongMat(&(torus->mat), YELLOW);    
+    calcAABBTorus(torus);    
+    is->obj_ptr = torus;
+    is->obj_type = TORUS;    
+    */
+    vec3 translation = {2.0f, 0.0f, 0.0f};
+    vec3 rotate_axis = {1.0f, 1.0f, -1.0f};
+    vec3_normalize(rotate_axis, rotate_axis);
+    float theta = PI / 4.0f;    
+    vec3 scaling = {2.0f, 2.0f, 2.0f};    
+    defaultInvTransform(is->inv_transform, scaling, rotate_axis, theta, translation);
+
+    so->obj_ptrs[so->num_obj] = is;
+    so->obj_types[so->num_obj] = INSTANCED;
+    (so->num_obj)++;
+}
+
 void initSceneObjects(SceneObjects *so, const SceneLights *sl)
 {
     for(int i = 0; i < MAX_OBJECTS; i++)
@@ -171,8 +207,9 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl)
     //initTriangle(so);
     //initOpenCylinder(so);
     //initDisk(so);
-    initTorus(so);
+    //initTorus(so);
     //initSolidCylinder(so);
+    initInstanced(so);
     
     for(int i = 0; i < sl->num_lights; i++)
     {
@@ -227,10 +264,11 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
     */
+
     // Sphere
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
-    vec3_assign(sphere->center, -2.0f, 3.0f, -0.0f);
+    vec3_assign(sphere->center, -2.0f, 3.0f, -2.0f);
     sphere->radius = 1.0f;
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;

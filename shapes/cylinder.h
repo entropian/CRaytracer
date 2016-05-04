@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdlib.h>
+#include "../util/util.h"
 #include "../util/vec.h"
 #include "../util/ray.h"
 #include "../util/shaderec.h"
@@ -47,7 +47,7 @@ void fillShadeRecOpenCylinder(ShadeRec *sr, OpenCylinder* oc, const Ray ray, con
     } break;
     case CONCAVE:
     {
-        vec3_assign(sr->normal, (-hit_point[0])/oc->radius, 0.0f, (-hit_point[2])/oc->radius);        
+        vec3_assign(sr->normal, (-hit_point[0])/oc->radius, 0.0f, (-hit_point[2])/oc->radius);
     } break;
     }
     sr->mat = &(oc->mat);
@@ -73,10 +73,10 @@ float rayIntersectOpenCylinder(ShadeRec* sr, OpenCylinder* oc, const Ray ray)
         if(t > K_EPSILON)
         {
             getPointOnRay(hit_point, ray, t);
-            if((float)abs(hit_point[1]) <= oc->half_height)
+            if(abs(hit_point[1]) <= oc->half_height)
             {
                 float phi = (float)atan2(hit_point[0], hit_point[2]);
-                if((float)abs(phi) <= oc->phi)
+                if(abs(phi) <= oc->phi)
                 {
                     fillShadeRecOpenCylinder(sr, oc, ray, hit_point);
                     return t;                                        
@@ -87,10 +87,10 @@ float rayIntersectOpenCylinder(ShadeRec* sr, OpenCylinder* oc, const Ray ray)
         if(t > K_EPSILON)
         {
             getPointOnRay(hit_point, ray, t);
-            if((float)abs(hit_point[1]) <= oc->half_height)
+            if(abs(hit_point[1]) <= oc->half_height)
             {
                 float phi = (float)atan2(hit_point[0], hit_point[2]);
-                if((float)abs(phi) <= oc->phi)
+                if(abs(phi) <= oc->phi)
                 {
                     fillShadeRecOpenCylinder(sr, oc, ray, hit_point);
                     return t;                    
@@ -120,10 +120,10 @@ float shadowRayIntersectOpenCylinder(const OpenCylinder* oc, const Ray ray)
         if(t > K_EPSILON)
         {
             getPointOnRay(hit_point, ray, t);            
-            if((float)abs(hit_point[1]) <= oc->half_height)
+            if(abs(hit_point[1]) <= oc->half_height)
             {
                 float phi = (float)atan2(hit_point[0], hit_point[2]);
-                if((float)abs(phi) <= oc->phi)
+                if(abs(phi) <= oc->phi)
                 {
                     return t;
                 }
@@ -133,10 +133,10 @@ float shadowRayIntersectOpenCylinder(const OpenCylinder* oc, const Ray ray)
         if(t > K_EPSILON)
         {
             getPointOnRay(hit_point, ray, t);            
-            if((float)abs(hit_point[1]) <= oc->half_height)
+            if(abs(hit_point[1]) <= oc->half_height)
             {
                 float phi = (float)atan2(hit_point[0], hit_point[2]);
-                if((float)abs(phi) <= oc->phi)
+                if(abs(phi) <= oc->phi)
                 {
                     return t;
                 }

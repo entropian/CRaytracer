@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shapes/shapes.h"
+#include "shapes/instanced.h"
 #include "lights.h"
 
 typedef struct SceneObjects
@@ -72,7 +73,7 @@ void freeSceneLights(SceneLights* sl)
 }
 
 // NOTE: try using function pointer to condense the code?
-float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray ray)
+float intersectTest(ShadeRec* sr, const SceneObjects* scene_objects, const Ray ray)
 {
     float tmp_t = TMAX,  min_t = TMAX;
     ShadeRec tmp_sr, min_sr;
@@ -106,6 +107,9 @@ float intersectTest(ShadeRec *sr, const SceneObjects *scene_objects, const Ray r
             break;
         case SOLIDCYLINDER:
             tmp_t = rayIntersectSolidCylinder(&tmp_sr, (SolidCylinder*)scene_objects->obj_ptrs[i], ray);
+            break;
+        case INSTANCED:
+            tmp_t = rayIntersectInstanced(&tmp_sr, (InstancedShape*)scene_objects->obj_ptrs[i], ray);
             break;
         }
         if(tmp_t < min_t)
@@ -155,6 +159,9 @@ float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ra
             break;
         case SOLIDCYLINDER:
             t = shadowRayIntersectSolidCylinder((SolidCylinder*)scene_objects->obj_ptrs[i], shadow_ray);
+            break;
+        case INSTANCED:
+            t = shadowRayIntersectInstanced((InstancedShape*)scene_objects->obj_ptrs[i], shadow_ray);
             break;            
         }
         if(t < TMAX)

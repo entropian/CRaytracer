@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdlib.h>
+#include "../util/util.h"
 #include "../util/vec.h"
 #include "../util/ray.h"
 #include "../util/shaderec.h"
@@ -54,7 +54,7 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
             getPointOnRay(hit_point, ray, t);                        
             float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
             float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
-            if((float)abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
+            if(abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
                theta <= sphere->max_theta)            
             {
                 fillShadeRecSphere(sr, sphere, hit_point, ray, t);            
@@ -69,7 +69,7 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
             getPointOnRay(hit_point, ray, t);
             float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
             float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));            
-            if((float)abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
+            if(abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
                theta <= sphere->max_theta)                            
             {
                 fillShadeRecSphere(sr, sphere, hit_point, ray, t);
@@ -108,7 +108,7 @@ float shadowRayIntersectSphere(Sphere *sphere, const Ray ray)
             getPointOnRay(hit_point, ray, t);
             float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
             float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
-            if((float)abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
+            if(abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
                theta <= sphere->max_theta)                        
             {
                 return t;
@@ -122,7 +122,7 @@ float shadowRayIntersectSphere(Sphere *sphere, const Ray ray)
             getPointOnRay(hit_point, ray, t);
             float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
             float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
-            if((float)abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
+            if(abs(phi) <= sphere->phi && theta >= sphere->min_theta&&
                theta <= sphere->max_theta)                        
             {
                 return t;
