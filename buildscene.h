@@ -146,15 +146,15 @@ void initTorus(SceneObjects* so)
     (so->num_obj)++;            
 }
 
-void initSolidCylinder(SceneObjects* so)
+void initSCylinder(SceneObjects* so)
 {
     if(so->num_obj == MAX_OBJECTS){return;}
     Material mat;
     initDefaultPhongMat(&mat, YELLOW);
     float radius = 1.0f, half_height = 0.5f, phi = (float)PI;
-    SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
+    SCylinder* sc = initSCylinder(radius, half_height, phi, &mat, true);
     so->obj_ptrs[so->num_obj] = sc;
-    so->obj_types[so->num_obj] = SOLIDCYLINDER;
+    so->obj_types[so->num_obj] = COMPOUND;
     (so->num_obj)++;    
 }
 
@@ -164,13 +164,15 @@ void initInstanced(SceneObjects* so)
     Material mat;
     InstancedShape* is = (InstancedShape*)malloc(sizeof(InstancedShape));
 
+    /*
     initDefaultPhongMat(&mat, YELLOW);
     float radius = 1.0f, half_height = 0.5f, phi = (float)PI;
     SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
     is->obj_ptr = sc;
-    is->obj_type = SOLIDCYLINDER;        
+    is->obj_type = SOLIDCYLINDER;
+    */
 
-    /*
+
     Torus* torus = (Torus*)malloc(sizeof(Torus));
     torus->shadow = true;
     torus->swept_radius = 2.0f;
@@ -180,7 +182,7 @@ void initInstanced(SceneObjects* so)
     calcAABBTorus(torus);    
     is->obj_ptr = torus;
     is->obj_type = TORUS;    
-    */
+
     vec3 translation = {2.0f, 0.0f, 0.0f};
     vec3 rotate_axis = {1.0f, 1.0f, -1.0f};
     vec3_normalize(rotate_axis, rotate_axis);
@@ -209,7 +211,8 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl)
     //initDisk(so);
     //initTorus(so);
     //initSolidCylinder(so);
-    initInstanced(so);
+    //initInstanced(so);
+    initSCylinder(so);
     
     for(int i = 0; i < sl->num_lights; i++)
     {

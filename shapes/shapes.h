@@ -19,8 +19,8 @@ enum ObjectType
     OPENCYLINDER,
     DISK,
     TORUS,
-    SOLIDCYLINDER,
-    INSTANCED
+    INSTANCED,
+    COMPOUND
 };
 
 

@@ -26,9 +26,13 @@ void freeSceneObjects(SceneObjects* so)
     {
         if(so->obj_ptrs[i] != NULL)
         {
-            if(so->obj_types[i] == SOLIDCYLINDER)
+            if(so->obj_types[i] == COMPOUND)
             {
-                freeSolidCylinder((SolidCylinder*)so->obj_ptrs[i]);
+                freeCompoundObject((CompoundObject*)(so->obj_ptrs[i]));
+            }else if(so->obj_types[i] == INSTANCED)
+            {
+                // TODO
+                freeInstancedShape((InstancedShape*)(so->obj_ptrs[i]));                
             }else
             {
                 free(so->obj_ptrs[i]);
@@ -105,11 +109,11 @@ float intersectTest(ShadeRec* sr, const SceneObjects* scene_objects, const Ray r
         case TORUS:
             tmp_t = rayIntersectTorus(&tmp_sr, (Torus*)scene_objects->obj_ptrs[i], ray);
             break;
-        case SOLIDCYLINDER:
-            tmp_t = rayIntersectSolidCylinder(&tmp_sr, (SolidCylinder*)scene_objects->obj_ptrs[i], ray);
-            break;
         case INSTANCED:
             tmp_t = rayIntersectInstanced(&tmp_sr, (InstancedShape*)scene_objects->obj_ptrs[i], ray);
+            break;
+        case COMPOUND:
+            tmp_t = rayIntersectCompound(&tmp_sr, (CompoundObject*)scene_objects->obj_ptrs[i], ray);
             break;
         }
         if(tmp_t < min_t)
@@ -157,11 +161,11 @@ float shadowIntersectTest(const SceneObjects *scene_objects, const Ray shadow_ra
         case TORUS:
             t = shadowRayIntersectTorus((Torus*)scene_objects->obj_ptrs[i], shadow_ray);
             break;
-        case SOLIDCYLINDER:
-            t = shadowRayIntersectSolidCylinder((SolidCylinder*)scene_objects->obj_ptrs[i], shadow_ray);
-            break;
         case INSTANCED:
             t = shadowRayIntersectInstanced((InstancedShape*)scene_objects->obj_ptrs[i], shadow_ray);
+            break;
+        case COMPOUND:
+            t = shadowRayIntersectCompound((CompoundObject*)scene_objects->obj_ptrs[i], shadow_ray);
             break;            
         }
         if(t < TMAX)

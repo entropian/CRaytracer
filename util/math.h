@@ -43,8 +43,8 @@ void defaultInvTransform(mat4 r, const vec3 scaling, const vec3 axis, const floa
     mat4_translate(inv_translation, -translation[0], -translation[1], -translation[2]);
     mat4_scale_inverse(inv_scale, scaling);
     mat4_rotate(inv_rotation, axis, theta);
-    mat4_mult(tmp, inv_rotation, inv_scale);
-    mat4_mult(r, inv_translation, tmp);
+    mat4_mult(tmp, inv_scale, inv_rotation);
+    mat4_mult(r, tmp, inv_translation);
 }
 
 
