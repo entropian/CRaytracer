@@ -8,8 +8,8 @@ typedef struct CompoundObject
 {
     bool shadow;
     int num_obj;
-    ObjectType obj_types[10];
-    void* obj_ptrs[10];
+    ObjectType* obj_types;
+    void** obj_ptrs;
     AABB aabb;    
 } CompoundObject;
 
@@ -41,6 +41,8 @@ void freeCompoundObject(CompoundObject* co)
             free(co->obj_ptrs[i]);
         }
     }
+    free(co->obj_ptrs);
+    free(co->obj_types);
 }
 
 void freeInstancedShape(InstancedShape* is)
@@ -249,23 +251,26 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
     return t;
 }
 
-typedef CompoundObject SCylinder;
+typedef CompoundObject SolidCylinder;
 
-void calcAABBSCylinder(AABB* aabb, const Disk* top, const Disk* bottom, const OpenCylinder* tube)
+void calcAABBSolidCylinder(AABB* aabb, const Disk* top, const Disk* bottom, const OpenCylinder* tube)
 {
     aabb->min[0] = -(tube->radius);
     aabb->min[1] = -(tube->half_height);
-    aabb->min[2] = tube->radius;
+    aabb->min[2] = -(tube->radius);
 
     aabb->max[0] = tube->radius;
     aabb->max[1] = tube->half_height;
-    aabb->max[2] = -(tube->radius);    
+    aabb->max[2] = (tube->radius);    
 }
 
-SCylinder* initSCylinder(const float radius, const float half_height, const float phi,
+SolidCylinder* initSolidCylinder(const float radius, const float half_height, const float phi,
                     const Material* mat, const bool shadow)
 {
-    SCylinder* sc = (SCylinder*)malloc(sizeof(SCylinder));
+    int num_obj = 3;
+    SolidCylinder* sc = (SolidCylinder*)malloc(sizeof(SolidCylinder));
+    sc->obj_ptrs = (void**)malloc(sizeof(void*) * num_obj);
+    sc->obj_types = (ObjectType*)malloc(sizeof(ObjectType) * num_obj);
     sc->shadow = shadow;
     Disk* top = (Disk*)malloc(sizeof(Disk));
     Disk* bottom = (Disk*)malloc(sizeof(Disk));
@@ -286,7 +291,7 @@ SCylinder* initSCylinder(const float radius, const float half_height, const floa
     sc->obj_types[1] = DISK;
     sc->obj_ptrs[2] = tube;
     sc->obj_types[2] = OPENCYLINDER;
-    sc->num_obj = 3;
-    calcAABBSCylinder(&(sc->aabb), top, bottom, tube);
+    sc->num_obj = num_obj;
+    calcAABBSolidCylinder(&(sc->aabb), top, bottom, tube);
     return sc;
 }

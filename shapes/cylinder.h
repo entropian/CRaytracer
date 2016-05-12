@@ -145,12 +145,3 @@ float shadowRayIntersectOpenCylinder(const OpenCylinder* oc, const Ray ray)
     }
     return TMAX;
 }
-
-typedef struct SolidCylinder
-{
-    bool shadow;
-    Disk* top;
-    Disk* bottom;
-    OpenCylinder* tube;
-    AABB aabb;
-} SolidCylinder;

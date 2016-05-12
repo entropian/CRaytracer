@@ -173,13 +173,6 @@ int main()
             // Shading
             if(min_t < TMAX)
             {
-                /*
-                if(p == 0)
-                {
-                    printf("new set\n");
-                }
-                */
-
                 vec3 radiance = {0.0f, 0.0f, 0.0f};                
                 if(min_sr.mat->mat_type == EMISSIVE)
                 {
@@ -187,7 +180,6 @@ int main()
                     maxToOne(radiance, radiance);
                 }else
                 {
-                    
                     // Ambient component
                     // ka*ca * amb_inc_radiance
                     vec3 amb_inc_radiance;

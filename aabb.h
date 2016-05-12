@@ -37,15 +37,15 @@ bool rayIntersectAABB(const AABB* aabb, const Ray ray)
         ty_max = (aabb->min[1] - ray.origin[1]) * b;        
     }
 
-    float c = 1.0f/-ray.direction[2];
+    float c = 1.0f/ray.direction[2];
     if(c >= 0)
     {
-        tz_min = -(aabb->min[2] - ray.origin[2]) * c;
-        tz_max = -(aabb->max[2] - ray.origin[2]) * c;
+        tz_min = (aabb->min[2] - ray.origin[2]) * c;
+        tz_max = (aabb->max[2] - ray.origin[2]) * c;
     }else
     {
-        tz_min = -(aabb->max[2] - ray.origin[2]) * c;
-        tz_max = -(aabb->min[2] - ray.origin[2]) * c;
+        tz_min = (aabb->max[2] - ray.origin[2]) * c;
+        tz_max = (aabb->min[2] - ray.origin[2]) * c;
     }
     
     float t0, t1;

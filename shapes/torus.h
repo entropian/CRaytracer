@@ -41,11 +41,11 @@ void calcAABBTorus(Torus* torus)
     AABB* aabb = &(torus->aabb);
     aabb->min[0] = -(torus->swept_radius + torus->tube_radius);
     aabb->min[1] = -(torus->tube_radius);
-    aabb->min[2] = -(aabb->min[0]);
+    aabb->min[2] = aabb->min[0];
 
     aabb->max[0] = torus->swept_radius + torus->tube_radius;
     aabb->max[1] = torus->tube_radius;
-    aabb->max[2] = -(aabb->max[0]);
+    aabb->max[2] = aabb->max[0];
 }
 
 float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
