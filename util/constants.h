@@ -27,4 +27,7 @@ const float DEFAULT_FOCAL_LENGTH = 3.0f;
 const float DEFAULT_LENS_RADIUS = 0.2f;
 
 const float K_EPSILON = 0.00007f;
+const float K_SMALLVALUE = 0.0000001;
 const float TMAX = FLT_MAX;
+const float HUGEVALUE = 1.0E10;
+const float K_FLAT_AABB = 0.001;

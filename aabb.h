@@ -10,7 +10,7 @@ typedef struct AABB
     vec3 max;
 } AABB;
 
-bool rayIntersectAABB(const AABB* aabb, const Ray ray)
+float rayIntersectAABB(const AABB* aabb, const Ray ray)
 {
     float tx_min, ty_min, tz_min;
     float tx_max, ty_max, tz_max;
@@ -75,5 +75,31 @@ bool rayIntersectAABB(const AABB* aabb, const Ray ray)
         t1 = tz_max;
     }
 
-    return (t0 < t1 && t1 > K_EPSILON);
+    if(t0 < t1 && t1 > K_EPSILON)
+    {
+        if(t0 > K_EPSILON)
+        {
+            return t0;
+        }else
+        {
+            return t1;
+        }
+    }else
+    {
+        return TMAX;
+    }
+    //return (t0 < t1 && t1 > K_EPSILON);
 }
+
+bool isInsideAABB(const AABB* aabb, const vec3 point)
+{
+    for(int i = 0; i < 3; i++)
+    {
+        if(point[i] < aabb->min[i] || point[i] > aabb->max[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+   

@@ -401,6 +401,9 @@ bool parseDiskEntry(Disk** r,  FILE* fp)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MAX
     if(!parseVec3(disk_ptr->normal, fp)){return false;}
+    printVec3WithText("disk->normal", disk_ptr->normal);
+    vec3_normalize(disk_ptr->normal, disk_ptr->normal);
+    printVec3WithText("disk->normal normalized ", disk_ptr->normal);    
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word RADIUS
     if(!getNextTokenInFile(buffer, fp)){return false;}
@@ -444,7 +447,7 @@ bool parseTorusEntry(Torus** r,  FILE* fp)
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!parseMatEntry(&(torus_ptr->mat), fp)){return false;}    
 
-    printTorus(torus_ptr);
+    //printTorus(torus_ptr);
     *r = torus_ptr;
     return true;
 }

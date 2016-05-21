@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../util/mat.h"
-#include "shapes.h"
+#include "objecttype.h"
 #include "../aabb.h"
 
 typedef struct CompoundObject
@@ -152,7 +152,7 @@ float shadowRayIntersectInstanced(InstancedShape* is, const Ray src_ray)
 
 float rayIntersectCompound(ShadeRec* sr, CompoundObject* co, const Ray ray)
 {
-    if(!rayIntersectAABB(&(co->aabb), ray))
+    if(rayIntersectAABB(&(co->aabb), ray) == TMAX)
     {
         return TMAX;
     }       
@@ -204,7 +204,7 @@ float rayIntersectCompound(ShadeRec* sr, CompoundObject* co, const Ray ray)
 
 float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
 {
-    if(!rayIntersectAABB(&(co->aabb), shadow_ray))
+    if(rayIntersectAABB(&(co->aabb), shadow_ray) == TMAX)
     {
         return TMAX;
     }               

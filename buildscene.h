@@ -43,7 +43,6 @@ void initInstanced(SceneObjects* so)
     is->obj_type = SOLIDCYLINDER;
     */
 
-
     Torus* torus = (Torus*)malloc(sizeof(Torus));
     torus->shadow = true;
     torus->swept_radius = 2.0f;
@@ -66,94 +65,126 @@ void initInstanced(SceneObjects* so)
     (so->num_obj)++;
 }
 
-void initSceneObjects(SceneObjects *so, const SceneLights *sl)
+void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scenefile)
 {
     for(int i = 0; i < MAX_OBJECTS; i++)
     {
         so->obj_ptrs[i] = NULL;
     }
     so->num_obj = 0;    
-    FILE* fp = fopen("scene.txt", "r");
-    char buffer[128];
-    while(getNextTokenInFile(buffer, fp))
+    FILE* fp = fopen(scenefile, "r");
+    if(fp)
     {
-        if(strcmp(buffer, "OBJECT") == 0)
+        char buffer[128];
+        while(getNextTokenInFile(buffer, fp))
         {
-            getNextTokenInFile(buffer, fp);
-            if(strcmp(buffer, "SPHERE") == 0)
+            if(strcmp(buffer, "OBJECT") == 0)
             {
-                Sphere* sphere_ptr;
-                if(parseSphereEntry(&sphere_ptr, fp))
+                getNextTokenInFile(buffer, fp);
+                if(strcmp(buffer, "SPHERE") == 0)
                 {
-                    so->obj_ptrs[so->num_obj] = sphere_ptr;
-                    so->obj_types[so->num_obj] = SPHERE;
-                    (so->num_obj)++;
+                    Sphere* sphere_ptr;
+                    if(parseSphereEntry(&sphere_ptr, fp))
+                    {
+                        so->obj_ptrs[so->num_obj] = sphere_ptr;
+                        so->obj_types[so->num_obj] = SPHERE;
+                        (so->num_obj)++;
+                    }
+                }else if(strcmp(buffer, "PLANE") == 0)
+                {
+                    Plane* plane_ptr;
+                    if(parsePlaneEntry(&plane_ptr, fp))
+                    {
+                        so->obj_ptrs[so->num_obj] = plane_ptr;
+                        so->obj_types[so->num_obj] = PLANE;
+                        (so->num_obj)++;
+                    }      
+                }else if(strcmp(buffer, "RECTANGLE") == 0)
+                {
+                    Rectangle* rect_ptr;
+                    if(parseRectEntry(&rect_ptr, fp))
+                    {
+                        so->obj_ptrs[so->num_obj] = rect_ptr;
+                        so->obj_types[so->num_obj] = RECTANGLE;
+                        (so->num_obj)++;
+                    }      
+                }else if(strcmp(buffer, "TRIANGLE") == 0)
+                {
+                    Triangle* tri_ptr;
+                    if(parseTriangleEntry(&tri_ptr, fp))
+                    {
+                        so->obj_ptrs[so->num_obj] = tri_ptr;
+                        so->obj_types[so->num_obj] = TRIANGLE;
+                        (so->num_obj)++;
+                    }
+                }else if(strcmp(buffer, "AABOX") == 0)
+                {
+                    AABox* aabox_ptr;
+                    if(parseAABoxEntry(&aabox_ptr, fp))
+                    {
+                        so->obj_ptrs[so->num_obj] = aabox_ptr;
+                        so->obj_types[so->num_obj] = AABOX;
+                        (so->num_obj)++;
+                    }                
+                }else if(strcmp(buffer, "OPENCYLINDER") == 0)
+                {
+                    OpenCylinder* cyl_ptr;
+                    if(parseOpenCylEntry(&cyl_ptr, fp))
+                    {
+                        so->obj_ptrs[so->num_obj] = cyl_ptr;
+                        so->obj_types[so->num_obj] = OPENCYLINDER;
+                        (so->num_obj)++;
+                    }
+                }else if(strcmp(buffer, "DISK") == 0)
+                {
+                    Disk* disk_ptr;
+                    if(parseDiskEntry(&disk_ptr, fp))
+                    {
+                        so->obj_ptrs[so->num_obj] = disk_ptr;
+                        so->obj_types[so->num_obj] = DISK;
+                        (so->num_obj)++;
+                    }
+                }else if(strcmp(buffer, "TORUS") == 0)
+                {
+                    Torus* torus_ptr;
+                    if(parseTorusEntry(&torus_ptr, fp))
+                    {
+                        so->obj_ptrs[so->num_obj] = torus_ptr;
+                        so->obj_types[so->num_obj] = TORUS;
+                        (so->num_obj)++;
+                    }else
+                    {
+                        printf("falsed\n");
+                    }
                 }
-            }else if(strcmp(buffer, "PLANE") == 0)
-            {
-                Plane* plane_ptr;
-                if(parsePlaneEntry(&plane_ptr, fp))
-                {
-                    so->obj_ptrs[so->num_obj] = plane_ptr;
-                    so->obj_types[so->num_obj] = PLANE;
-                    (so->num_obj)++;
-                }      
-            }else if(strcmp(buffer, "RECTANGLE") == 0)
-            {
-                Rectangle* rect_ptr;
-                if(parseRectEntry(&rect_ptr, fp))
-                {
-                    so->obj_ptrs[so->num_obj] = rect_ptr;
-                    so->obj_types[so->num_obj] = RECTANGLE;
-                    (so->num_obj)++;
-                }      
-            }else if(strcmp(buffer, "TRIANGLE") == 0)
-            {
-                Triangle* tri_ptr;
-                if(parseTriangleEntry(&tri_ptr, fp))
-                {
-                    so->obj_ptrs[so->num_obj] = tri_ptr;
-                    so->obj_types[so->num_obj] = TRIANGLE;
-                    (so->num_obj)++;
-                }
-            }else if(strcmp(buffer, "OPENCYLINDER") == 0)
-            {
-                OpenCylinder* cyl_ptr;
-                if(parseOpenCylEntry(&cyl_ptr, fp))
-                {
-                    so->obj_ptrs[so->num_obj] = cyl_ptr;
-                    so->obj_types[so->num_obj] = OPENCYLINDER;
-                    (so->num_obj)++;
-                }
-            }else if(strcmp(buffer, "DISK") == 0)
-            {
-                Disk* disk_ptr;
-                if(parseDiskEntry(&disk_ptr, fp))
-                {
-                    so->obj_ptrs[so->num_obj] = disk_ptr;
-                    so->obj_types[so->num_obj] = DISK;
-                    (so->num_obj)++;
-                }
-            }else if(strcmp(buffer, "TORUS") == 0)
-            {
-                Torus* torus_ptr;
-                if(parseTorusEntry(&torus_ptr, fp))
-                {
-                    so->obj_ptrs[so->num_obj] = torus_ptr;
-                    so->obj_types[so->num_obj] = TORUS;
-                    (so->num_obj)++;
-                }else
-                {
-                    printf("falsed\n");
-                }
-            }
-        }   
+            }   
+        }
     }
     
-    //initTorus(so);
     //initSolidCylinder(so);
     //initInstanced(so);
-    //initSolidCylinder(so);
+
+    for(int i = 0; i < 200; ++i)
+    {
+        Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
+        sphere->shadow = true;
+        sphere->min_theta = 0;
+        sphere->max_theta = PI;
+        sphere->phi = PI;
+        sphere->radius = 0.5;
+        float r = (float)rand() / (float)RAND_MAX;
+        float g = (float)rand() / (float)RAND_MAX;
+        float b = (float)rand() / (float)RAND_MAX;
+        vec3 color = {r, g, b};
+        initDefaultMatteMat(&(sphere->mat), color);
+        float x = (float)rand() / (float)RAND_MAX * 18.0f - 9.0f;
+        float y = (float)rand() / (float)RAND_MAX * 18.0f - 10.0f;
+        float z = (float)rand() / (float)RAND_MAX * -10.0f - 2.0f;
+        vec3_assign(sphere->center, x, y, z);
+        so->obj_ptrs[so->num_obj] = sphere;
+        so->obj_types[so->num_obj] = SPHERE;
+        (so->num_obj)++;
+    }
     
     for(int i = 0; i < sl->num_lights; i++)
     {
@@ -282,15 +313,39 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     */
 
     sl->env_light_ptr = NULL;
-    initAreaLights(sl, num_samples, num_sets);
-    //initEnvLight(sl, num_samples, num_sets);
+    //initAreaLights(sl, num_samples, num_sets);
+    initEnvLight(sl, num_samples, num_sets);
 }
 
-void initScene(SceneObjects* so, SceneLights* sl, const int num_samples, const int num_sets)
+void initScene(SceneObjects* so, SceneLights* sl, const int num_samples, const int num_sets,
+               const char* scenefile)
 {
     // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
     initSceneLights(sl, num_samples, num_sets);    
-    initSceneObjects(so, sl);        
+    initSceneObjects(so, sl, scenefile);
+    mvNonGridObjToStart(so);
+    //printf("num_non_grid_obj = %d\n", so->num_non_grid_obj);
+    printf("before num_obj = %d\n", so->num_obj);
+    RegularGrid_create(&(so->rg), (so->obj_ptrs), so->obj_types, &(so->num_obj),
+                       so->num_non_grid_obj, 2);
+    printf("after num_obj = %d\n", so->num_obj);
+    RegularGrid* rg_ptr = &(so->rg);
+    so->accel = true;
+    /*
+    for(int i = 0; i < rg_ptr->num_cells; ++i)
+    {
+        if(rg_ptr->cells[i].size > 0)
+        {
+            printf("cell_index %d: ", i);
+
+            for(int j = 0; j < rg_ptr->cells[i].size; ++j)
+            {
+                printf("%d ", IntVector_get(&(rg_ptr->cells[i]), j));
+            }
+            printf("\n");
+        }
+    }
+    */
 }
 
 void initBackgroundColor(vec3 r, const SceneLights* sl, const vec3 default_color)

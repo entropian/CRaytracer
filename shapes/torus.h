@@ -50,7 +50,7 @@ void calcAABBTorus(Torus* torus)
 
 float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
 {
-    if(!rayIntersectAABB(&(torus->aabb), ray))
+    if(rayIntersectAABB(&(torus->aabb), ray) == TMAX)
     {
         return TMAX;
     }
@@ -121,7 +121,7 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
 
 float shadowRayIntersectTorus(const Torus* torus, const Ray ray)
 {
-    if(!rayIntersectAABB(&(torus->aabb), ray))
+    if(rayIntersectAABB(&(torus->aabb), ray) == TMAX)
     {
         return TMAX;
     }

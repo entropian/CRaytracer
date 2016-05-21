@@ -80,8 +80,9 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    //int frame_res_width = 900, frame_res_height = 900;
-    int frame_res_width = 360, frame_res_height = 360;    
+    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 360, frame_res_height = 360;
+    //int frame_res_width = 480, frame_res_height = 480;    
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
@@ -89,7 +90,7 @@ int main()
     srand((unsigned int)time(NULL));    
     const int num_samples = 16;
     const int num_sets = 83;
-    Samples2D unit_square_samples = Samples2D_default;                                                          
+    Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;
     Samples3D h_samples = Samples3D_default;
     genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
@@ -102,12 +103,12 @@ int main()
     // TODO: move this into scene lights
     vec3 amb_color = {1.0f, 1.0f, 1.0f};
     float amb_ls = 0.0f;
-    bool amb_occlusion = true;
+    bool amb_occlusion = false;
 
     // Scene 
     SceneLights scene_lights;
     SceneObjects scene_objects;
-    initScene(&scene_objects, &scene_lights, num_samples, num_sets);
+    initScene(&scene_objects, &scene_lights, num_samples, num_sets, "");
 
     // vec3 bg_color = {0.0f, 0.0f, 0.0f}; 
     vec3 bg_color;
@@ -121,7 +122,7 @@ int main()
     //camera.lens_radius = 0.2f;
     
     //vec3 position = {0.0f, 0.5f, 5.0f};
-    vec3 position = {0.0f, 3.0f, 5.0f};
+    vec3 position = {0.0f, 3.0f, 6.0f};
     vec3 look_point = {0.0f, 0.0f, -4.0f};
     //vec3 look_point = {0.0f, 0.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
@@ -219,6 +220,7 @@ int main()
                                     in_shadow = true;
                                 }                            
                             }
+                            //in_shadow = false;
                             if(!in_shadow)
                             {
                                 if(scene_lights.light_types[i] == AREALIGHT)

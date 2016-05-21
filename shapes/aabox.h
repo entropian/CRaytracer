@@ -27,7 +27,7 @@ void getAABoxNormal(vec3 r, const int face_hit)
     } break;
     case 2:
     {
-        vec3_assign(r, 0.0f, 0.0f, 1.0f);    // NOTE: z component is negated due to negative z being forward
+        vec3_assign(r, 0.0f, 0.0f, -1.0f);    // NOTE: z component is negated due to negative z being forward
     } break;
     case 3:
     {
@@ -39,7 +39,7 @@ void getAABoxNormal(vec3 r, const int face_hit)
     } break;
     case 5:
     {
-        vec3_assign(r, 0.0f, 0.0f, -1.0f);    // NOTE: z component is negated due to negative z being forward
+        vec3_assign(r, 0.0f, 0.0f, 1.0f);    // NOTE: z component is negated due to negative z being forward
     } break;    
     }
 }
@@ -72,15 +72,15 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
         ty_max = (aabox->min[1] - ray.origin[1]) * b;        
     }
     // NOTE: z component is negated due to negative z being forward
-    float c = 1.0f/-ray.direction[2];
+    float c = 1.0f/ray.direction[2];
     if(c >= 0)
     {
-        tz_min = -(aabox->min[2] - ray.origin[2]) * c;
-        tz_max = -(aabox->max[2] - ray.origin[2]) * c;
+        tz_min = (aabox->min[2] - ray.origin[2]) * c;
+        tz_max = (aabox->max[2] - ray.origin[2]) * c;
     }else
     {
-        tz_min = -(aabox->max[2] - ray.origin[2]) * c;
-        tz_max = -(aabox->min[2] - ray.origin[2]) * c;
+        tz_min = (aabox->max[2] - ray.origin[2]) * c;
+        tz_max = (aabox->min[2] - ray.origin[2]) * c;
     }
 
     float t0, t1;
@@ -165,16 +165,16 @@ float shadowRayIntersectAABox(const AABox* aabox, const Ray ray)
         ty_min = (aabox->max[1] - ray.origin[1]) * b;
         ty_max = (aabox->min[1] - ray.origin[1]) * b;        
     }
-    // NOTE: z component is negated due to negative z being forward
-    float c = 1.0f/-ray.direction[2];
+
+    float c = 1.0f/ray.direction[2];
     if(c >= 0)
     {
-        tz_min = -(aabox->min[2] - ray.origin[2]) * c;
-        tz_max = -(aabox->max[2] - ray.origin[2]) * c;
+        tz_min = (aabox->min[2] - ray.origin[2]) * c;
+        tz_max = (aabox->max[2] - ray.origin[2]) * c;
     }else
     {
-        tz_min = -(aabox->max[2] - ray.origin[2]) * c;
-        tz_max = -(aabox->min[2] - ray.origin[2]) * c;
+        tz_min = (aabox->max[2] - ray.origin[2]) * c;
+        tz_max = (aabox->min[2] - ray.origin[2]) * c;
     }
 
     float t0, t1;
