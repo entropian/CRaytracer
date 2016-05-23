@@ -102,4 +102,15 @@ bool isInsideAABB(const AABB* aabb, const vec3 point)
     }
     return true;
 }
+
+void addToAABB(AABB* r, const AABB* a)
+{
+    if(a->min[0] < r->min[0]){r->min[0] = a->min[0];}
+    if(a->min[1] < r->min[1]){r->min[1] = a->min[1];}
+    if(a->min[2] < r->min[2]){r->min[2] = a->min[2];}
+
+    if(a->max[0] > r->max[0]){r->max[0] = a->max[0];}
+    if(a->max[1] > r->max[1]){r->max[1] = a->max[1];}
+    if(a->max[2] > r->max[2]){r->max[2] = a->max[2];}        
+}
    
