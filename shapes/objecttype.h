@@ -29,3 +29,31 @@ bool isGridObjType(const ObjectType obj_type)
     }
     return false;
 }
+
+void printObjType(const ObjectType obj_type)
+{
+    switch(obj_type)
+    {
+    case SPHERE:
+        printf("SPHERE\n");
+        break;
+    case RECTANGLE:
+        printf("RECTANGLE\n");
+        break;
+    case AABOX:
+        printf("AABOX\n");
+        break;
+    case TRIANGLE:
+        printf("TRIANGLE\n");
+        break;
+    case OPENCYLINDER:
+        printf("OPENCYLINDER\n");
+        break;
+    case DISK:
+        printf("DISK\n");
+        break;
+    case TORUS:
+        printf("TORUS\n");
+        break;
+    }
+}

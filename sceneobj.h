@@ -125,6 +125,7 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
         }
     }
 
+    float t = TMAX;
     if(hits_grid)
     {
         float x_comp = ray.direction[0];
@@ -192,7 +193,8 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
                 if(obj_t < TMAX)
                 {
                     *sr = obj_sr;
-                    return obj_t;
+                    t = obj_t;
+                    break;
                 }
             }
             if(tx_next < ty_next && tx_next < tz_next)
@@ -222,11 +224,12 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
             min_sr = tmp_sr;
         }
     }
-    if(min_t < TMAX)
+    if(min_t < t)
     {
         *sr = min_sr;
+        t = min_t;
     }
-    return min_t;        
+    return t;        
 }
 
 float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
@@ -349,7 +352,7 @@ float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
     return t;
 }
 
-float BVHIntersectTest(ShadeRec* sr, const BVHNode* tree, const Ray ray)
+float BVHIntersectTest(ShadeRec* sr, const SceneObjects* so, const BVHNode* tree, const Ray ray)
 {
     if(tree->type == LEAF)
     {
@@ -357,15 +360,25 @@ float BVHIntersectTest(ShadeRec* sr, const BVHNode* tree, const Ray ray)
     }else
     {
         float t1 = TMAX, t2 = TMAX;
+        ShadeRec sr1, sr2;
         if(rayIntersectAABB(&(tree->left->aabb), ray) < TMAX)
         {
-            t1 = BVHIntersectTest(sr, tree->left, ray);
+            t1 = BVHIntersectTest(&sr1, so, tree->left, ray);
         }
         if(rayIntersectAABB(&(tree->right->aabb), ray) < TMAX)
         {
-            t2 = BVHIntersectTest(sr, tree->right, ray);
+            t2 = BVHIntersectTest(&sr2, so, tree->right, ray);
         }
-        return t1 < t2 ? t1 : t2;
+        if(t1 < t2)
+        {
+            *sr = sr1;
+            return t1;
+        }else
+        {
+            *sr = sr2;
+            return t2;
+        }
+        //return t1 < t2 ? t1 : t2;
     }
 }
 
@@ -399,11 +412,27 @@ float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
     {
         BVHNode* tree = (BVHNode*)(so->accel_ptr);
         // Assuming that rayIntersectAABB() works whether the ray originates inside or outside of the AABB
-        if(rayIntersectAABB(&(tree->aabb), ray) == TMAX)
+        float t = TMAX;
+        if(rayIntersectAABB(&(tree->aabb), ray) < TMAX)
         {
-            return TMAX;
+            t = BVHIntersectTest(sr, so, tree, ray);
         }
-        float t = BVHIntersectTest(sr, tree, ray);
+        float tmp_t = TMAX,  min_t = TMAX;
+        ShadeRec tmp_sr, min_sr;
+        for(int i = 0; i < so->num_non_grid_obj; i++)
+        {
+            tmp_t = rayIntersectObject(&tmp_sr, so->obj_ptrs[i], so->obj_types[i], ray);
+            if(tmp_t < min_t)
+            {
+                min_t = tmp_t;
+                min_sr = tmp_sr;
+            }
+        }
+        if(min_t < t)
+        {
+            *sr = min_sr;
+            return min_t;
+        }
         return t;
     }else
     {
@@ -431,15 +460,26 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray)
     if(so->accel == GRID)
     {
         return gridShadowIntersectTest(so, shadow_ray);
-    }else if(false)
+    }else if(so->accel == BVH)
     {
         BVHNode* tree = (BVHNode*)(so->accel_ptr);
-        if(rayIntersectAABB(&(tree->aabb), shadow_ray) == TMAX)
+        float t = TMAX;
+        if(rayIntersectAABB(&(tree->aabb), shadow_ray) < TMAX)
         {
-            return TMAX;
+            t = BVHShadowIntersectTest(tree, shadow_ray);
         }
-        float t = BVHShadowIntersectTest(tree, shadow_ray);
-        return t;
+        if(t == TMAX)
+        { 
+            for(int i = 0; i < so->num_non_grid_obj; i++)
+            {
+                t = shadowRayIntersectObject(so->obj_ptrs[i], so->obj_types[i], shadow_ray);
+                if(t < TMAX)
+                {
+                    return t;
+                }
+            }
+        }
+        return t;        
     }else
     {
         float t = TMAX;
@@ -451,7 +491,7 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray)
                 return t;
             }
         }
-        return t;
+        return t;        
     }
 }
 

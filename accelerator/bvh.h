@@ -40,20 +40,6 @@ AABB calcBoundingVolume(const void* obj_ptrs[], const ObjectType obj_types[], co
 
 int partitionObjects(void* obj_ptrs[], ObjectType obj_types[], int num_obj, const int axis_index)
 {
-    vec3 axis;
-    switch(axis_index)
-    {
-    case 0:
-        vec3_copy(axis, RIGHT);        
-        break;
-    case 1:
-        vec3_copy(axis, UP);        
-        break;
-    case 2:
-        vec3_copy(axis, BACKWARD);
-        break;
-    }
-
     float* centroid = (float*)malloc(sizeof(float) * num_obj);
     for(int i = 0; i < num_obj; ++i)
     {
@@ -84,7 +70,8 @@ int partitionObjects(void* obj_ptrs[], ObjectType obj_types[], int num_obj, cons
     return num_obj / 2;
 }
 
-void BVH_create(BVHNode **tree, void* obj_ptrs[], ObjectType obj_types[], int num_obj, const int axis_index)
+void BVH_build(BVHNode **tree, void* obj_ptrs[], ObjectType obj_types[], 
+               int num_obj, const int axis_index)
 {
     assert(num_obj > 0);
 
@@ -98,37 +85,39 @@ void BVH_create(BVHNode **tree, void* obj_ptrs[], ObjectType obj_types[], int nu
         pNode->type = LEAF;
         pNode->num_obj = num_obj;
         pNode->obj_ptr = obj_ptrs[0];
+        pNode->obj_type = obj_types[0];
         pNode->left = NULL;
         pNode->right = NULL;
     }else
     {
         pNode->type = NODE;
         int k = partitionObjects(obj_ptrs, obj_types, num_obj, axis_index);
-        BVH_create(&(pNode->left), obj_ptrs, obj_types, k, (axis_index + 1) % 3);
-        BVH_create(&(pNode->right), &(obj_ptrs[k]), &(obj_types[k]), num_obj - k, (axis_index + 1) % 3);
+        BVH_build(&(pNode->left), obj_ptrs, obj_types, k, (axis_index + 1) % 3);
+        BVH_build(&(pNode->right), &(obj_ptrs[k]), &(obj_types[k]),
+                  num_obj - k, (axis_index + 1) % 3);
     }
 }
 
 void printBVH(BVHNode* tree, int* leaf_count, int depth)
 {
+    for(int i = 0; i < depth; ++i)
+    {
+        printf("\t");
+    }
     if(tree->type == NODE)
     {
-        ++(*leaf_count);        
+        ++(*leaf_count);
         printf("NODE %d depth %d\n", *leaf_count, depth);
     }else if(tree->type == LEAF)
     {
         ++(*leaf_count);
-        printf("LEAF %d depth %d\n", *leaf_count, depth);
-        printVec3WithText("aabb.min", tree->aabb.min);
-        printVec3WithText("aabb.max", tree->aabb.max);
-        if(tree->obj_type != SPHERE)
-        {
-            printf("WHAT THE HELL\n");
-        }
-    }else
+        printf("LEAF %d depth %d ", *leaf_count, depth);
+        printObjType(tree->obj_type);
+     }else
     {
         printf("WTF NEITHER?\n");
     }
     if(tree->left){printBVH(tree->left, leaf_count, depth+1);}
     if(tree->right){printBVH(tree->right, leaf_count, depth+1);}
 }
+

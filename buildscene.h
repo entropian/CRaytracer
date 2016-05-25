@@ -163,7 +163,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
     
     //initSolidCylinder(so);
     //initInstanced(so);
-
+    /*
     for(int i = 0; i < 50; ++i)
     {
         Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
@@ -185,7 +185,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
         so->obj_types[so->num_obj] = SPHERE;
         (so->num_obj)++;
     }
-    
+    */
     for(int i = 0; i < sl->num_lights; i++)
     {
         if(sl->light_types[i] == AREALIGHT)
@@ -324,19 +324,19 @@ void initScene(SceneObjects* so, SceneLights* sl, const int num_samples, const i
     initSceneLights(sl, num_samples, num_sets);    
     initSceneObjects(so, sl, scenefile);
     mvNonGridObjToStart(so);
-    //printf("num_non_grid_obj = %d\n", so->num_non_grid_obj);
-    BVHNode* tree;
-    BVH_create(&tree, &(so->obj_ptrs[so->num_non_grid_obj]), &(so->obj_types[so->num_non_grid_obj]),
-               so->num_obj - so->num_non_grid_obj, 0);
-    int leaf_count = 0;
-    printBVH(tree, &leaf_count, 0);
-    UniformGrid* rg = UniformGrid_create((so->obj_ptrs), so->obj_types, &(so->num_obj), so->num_non_grid_obj, 2);
+
     so->accel = GRID;
     if(so->accel == GRID)
     {
+        UniformGrid* rg = UniformGrid_create((so->obj_ptrs), so->obj_types, &(so->num_obj), so->num_non_grid_obj, 2);
         so->accel_ptr = rg;
     }else if(so->accel == BVH)
     {
+        BVHNode* tree;    
+        BVH_build(&tree, &(so->obj_ptrs[so->num_non_grid_obj]), &(so->obj_types[so->num_non_grid_obj]),
+                  so->num_obj - so->num_non_grid_obj, 0);
+        int leaf_count = 0;
+        printBVH(tree, &leaf_count, 0);        
         so->accel_ptr = tree;
     }
 

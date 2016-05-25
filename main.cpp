@@ -108,7 +108,7 @@ int main()
     // Scene 
     SceneLights scene_lights;
     SceneObjects scene_objects;
-    initScene(&scene_objects, &scene_lights, num_samples, num_sets, "");
+    initScene(&scene_objects, &scene_lights, num_samples, num_sets, "example_scene.txt");
 
     // vec3 bg_color = {0.0f, 0.0f, 0.0f}; 
     vec3 bg_color;
