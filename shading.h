@@ -2,6 +2,7 @@
 
 #include "util/constants.h"
 #include "util/vec.h"
+#include "util/util.h"
 #include "materials.h"
 #include "shapes/shapes.h"
 #include "lights.h"
@@ -36,7 +37,7 @@ void specularShading(vec3 radiance, const vec3 light_dir,
     float ndotwo = vec3_dot(sr->normal, sr->wo);
     vec3_scale(tmp, sr->normal, ndotwo * 2.0f);
     vec3_add(reflect_dir, wo_neg, tmp);    
-    float rdotl = vec3_dot(reflect_dir, light_dir);
+    float rdotl = clamp(vec3_dot(reflect_dir, light_dir), 0.0f, 1.0f);
     vec3_scale(tmp, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
     vec3_mult(tmp, inc_radiance_cos, tmp);
     vec3_add(radiance, radiance, tmp);

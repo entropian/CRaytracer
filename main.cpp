@@ -80,15 +80,17 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 900, frame_res_height = 900;
     //int frame_res_width = 360, frame_res_height = 360;
-    //int frame_res_width = 480, frame_res_height = 480;    
+    //int frame_res_width = 480, frame_res_height = 480;
+    //int frame_res_width = 720, frame_res_height = 720;
+    int frame_res_width = 512, frame_res_height = 512;
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
     // Samples
     srand((unsigned int)time(NULL));    
-    const int num_samples = 16;
+    const int num_samples = 64;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;

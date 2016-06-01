@@ -16,6 +16,7 @@
 #include "sceneobj.h"
 #include "scenefile.h"
 #include "shading.h"
+#include "objloader/objloader.h"
 
 void initSolidCylinder(SceneObjects* so)
 {
@@ -71,8 +72,13 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
     {
         so->obj_ptrs[i] = NULL;
     }
-    so->num_obj = 0;    
+    so->num_obj = 0;
+    
+#ifdef _MSC_VER
+
+#else
     FILE* fp = fopen(scenefile, "r");
+#endif
     if(fp)
     {
         char buffer[128];

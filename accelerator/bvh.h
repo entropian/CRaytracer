@@ -113,10 +113,8 @@ void printBVH(BVHNode* tree, int* leaf_count, int depth)
         ++(*leaf_count);
         printf("LEAF %d depth %d ", *leaf_count, depth);
         printObjType(tree->obj_type);
-     }else
-    {
-        printf("WTF NEITHER?\n");
     }
+
     if(tree->left){printBVH(tree->left, leaf_count, depth+1);}
     if(tree->right){printBVH(tree->right, leaf_count, depth+1);}
 }
