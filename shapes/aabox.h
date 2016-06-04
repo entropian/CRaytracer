@@ -10,7 +10,7 @@ typedef struct AABox
 {
     bool shadow;
     vec3 min, max;
-    Material mat;
+    Material* mat;
 } AABox;
 
 void getAABoxNormal(vec3 r, const int face_hit)
@@ -128,7 +128,7 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
             getAABoxNormal(sr->normal, face_out);
         }
         getPointOnRay(sr->hit_point, ray, t_min);
-        sr->mat = &(aabox->mat);
+        sr->mat = aabox->mat;
         sr->hit_status = true;
         vec3_negate(sr->wo, ray.direction);
     }

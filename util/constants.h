@@ -4,6 +4,7 @@
 
 const int MAX_OBJECTS = 1000;
 const int MAX_LIGHTS = 10;
+const int MAX_MESH = 20;
 
 const vec3 UP = {0.0f, 1.0f, 0.0f};
 const vec3 DOWN = {0.0f, -1.0f, 0.0f};
@@ -31,3 +32,4 @@ const float K_SMALLVALUE = 0.0000001;
 const float TMAX = FLT_MAX;
 const float HUGEVALUE = 1.0E10;
 const float K_FLAT_AABB = 0.001;
+

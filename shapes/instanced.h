@@ -265,7 +265,7 @@ void calcAABBSolidCylinder(AABB* aabb, const Disk* top, const Disk* bottom, cons
 }
 
 SolidCylinder* initSolidCylinder(const float radius, const float half_height, const float phi,
-                    const Material* mat, const bool shadow)
+                    Material* mat, const bool shadow)
 {
     int num_obj = 3;
     SolidCylinder* sc = (SolidCylinder*)malloc(sizeof(SolidCylinder));
@@ -283,7 +283,7 @@ SolidCylinder* initSolidCylinder(const float radius, const float half_height, co
     vec3_assign(bottom->normal, 0.0f, -1.0f, 0.0f);
     tube->phi = phi;
     tube->normal_type = OPEN;
-    top->mat = bottom->mat = tube->mat = *mat;
+    top->mat = bottom->mat = tube->mat = mat;
 
     sc->obj_ptrs[0] = top;
     sc->obj_types[0] = DISK;

@@ -23,7 +23,7 @@ typedef struct OpenCylinder
     float half_height;
     float radius;
     float phi; // for setting how much the cylinder is visible
-    Material mat;    
+    Material* mat;    
 } OpenCylinder;
 
 void fillShadeRecOpenCylinder(ShadeRec *sr, OpenCylinder* oc, const Ray ray, const vec3 hit_point)
@@ -50,7 +50,7 @@ void fillShadeRecOpenCylinder(ShadeRec *sr, OpenCylinder* oc, const Ray ray, con
         vec3_assign(sr->normal, (-hit_point[0])/oc->radius, 0.0f, (-hit_point[2])/oc->radius);
     } break;
     }
-    sr->mat = &(oc->mat);
+    sr->mat = oc->mat;
 }
 
 float rayIntersectOpenCylinder(ShadeRec* sr, OpenCylinder* oc, const Ray ray)

@@ -11,7 +11,7 @@ typedef struct Plane
     bool shadow;
     vec3 point;
     vec3 normal;
-    Material mat;
+    Material* mat;
 } Plane;
 
 float rayIntersectPlane(ShadeRec *sr, Plane *plane, const Ray ray)
@@ -25,7 +25,7 @@ float rayIntersectPlane(ShadeRec *sr, Plane *plane, const Ray ray)
         vec3_scale(displacement, ray.direction, t);
         vec3_add(sr->hit_point, ray.origin, displacement);
         vec3_negate(sr->wo, ray.direction);
-        sr->mat = &(plane->mat);
+        sr->mat = plane->mat;
         return t;
     }
     return TMAX;

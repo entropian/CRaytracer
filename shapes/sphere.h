@@ -14,7 +14,7 @@ typedef struct Sphere
     float min_theta, max_theta, phi; // For setting how much of the sphere is visible if partial is true
     float radius;    
     vec3 center;
-    Material mat;
+    Material* mat;
 } Sphere;
 
 void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, const Ray ray, const float t)
@@ -25,7 +25,7 @@ void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, cons
     vec3_sub(hit_point_to_center, sr->hit_point, sphere->center);
     vec3_normalize(sr->normal, hit_point_to_center);
     vec3_negate(sr->wo, ray.direction);
-    sr->mat = &(sphere->mat);
+    sr->mat = sphere->mat;
 }
 
 float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)

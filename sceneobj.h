@@ -5,6 +5,7 @@
 #include "lights.h"
 #include "accelerator/uniformgrid.h"
 #include "accelerator/bvh.h"
+#include "objloader/objloader.h"
 
 enum AccelType
 {
@@ -17,9 +18,11 @@ typedef struct SceneObjects
 {
     AccelType accel;    
     int num_obj;
+    int num_mat;    
     int num_non_grid_obj;
-    ObjectType obj_types[MAX_OBJECTS];
+    ObjectType obj_types[MAX_OBJECTS];    // TODO: use dynamic buffer 
     void* obj_ptrs[MAX_OBJECTS];
+    Material* materials;    
     void* accel_ptr;
 } SceneObjects;
 

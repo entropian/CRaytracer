@@ -17,6 +17,12 @@ typedef struct Material
     vec3 ca, cd, cs, ce;
 }Material;
 
+void printMaterial(const Material* mat)
+{
+    printf("shadow %s\n", mat->shadow ? "true" : "false");
+    printf("ka %f, kd %f\n", mat->ka, mat->kd);
+}
+
 void initDefaultMatteMat(Material* mat, const vec3 color)
 {
     vec3_copy(mat->cd, color);

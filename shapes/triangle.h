@@ -11,8 +11,16 @@ typedef struct Triangle
     bool shadow;
     vec3 v0, v1, v2;
     vec3 normal;
-    Material mat;
+    Material* mat;
 } Triangle;
+
+typedef struct 
+{
+    bool shadow;
+    vec3 v0, v1, v2;
+    vec3 normal;
+    Material* mat;
+} MeshTriangle;
 
 void calcTriangleNormal(Triangle* triangle)
 {
@@ -78,7 +86,7 @@ float rayIntersectTriangle(ShadeRec* sr, Triangle* tri, const Ray ray)
     vec3_copy(sr->normal, tri->normal);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);    
-    sr->mat = &(tri->mat);
+    sr->mat = tri->mat;
     return t;
 }
 

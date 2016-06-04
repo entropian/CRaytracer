@@ -12,7 +12,7 @@ typedef struct Disk
     float radius;
     vec3 center;
     vec3 normal;
-    Material mat;
+    Material* mat;
 } Disk;
 
 float rayIntersectDisk(ShadeRec* sr, Disk* disk, const Ray ray)
@@ -36,7 +36,7 @@ float rayIntersectDisk(ShadeRec* sr, Disk* disk, const Ray ray)
                 vec3_copy(sr->normal, disk->normal);
             }
             vec3_copy(sr->hit_point, hit_point);
-            sr->mat = &(disk->mat);
+            sr->mat = disk->mat;
             return t;
         }
     }

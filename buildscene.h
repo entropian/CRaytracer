@@ -49,7 +49,9 @@ void initInstanced(SceneObjects* so)
     torus->swept_radius = 2.0f;
     torus->tube_radius = 0.5f;
     torus->phi = (float)PI;
-    initDefaultPhongMat(&(torus->mat), YELLOW);    
+    // TODO: push the material onto the material array or something
+    torus->mat = (Material*)malloc(sizeof(Material));    
+    initDefaultPhongMat(torus->mat, YELLOW);    
     calcAABBTorus(torus);    
     is->obj_ptr = torus;
     is->obj_type = TORUS;    
@@ -81,16 +83,24 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
 #endif
     if(fp)
     {
+        char** mat_names;
+        int num_mat = parseMaterials(&(so->materials), &mat_names, fp);
+        so->num_mat = num_mat;
+
         char buffer[128];
         while(getNextTokenInFile(buffer, fp))
         {
+            if(buffer[0] == '#')
+            {
+                while(fgetc(fp) != '\n'){}
+            }
             if(strcmp(buffer, "OBJECT") == 0)
             {
                 getNextTokenInFile(buffer, fp);
                 if(strcmp(buffer, "SPHERE") == 0)
                 {
                     Sphere* sphere_ptr;
-                    if(parseSphereEntry(&sphere_ptr, fp))
+                    if(parseSphereEntry(&sphere_ptr, fp, so->materials, mat_names, num_mat))
                     {
                         so->obj_ptrs[so->num_obj] = sphere_ptr;
                         so->obj_types[so->num_obj] = SPHERE;
@@ -99,7 +109,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
                 }else if(strcmp(buffer, "PLANE") == 0)
                 {
                     Plane* plane_ptr;
-                    if(parsePlaneEntry(&plane_ptr, fp))
+                    if(parsePlaneEntry(&plane_ptr, fp, so->materials, mat_names, num_mat))
                     {
                         so->obj_ptrs[so->num_obj] = plane_ptr;
                         so->obj_types[so->num_obj] = PLANE;
@@ -108,7 +118,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
                 }else if(strcmp(buffer, "RECTANGLE") == 0)
                 {
                     Rectangle* rect_ptr;
-                    if(parseRectEntry(&rect_ptr, fp))
+                    if(parseRectEntry(&rect_ptr, fp, so->materials, mat_names, num_mat))
                     {
                         so->obj_ptrs[so->num_obj] = rect_ptr;
                         so->obj_types[so->num_obj] = RECTANGLE;
@@ -117,7 +127,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
                 }else if(strcmp(buffer, "TRIANGLE") == 0)
                 {
                     Triangle* tri_ptr;
-                    if(parseTriangleEntry(&tri_ptr, fp))
+                    if(parseTriangleEntry(&tri_ptr, fp, so->materials, mat_names, num_mat))
                     {
                         so->obj_ptrs[so->num_obj] = tri_ptr;
                         so->obj_types[so->num_obj] = TRIANGLE;
@@ -126,7 +136,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
                 }else if(strcmp(buffer, "AABOX") == 0)
                 {
                     AABox* aabox_ptr;
-                    if(parseAABoxEntry(&aabox_ptr, fp))
+                    if(parseAABoxEntry(&aabox_ptr, fp, so->materials, mat_names, num_mat))
                     {
                         so->obj_ptrs[so->num_obj] = aabox_ptr;
                         so->obj_types[so->num_obj] = AABOX;
@@ -135,7 +145,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
                 }else if(strcmp(buffer, "OPENCYLINDER") == 0)
                 {
                     OpenCylinder* cyl_ptr;
-                    if(parseOpenCylEntry(&cyl_ptr, fp))
+                    if(parseOpenCylEntry(&cyl_ptr, fp, so->materials, mat_names, num_mat))
                     {
                         so->obj_ptrs[so->num_obj] = cyl_ptr;
                         so->obj_types[so->num_obj] = OPENCYLINDER;
@@ -144,7 +154,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
                 }else if(strcmp(buffer, "DISK") == 0)
                 {
                     Disk* disk_ptr;
-                    if(parseDiskEntry(&disk_ptr, fp))
+                    if(parseDiskEntry(&disk_ptr, fp, so->materials, mat_names, num_mat))
                     {
                         so->obj_ptrs[so->num_obj] = disk_ptr;
                         so->obj_types[so->num_obj] = DISK;
@@ -153,15 +163,19 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
                 }else if(strcmp(buffer, "TORUS") == 0)
                 {
                     Torus* torus_ptr;
-                    if(parseTorusEntry(&torus_ptr, fp))
+                    if(parseTorusEntry(&torus_ptr, fp, so->materials, mat_names, num_mat))
                     {
                         so->obj_ptrs[so->num_obj] = torus_ptr;
                         so->obj_types[so->num_obj] = TORUS;
                         (so->num_obj)++;
-                    }else
-                    {
-                        printf("falsed\n");
                     }
+                }else if(strcmp(buffer, "MESH") == 0)
+                {
+                    /*
+                      parseMesh should return an array of mesh triangles, each containing a pointer
+                      to the mesh
+                      all the triangles will then be dumped into the object array
+                     */
                 }
             }   
         }
@@ -254,9 +268,11 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;
     sphere->phi = (float)PI;
-    vec3_copy(sphere->mat.ce, area_light_ptr->color);    
-    sphere->mat.ke = area_light_ptr->intensity;    
-    sphere->mat.mat_type = EMISSIVE;
+    // TODO: fix the material pointer situation
+    sphere->mat = (Material*)malloc(sizeof(Material));
+    vec3_copy(sphere->mat->ce, area_light_ptr->color);    
+    sphere->mat->ke = area_light_ptr->intensity;    
+    sphere->mat->mat_type = EMISSIVE;
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, num_samples, num_sets);    
 

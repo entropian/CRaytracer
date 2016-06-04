@@ -17,7 +17,7 @@ typedef struct Torus
     float tube_radius;
     float phi;
     AABB aabb;
-    Material mat;
+    Material* mat;
 } Torus;
 
 void computeTorusNormal(vec3 r, const Torus* torus, const vec3 hit_point)
@@ -112,7 +112,7 @@ float rayIntersectTorus(ShadeRec* sr, Torus* torus, const Ray ray)
         {
             vec3_negate(sr->normal, sr->normal);
         }
-        sr->mat = &(torus->mat);
+        sr->mat = torus->mat;
         return (float)t;                                
     }
 

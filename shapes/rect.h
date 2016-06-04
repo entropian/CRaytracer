@@ -12,7 +12,7 @@ typedef struct Rectangle
     vec3 point;                // Bottom left of the rectangle
     vec3 width, height;
     vec3 normal;
-    Material mat;
+    Material* mat;
 } Rectangle;
 
 float rayIntersectRect(ShadeRec *sr, Rectangle *rect, const Ray ray)
@@ -35,7 +35,7 @@ float rayIntersectRect(ShadeRec *sr, Rectangle *rect, const Ray ray)
                 vec3_scale(displacement, ray.direction, t);
                 vec3_copy(sr->hit_point, point);
                 vec3_negate(sr->wo, ray.direction);
-                sr->mat = &(rect->mat);                
+                sr->mat = rect->mat;                
                 return t;
             }
         }
