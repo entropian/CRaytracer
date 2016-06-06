@@ -9,7 +9,7 @@ enum MatType
     EMISSIVE
 };
 // NOTE: this looks like it sucks
-typedef struct Material
+typedef struct 
 {
     bool shadow;
     MatType mat_type;

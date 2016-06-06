@@ -8,8 +8,7 @@ typedef struct CompoundObject
 {
     bool shadow;
     int num_obj;
-    ObjectType* obj_types;
-    void** obj_ptrs;
+    Object_t* objects;
     AABB aabb;    
 } CompoundObject;
 
@@ -18,9 +17,8 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray);
 
 typedef struct InstancedShape
 {
-    ObjectType obj_type;
-    void* obj_ptr;
-    Material* mat;
+    Material* mat;    
+    Object_t obj;
     mat4 inv_transform;
 } InstancedShape;
 
@@ -30,29 +28,28 @@ void freeCompoundObject(CompoundObject* co)
 {
     for(int i = 0; i < co->num_obj; i++)
     {
-        if(co->obj_types[i] == INSTANCED)
+        if(co->objects[i].type == INSTANCED)
         {
-            freeInstancedShape((InstancedShape*)(co->obj_ptrs[i]));
-        }else if(co->obj_types[i] == COMPOUND)
+            freeInstancedShape((InstancedShape*)(co->objects[i].ptr));
+        }else if(co->objects[i].type == COMPOUND)
         {
-            freeCompoundObject((CompoundObject*)(co->obj_ptrs[i]));
+            freeCompoundObject((CompoundObject*)(co->objects[i].ptr));
         }else
         {
-            free(co->obj_ptrs[i]);
+            free(co->objects[i].ptr);
         }
     }
-    free(co->obj_ptrs);
-    free(co->obj_types);
+    free(co->objects);
 }
 
 void freeInstancedShape(InstancedShape* is)
 {
-    if(is->obj_type == COMPOUND)
+    if(is->obj.type == COMPOUND)
     {
-        freeCompoundObject((CompoundObject*)is->obj_ptr);
+        freeCompoundObject((CompoundObject*)is->obj.ptr);
     }else
     {
-        free(is->obj_ptr);
+        free(is->obj.ptr);
     }
 }
 
@@ -61,37 +58,37 @@ float rayIntersectInstanced(ShadeRec* sr, InstancedShape* is, const Ray src_ray)
     Ray ray;    
     transformRay(&ray, is->inv_transform, src_ray);
     float t = TMAX;
-    switch(is->obj_type)
+    switch(is->obj.type)
     {
     case SPHERE:
-        t = rayIntersectSphere(sr, (Sphere*)is->obj_ptr, ray);            
+        t = rayIntersectSphere(sr, (Sphere*)is->obj.ptr, ray);            
         break;
     case PLANE:
-        t = rayIntersectPlane(sr, (Plane*)is->obj_ptr, ray);                        
+        t = rayIntersectPlane(sr, (Plane*)is->obj.ptr, ray);                        
         break;
     case RECTANGLE:
-        t = rayIntersectRect(sr, (Rectangle*)is->obj_ptr, ray);
+        t = rayIntersectRect(sr, (Rectangle*)is->obj.ptr, ray);
         break;
     case AABOX:
-        t = rayIntersectAABox(sr, (AABox*)is->obj_ptr, ray);
+        t = rayIntersectAABox(sr, (AABox*)is->obj.ptr, ray);
         break;
     case TRIANGLE:
-        t = rayIntersectTriangle(sr, (Triangle*)is->obj_ptr, ray);
+        t = rayIntersectTriangle(sr, (Triangle*)is->obj.ptr, ray);
         break;
     case OPENCYLINDER:
-        t = rayIntersectOpenCylinder(sr, (OpenCylinder*)is->obj_ptr, ray);            
+        t = rayIntersectOpenCylinder(sr, (OpenCylinder*)is->obj.ptr, ray);            
         break;
     case DISK:
-        t = rayIntersectDisk(sr, (Disk*)is->obj_ptr, ray);
+        t = rayIntersectDisk(sr, (Disk*)is->obj.ptr, ray);
         break;
     case TORUS:
-        t = rayIntersectTorus(sr, (Torus*)is->obj_ptr, ray);
+        t = rayIntersectTorus(sr, (Torus*)is->obj.ptr, ray);
         break;
     case INSTANCED:
-        t = rayIntersectInstanced(sr, (InstancedShape*)is->obj_ptr, ray);
+        t = rayIntersectInstanced(sr, (InstancedShape*)is->obj.ptr, ray);
         break;
     case COMPOUND:
-        t = rayIntersectCompound(sr, (CompoundObject*)is->obj_ptr, ray);
+        t = rayIntersectCompound(sr, (CompoundObject*)is->obj.ptr, ray);
         break;
     }
     if(t < TMAX)
@@ -114,37 +111,37 @@ float shadowRayIntersectInstanced(InstancedShape* is, const Ray src_ray)
     Ray shadow_ray;
     transformRay(&shadow_ray, is->inv_transform, src_ray);    
     float t = TMAX;
-    switch(is->obj_type)
+    switch(is->obj.type)
     {
         case SPHERE:
-            t = shadowRayIntersectSphere((Sphere*)is->obj_ptr, shadow_ray);            
+            t = shadowRayIntersectSphere((Sphere*)is->obj.ptr, shadow_ray);            
             break;
         case PLANE:
-            t = shadowRayIntersectPlane((Plane*)is->obj_ptr, shadow_ray);                        
+            t = shadowRayIntersectPlane((Plane*)is->obj.ptr, shadow_ray);                        
             break;
         case RECTANGLE:
-            t = shadowRayIntersectRect((Rectangle*)is->obj_ptr, shadow_ray);
+            t = shadowRayIntersectRect((Rectangle*)is->obj.ptr, shadow_ray);
             break;
         case AABOX:
-            t = shadowRayIntersectAABox((AABox*)is->obj_ptr, shadow_ray);
+            t = shadowRayIntersectAABox((AABox*)is->obj.ptr, shadow_ray);
             break;
         case TRIANGLE:
-            t = shadowRayIntersectTriangle((Triangle*)is->obj_ptr, shadow_ray);
+            t = shadowRayIntersectTriangle((Triangle*)is->obj.ptr, shadow_ray);
             break;
         case OPENCYLINDER:
-            t = shadowRayIntersectOpenCylinder((OpenCylinder*)is->obj_ptr, shadow_ray);            
+            t = shadowRayIntersectOpenCylinder((OpenCylinder*)is->obj.ptr, shadow_ray);            
             break;
         case DISK:
-            t = shadowRayIntersectDisk((Disk*)is->obj_ptr, shadow_ray);
+            t = shadowRayIntersectDisk((Disk*)is->obj.ptr, shadow_ray);
             break;
         case TORUS:
-            t = shadowRayIntersectTorus((Torus*)is->obj_ptr, shadow_ray);
+            t = shadowRayIntersectTorus((Torus*)is->obj.ptr, shadow_ray);
             break;
         case INSTANCED:
-            t = shadowRayIntersectInstanced((InstancedShape*)is->obj_ptr, shadow_ray);
+            t = shadowRayIntersectInstanced((InstancedShape*)is->obj.ptr, shadow_ray);
             break;
         case COMPOUND:
-            t = shadowRayIntersectCompound((CompoundObject*)is->obj_ptr, shadow_ray);
+            t = shadowRayIntersectCompound((CompoundObject*)is->obj.ptr, shadow_ray);
             break;                        
     }
     return t;
@@ -161,8 +158,8 @@ float rayIntersectCompound(ShadeRec* sr, CompoundObject* co, const Ray ray)
     int num_obj = co->num_obj;
     for(int i = 0; i < num_obj; i++)
     {
-        void* obj_ptr = co->obj_ptrs[i];
-        switch(co->obj_types[i])
+        void* obj_ptr = co->objects[i].ptr;
+        switch(co->objects[i].type)
         {
         case SPHERE:
             tmp_t = rayIntersectSphere(&tmp_sr, (Sphere*)obj_ptr, ray);            
@@ -212,8 +209,8 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
     int num_obj = co->num_obj;
     for(int i = 0; i < num_obj; i++)
     {
-        void* obj_ptr = co->obj_ptrs[i];
-        switch(co->obj_types[i])
+        void* obj_ptr = co->objects[i].ptr;
+        switch(co->objects[i].type)
         {
         case SPHERE:
             t = shadowRayIntersectSphere((Sphere*)obj_ptr, shadow_ray);  
@@ -269,8 +266,9 @@ SolidCylinder* initSolidCylinder(const float radius, const float half_height, co
 {
     int num_obj = 3;
     SolidCylinder* sc = (SolidCylinder*)malloc(sizeof(SolidCylinder));
-    sc->obj_ptrs = (void**)malloc(sizeof(void*) * num_obj);
-    sc->obj_types = (ObjectType*)malloc(sizeof(ObjectType) * num_obj);
+    //sc->obj_ptrs = (void**)malloc(sizeof(void*) * num_obj);
+    //sc->obj_types = (ObjectType*)malloc(sizeof(ObjectType) * num_obj);
+    sc->objects = (Object_t*)malloc(sizeof(Object_t) * num_obj);
     sc->shadow = shadow;
     Disk* top = (Disk*)malloc(sizeof(Disk));
     Disk* bottom = (Disk*)malloc(sizeof(Disk));
@@ -285,12 +283,20 @@ SolidCylinder* initSolidCylinder(const float radius, const float half_height, co
     tube->normal_type = OPEN;
     top->mat = bottom->mat = tube->mat = mat;
 
+    /*
     sc->obj_ptrs[0] = top;
     sc->obj_types[0] = DISK;
     sc->obj_ptrs[1] = bottom;
     sc->obj_types[1] = DISK;
     sc->obj_ptrs[2] = tube;
     sc->obj_types[2] = OPENCYLINDER;
+    */
+    sc->objects[0].ptr = top;
+    sc->objects[0].type = DISK;
+    sc->objects[1].ptr = bottom;
+    sc->objects[1].type = DISK;
+    sc->objects[2].ptr = tube;
+    sc->objects[2].type = OPENCYLINDER;
     sc->num_obj = num_obj;
     calcAABBSolidCylinder(&(sc->aabb), top, bottom, tube);
     return sc;

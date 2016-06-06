@@ -30,15 +30,14 @@ void UniformGrid_destroy(UniformGrid* ug)
     }
 }
 
-void getSceneObjAABBs(AABB* aabb_array, int* num_aabb,
-                      const void* obj_ptrs[], const ObjectType obj_types[], const int num_obj)
+void getSceneObjAABBs(AABB* aabb_array, int* num_aabb, const Object_t objects[], const int num_obj)
 {   
     int aabb_index = 0;
     for(int i = 0; i < num_obj; ++i)
     {
-        if(isGridObjType(obj_types[i]))
+        if(isGridObjType(objects[i].type))
         {
-            getObjectAABB(&(aabb_array[aabb_index++]), obj_ptrs[i], obj_types[i]);
+            getObjectAABB(&(aabb_array[aabb_index++]), objects[i]);
         }
     }
     *num_aabb = aabb_index;
@@ -57,10 +56,7 @@ AABB calcUniformGridAABB(const AABB aabb_array[], const int num_aabb)
 }
 
 // Assume non-grid objects are in the beginning of the array
-//void UniformGrid_create(UniformGrid* rg, const void* obj_ptrs[], const ObjectType obj_types[],
-//                        const int num_obj, const int num_non_grid_obj, const int multiplier)
-UniformGrid* UniformGrid_create(void* obj_ptrs[], ObjectType obj_types[],
-                        int* num_obj, const int num_non_grid_obj, const int multiplier)    
+UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_non_grid_obj, const int multiplier)    
 {
     // Calc aabb for every obj and store in a array
     // use array to calc grid aabb
@@ -68,7 +64,7 @@ UniformGrid* UniformGrid_create(void* obj_ptrs[], ObjectType obj_types[],
     UniformGrid* ug = (UniformGrid*)malloc(sizeof(UniformGrid));
     AABB* aabb_array = (AABB*)malloc(sizeof(AABB) * *num_obj);
     int num_aabb;
-    getSceneObjAABBs(aabb_array, &num_aabb, (const void**)obj_ptrs, obj_types, *num_obj);
+    getSceneObjAABBs(aabb_array, &num_aabb, objects, *num_obj);
     ug->aabb = calcUniformGridAABB(aabb_array, num_aabb);
     
     ug->wx = ug->aabb.max[0] - ug->aabb.min[0];

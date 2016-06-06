@@ -5,6 +5,8 @@
 const int MAX_OBJECTS = 1000;
 const int MAX_LIGHTS = 10;
 const int MAX_MESH = 20;
+const int DEFAULT_MATERIAL = 20;
+const int MAX_NAME_LENGTH = 128;
 
 const vec3 UP = {0.0f, 1.0f, 0.0f};
 const vec3 DOWN = {0.0f, -1.0f, 0.0f};

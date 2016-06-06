@@ -8,6 +8,7 @@
 #include "lights.h"
 #include "sceneobj.h"
 #include "sampling.h"
+#include "intersect.h"
 
 void diffuseBRDF(vec3 f, const ShadeRec* sr)
 {

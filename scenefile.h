@@ -12,8 +12,6 @@
 #include "materials.h"
 #include "objloader/dbuffer.h"
 
-static const int MAX_NAME_LENGTH = 128;
-
 void printSphere(const Sphere* sphere)
 {
     printf("shadow %s\n", sphere->shadow ? "true" : "false");
@@ -183,16 +181,9 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
     }    
 }
 
-int parseMaterials(Material** materials, char*** names, FILE* fp)
+//int parseMaterials(Material** materials, char*** names, FILE* fp)
+int parseMaterials(SceneMaterials* sm, FILE* fp)
 {
-    /*
-    int mat_max = 0;
-    Material* mat_array = (Material*)malloc(sizeof(Material) * mat_max);
-    int mat_count = 0;
-    */
-    DBuffer mat_array = DBuffer_create_cap(Material, 20);
-    DBuffer name_array = DBuffer_create_cap(char*, 20);
-    
     char buffer[128];
     while(getNextTokenInFile(buffer, fp) && strcmp(buffer, "END_MATERIALS") != 0)
     {
@@ -201,24 +192,15 @@ int parseMaterials(Material** materials, char*** names, FILE* fp)
             Material mat;
             char* name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
             parseMatEntry(&mat, &name, fp);
-            DBuffer_push(mat_array, mat);
-            DBuffer_push(name_array, name);
+            SceneMaterials_push(sm, mat, name);
         }
     }
-    *materials = (Material*)(mat_array.data);
-    *names = (char**)(name_array.data);
-    return DBuffer_size(mat_array);
+    return sm->size;
 }
 
+#if 0
 Material* findMaterial(const char* mat_name, Material* mat_array, char** name_array, const int num_mat)
 {
-    printf("num_mat %d\n", num_mat);
-    for(int i = 0; i < num_mat; i++)
-    {
-        printf("here\n");
-        printMaterial(&(mat_array[i]));        
-        printf("%s\n", name_array[i]);
-    }    
     for(int i = 0; i < num_mat; i++)
     {
         if(strcmp(mat_name, name_array[i]) == 0)
@@ -230,9 +212,10 @@ Material* findMaterial(const char* mat_name, Material* mat_array, char** name_ar
     fprintf(stderr, "Material not found\n");
     return NULL;
 }
+#endif
 
 
-bool parseSphereEntry(Sphere** r, FILE* fp, Material* mat_array, char** mat_names, const int num_mat)
+bool parseSphereEntry(Object_t* obj, FILE* fp, SceneMaterials* sm, const int num_mat)
 {
     char buffer[128];
     Sphere* sphere_ptr = (Sphere*)malloc(sizeof(Sphere));
@@ -266,15 +249,15 @@ bool parseSphereEntry(Sphere** r, FILE* fp, Material* mat_array, char** mat_name
     sphere_ptr->max_theta = (float)atof(buffer);                
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    //if(!parseMatEntry(&(sphere_ptr->mat), fp)){return false;}
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name
-    sphere_ptr->mat = findMaterial(buffer, mat_array, mat_names, num_mat);
+    sphere_ptr->mat = findMaterial(buffer, sm);
 
-    *r = sphere_ptr;    
+    obj->ptr = sphere_ptr;
+    obj->type = SPHERE;
     return true;    
 }
 
-bool parsePlaneEntry(Plane** r, FILE* fp, Material* mat_array, char** mat_names, const int num_mat)
+bool parsePlaneEntry(Object_t* obj, FILE* fp, SceneMaterials* sm, const int num_mat)
 {
     char buffer[128];
     Plane* plane_ptr = (Plane*)malloc(sizeof(Plane));
@@ -295,15 +278,15 @@ bool parsePlaneEntry(Plane** r, FILE* fp, Material* mat_array, char** mat_names,
     if(!parseVec3(plane_ptr->normal, fp)){return false;}
     
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    //if(!parseMatEntry(&(plane_ptr->mat), fp)){return false;}
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    plane_ptr->mat = findMaterial(buffer, mat_array, mat_names, num_mat);    
+    plane_ptr->mat = findMaterial(buffer, sm);    
 
-    *r = plane_ptr;
+    obj->ptr = plane_ptr;
+    obj->type = PLANE;
     return true;
 }
 
-bool parseRectEntry(Rectangle** r, FILE* fp, Material* mat_array, char** mat_names, const int num_mat)
+bool parseRectEntry(Object_t* obj, FILE* fp, SceneMaterials* sm, const int num_mat)
 {
     char buffer[128];
     Rectangle* rect_ptr = (Rectangle*)malloc(sizeof(Rectangle));
@@ -330,15 +313,15 @@ bool parseRectEntry(Rectangle** r, FILE* fp, Material* mat_array, char** mat_nam
     vec3_normalize(rect_ptr->normal, rect_ptr->normal);    
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    //if(!parseMatEntry(&(rect_ptr->mat), fp)){return false;}
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    rect_ptr->mat = findMaterial(buffer, mat_array, mat_names, num_mat);        
+    rect_ptr->mat = findMaterial(buffer, sm);        
 
-    *r = rect_ptr;
+    obj->ptr = rect_ptr;
+    obj->type = RECTANGLE;
     return true;
 }
 
-bool parseTriangleEntry(Triangle** r,  FILE* fp, Material* mat_array, char** mat_names, const int num_mat)
+bool parseTriangleEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm, const int num_mat)
 {
     char buffer[128];
     Triangle* tri_ptr = (Triangle*)malloc(sizeof(Triangle));
@@ -364,15 +347,15 @@ bool parseTriangleEntry(Triangle** r,  FILE* fp, Material* mat_array, char** mat
     calcTriangleNormal(tri_ptr);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    //if(!parseMatEntry(&(tri_ptr->mat), fp)){return false;}
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    tri_ptr->mat = findMaterial(buffer, mat_array, mat_names, num_mat);            
+    tri_ptr->mat = findMaterial(buffer, sm);            
 
-    *r = tri_ptr;
+    obj->ptr = tri_ptr;
+    obj->type = TRIANGLE;
     return true;
 }
 
-bool parseAABoxEntry(AABox** r,  FILE* fp, Material* mat_array, char** mat_names, const int num_mat)
+bool parseAABoxEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm, const int num_mat)
 {
     char buffer[128];
     AABox* aabox_ptr = (AABox*)malloc(sizeof(AABox));
@@ -393,15 +376,15 @@ bool parseAABoxEntry(AABox** r,  FILE* fp, Material* mat_array, char** mat_names
     if(!parseVec3(aabox_ptr->max, fp)){return false;}
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    //if(!parseMatEntry(&(aabox_ptr->mat), fp)){return false;}
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    aabox_ptr->mat = findMaterial(buffer, mat_array, mat_names, num_mat);                
+    aabox_ptr->mat = findMaterial(buffer, sm);                
 
-    *r = aabox_ptr;
+    obj->ptr = aabox_ptr;
+    obj->type = AABOX;
     return true;
 }
 
-bool parseOpenCylEntry(OpenCylinder** r,  FILE* fp, Material* mat_array, char** mat_names, const int num_mat)
+bool parseOpenCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm, const int num_mat)
 {
     char buffer[128];
     OpenCylinder* cyl_ptr = (OpenCylinder*)malloc(sizeof(OpenCylinder));
@@ -445,15 +428,15 @@ bool parseOpenCylEntry(OpenCylinder** r,  FILE* fp, Material* mat_array, char** 
     }
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    //if(!parseMatEntry(&(cyl_ptr->mat), fp)){return false;}
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    cyl_ptr->mat = findMaterial(buffer, mat_array, mat_names, num_mat);                    
+    cyl_ptr->mat = findMaterial(buffer, sm);                    
 
-    *r = cyl_ptr;
+    obj->ptr = cyl_ptr;
+    obj->type = OPENCYLINDER;
     return true;
 }
 
-bool parseDiskEntry(Disk** r,  FILE* fp, Material* mat_array, char** mat_names, const int num_mat)
+bool parseDiskEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm, const int num_mat)
 {
     char buffer[128];
     Disk* disk_ptr = (Disk*)malloc(sizeof(Disk));
@@ -481,15 +464,15 @@ bool parseDiskEntry(Disk** r,  FILE* fp, Material* mat_array, char** mat_names, 
     disk_ptr->radius = (float)atof(buffer);    
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    //if(!parseMatEntry(&(disk_ptr->mat), fp)){return false;}
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    disk_ptr->mat = findMaterial(buffer, mat_array, mat_names, num_mat);                        
+    disk_ptr->mat = findMaterial(buffer, sm);                        
 
-    *r = disk_ptr;
+    obj->ptr = disk_ptr;
+    obj->type = DISK;
     return true;
 }
 
-bool parseTorusEntry(Torus** r,  FILE* fp, Material* mat_array, char** mat_names, const int num_mat)
+bool parseTorusEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm, const int num_mat)
 {
     char buffer[128];
     Torus* torus_ptr = (Torus*)malloc(sizeof(Torus));
@@ -518,11 +501,11 @@ bool parseTorusEntry(Torus** r,  FILE* fp, Material* mat_array, char** mat_names
     calcAABBTorus(torus_ptr);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    //if(!parseMatEntry(&(torus_ptr->mat), fp)){return false;}
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    torus_ptr->mat = findMaterial(buffer, mat_array, mat_names, num_mat);                            
+    torus_ptr->mat = findMaterial(buffer, sm);                            
 
     //printTorus(torus_ptr);
-    *r = torus_ptr;
+    obj->ptr = torus_ptr;
+    obj->type = TORUS;
     return true;
 }

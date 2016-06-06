@@ -44,6 +44,7 @@
 #include "sceneobj.h"
 #include "shading.h"
 #include "buildscene.h"
+#include "intersect.h"
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -80,11 +81,11 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 900, frame_res_height = 900;
     //int frame_res_width = 360, frame_res_height = 360;
     //int frame_res_width = 480, frame_res_height = 480;
     //int frame_res_width = 720, frame_res_height = 720;
-    //int frame_res_width = 512, frame_res_height = 512;
+    int frame_res_width = 512, frame_res_height = 512;
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
@@ -109,8 +110,9 @@ int main()
 
     // Scene 
     SceneLights scene_lights;
-    SceneObjects scene_objects;
-    initScene(&scene_objects, &scene_lights, num_samples, num_sets, "test_scene.txt");
+    SceneObjects scene_objects = SceneObjects_create();
+    SceneMaterials scene_materials = SceneMaterials_create();
+    initScene(&scene_objects, &scene_lights, &scene_materials, num_samples, num_sets, "test_scene.txt");
 
     // vec3 bg_color = {0.0f, 0.0f, 0.0f}; 
     vec3 bg_color;

@@ -19,32 +19,31 @@ typedef struct BVHNode
 {
     BVHNodeType type;
     int num_obj;
-    void* obj_ptr;
-    ObjectType obj_type;
-    BVHNode *left, *right;
+    BVHNode *left, *right;    
+    Object_t obj;
     AABB aabb;
 } BVHNode;
 
-AABB calcBoundingVolume(const void* obj_ptrs[], const ObjectType obj_types[], const int num_obj)
+AABB calcBoundingVolume(const Object_t objects[], const int num_obj)
 {
     AABB r, tmp_aabb;
     vec3_assign(r.min, FLT_MAX, FLT_MAX, FLT_MAX);
     vec3_assign(r.max, -HUGEVALUE, -HUGEVALUE, -HUGEVALUE);    
     for(int i = 0; i < num_obj; i++)
     {
-        getObjectAABB(&tmp_aabb, obj_ptrs[i], obj_types[i]);
+        getObjectAABB(&tmp_aabb, objects[i]);
         addToAABB(&r, &tmp_aabb);
     }
     return r;
 }
 
-int partitionObjects(void* obj_ptrs[], ObjectType obj_types[], int num_obj, const int axis_index)
+int partitionObjects(Object_t objects[], int num_obj, const int axis_index)
 {
     float* centroid = (float*)malloc(sizeof(float) * num_obj);
     for(int i = 0; i < num_obj; ++i)
     {
         AABB tmp_aabb;
-        getObjectAABB(&tmp_aabb, obj_ptrs[i], obj_types[i]);
+        getObjectAABB(&tmp_aabb, objects[i]);
         centroid[i] = (tmp_aabb.min[axis_index] + tmp_aabb.max[axis_index]) * 0.5f;
     }
 
@@ -57,44 +56,37 @@ int partitionObjects(void* obj_ptrs[], ObjectType obj_types[], int num_obj, cons
             centroid[j] = centroid[j-1];
             centroid[j-1] = tmp;
 
-            void* tmp_void = obj_ptrs[j];
-            obj_ptrs[j] = obj_ptrs[j-1];
-            obj_ptrs[j-1] = tmp_void;
-
-            ObjectType tmp_type = obj_types[j];
-            obj_types[j] = obj_types[j-1];
-            obj_types[j-1] = tmp_type;
+            Object_t tmp_obj = objects[j];
+            objects[j] = objects[j-1];
+            objects[j-1] = tmp_obj;
         }
     }
     free(centroid);
     return num_obj / 2;
 }
 
-void BVH_build(BVHNode **tree, void* obj_ptrs[], ObjectType obj_types[], 
-               int num_obj, const int axis_index)
+void BVH_build(BVHNode **tree, Object_t objects[], int num_obj, const int axis_index)
 {
     assert(num_obj > 0);
 
     const int MIN_OBJECTS_PER_LEAF = 1;
     BVHNode* pNode = (BVHNode*)malloc(sizeof(BVHNode));
     *tree = pNode;
-    pNode->aabb = calcBoundingVolume((const void**)obj_ptrs, obj_types, num_obj);
+    pNode->aabb = calcBoundingVolume(objects, num_obj);
 
     if(num_obj <= MIN_OBJECTS_PER_LEAF)
     {
         pNode->type = LEAF;
         pNode->num_obj = num_obj;
-        pNode->obj_ptr = obj_ptrs[0];
-        pNode->obj_type = obj_types[0];
+        pNode->obj = objects[0];
         pNode->left = NULL;
         pNode->right = NULL;
     }else
     {
         pNode->type = NODE;
-        int k = partitionObjects(obj_ptrs, obj_types, num_obj, axis_index);
-        BVH_build(&(pNode->left), obj_ptrs, obj_types, k, (axis_index + 1) % 3);
-        BVH_build(&(pNode->right), &(obj_ptrs[k]), &(obj_types[k]),
-                  num_obj - k, (axis_index + 1) % 3);
+        int k = partitionObjects(objects, num_obj, axis_index);
+        BVH_build(&(pNode->left), objects, k, (axis_index + 1) % 3);
+        BVH_build(&(pNode->right), &(objects[k]), num_obj - k, (axis_index + 1) % 3);        
     }
 }
 
@@ -112,7 +104,7 @@ void printBVH(BVHNode* tree, int* leaf_count, int depth)
     {
         ++(*leaf_count);
         printf("LEAF %d depth %d ", *leaf_count, depth);
-        printObjType(tree->obj_type);
+        printObjType(tree->obj.type);
     }
 
     if(tree->left){printBVH(tree->left, leaf_count, depth+1);}

@@ -14,6 +14,12 @@ enum ObjectType
     COMPOUND
 };
 
+typedef struct
+{
+    void* ptr;
+    ObjectType type;
+}Object_t;
+
 bool isGridObjType(const ObjectType obj_type)
 {
     switch(obj_type)

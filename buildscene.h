@@ -25,12 +25,11 @@ void initSolidCylinder(SceneObjects* so)
     initDefaultPhongMat(&mat, YELLOW);
     float radius = 1.0f, half_height = 0.5f, phi = (float)PI;
     SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
-    so->obj_ptrs[so->num_obj] = sc;
-    so->obj_types[so->num_obj] = COMPOUND;
-    (so->num_obj)++;    
+    Object_t obj = {sc, COMPOUND};
+    SceneObjects_push_obj(so, obj);
 }
 
-void initInstanced(SceneObjects* so)
+void initInstanced(SceneObjects* so, SceneMaterials* sm)
 {
     if(so->num_obj == MAX_OBJECTS){return;}
     Material mat;
@@ -49,12 +48,11 @@ void initInstanced(SceneObjects* so)
     torus->swept_radius = 2.0f;
     torus->tube_radius = 0.5f;
     torus->phi = (float)PI;
-    // TODO: push the material onto the material array or something
-    torus->mat = (Material*)malloc(sizeof(Material));    
-    initDefaultPhongMat(torus->mat, YELLOW);    
+    initDefaultPhongMat(&mat, YELLOW);
+    torus->mat = SceneMaterials_push(sm, mat, "torus_mat1");
     calcAABBTorus(torus);    
-    is->obj_ptr = torus;
-    is->obj_type = TORUS;    
+    is->obj.ptr = torus;
+    is->obj.type = TORUS;    
 
     vec3 translation = {2.0f, 0.0f, 0.0f};
     vec3 rotate_axis = {1.0f, 1.0f, -1.0f};
@@ -63,19 +61,12 @@ void initInstanced(SceneObjects* so)
     vec3 scaling = {2.0f, 2.0f, 2.0f};    
     defaultInvTransform(is->inv_transform, scaling, rotate_axis, theta, translation);
 
-    so->obj_ptrs[so->num_obj] = is;
-    so->obj_types[so->num_obj] = INSTANCED;
-    (so->num_obj)++;
+    Object_t obj = {is, INSTANCED};
+    SceneObjects_push_obj(so, obj);
 }
 
-void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scenefile)
+void initSceneObjects(SceneObjects *so, const SceneLights *sl, SceneMaterials *sm, const char* scenefile)
 {
-    for(int i = 0; i < MAX_OBJECTS; i++)
-    {
-        so->obj_ptrs[i] = NULL;
-    }
-    so->num_obj = 0;
-    
 #ifdef _MSC_VER
 
 #else
@@ -83,10 +74,8 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
 #endif
     if(fp)
     {
-        char** mat_names;
-        int num_mat = parseMaterials(&(so->materials), &mat_names, fp);
-        so->num_mat = num_mat;
-
+        parseMaterials(sm, fp);
+        int num_mat = sm->size;
         char buffer[128];
         while(getNextTokenInFile(buffer, fp))
         {
@@ -96,86 +85,46 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
             }
             if(strcmp(buffer, "OBJECT") == 0)
             {
+                Object_t obj;
+                bool parse_status = false;
                 getNextTokenInFile(buffer, fp);
                 if(strcmp(buffer, "SPHERE") == 0)
                 {
-                    Sphere* sphere_ptr;
-                    if(parseSphereEntry(&sphere_ptr, fp, so->materials, mat_names, num_mat))
-                    {
-                        so->obj_ptrs[so->num_obj] = sphere_ptr;
-                        so->obj_types[so->num_obj] = SPHERE;
-                        (so->num_obj)++;
-                    }
+                    parse_status = parseSphereEntry(&obj, fp, sm, num_mat);
                 }else if(strcmp(buffer, "PLANE") == 0)
                 {
-                    Plane* plane_ptr;
-                    if(parsePlaneEntry(&plane_ptr, fp, so->materials, mat_names, num_mat))
-                    {
-                        so->obj_ptrs[so->num_obj] = plane_ptr;
-                        so->obj_types[so->num_obj] = PLANE;
-                        (so->num_obj)++;
-                    }      
+                    parse_status = parsePlaneEntry(&obj, fp, sm, num_mat);
                 }else if(strcmp(buffer, "RECTANGLE") == 0)
                 {
-                    Rectangle* rect_ptr;
-                    if(parseRectEntry(&rect_ptr, fp, so->materials, mat_names, num_mat))
-                    {
-                        so->obj_ptrs[so->num_obj] = rect_ptr;
-                        so->obj_types[so->num_obj] = RECTANGLE;
-                        (so->num_obj)++;
-                    }      
+                    parse_status = parseRectEntry(&obj, fp, sm, num_mat);
                 }else if(strcmp(buffer, "TRIANGLE") == 0)
                 {
-                    Triangle* tri_ptr;
-                    if(parseTriangleEntry(&tri_ptr, fp, so->materials, mat_names, num_mat))
-                    {
-                        so->obj_ptrs[so->num_obj] = tri_ptr;
-                        so->obj_types[so->num_obj] = TRIANGLE;
-                        (so->num_obj)++;
-                    }
+                    parse_status = parseTriangleEntry(&obj, fp, sm, num_mat);
                 }else if(strcmp(buffer, "AABOX") == 0)
                 {
-                    AABox* aabox_ptr;
-                    if(parseAABoxEntry(&aabox_ptr, fp, so->materials, mat_names, num_mat))
-                    {
-                        so->obj_ptrs[so->num_obj] = aabox_ptr;
-                        so->obj_types[so->num_obj] = AABOX;
-                        (so->num_obj)++;
-                    }                
+                    parse_status = parseAABoxEntry(&obj, fp, sm, num_mat);
                 }else if(strcmp(buffer, "OPENCYLINDER") == 0)
                 {
-                    OpenCylinder* cyl_ptr;
-                    if(parseOpenCylEntry(&cyl_ptr, fp, so->materials, mat_names, num_mat))
-                    {
-                        so->obj_ptrs[so->num_obj] = cyl_ptr;
-                        so->obj_types[so->num_obj] = OPENCYLINDER;
-                        (so->num_obj)++;
-                    }
+                    parse_status = parseOpenCylEntry(&obj, fp, sm, num_mat);
                 }else if(strcmp(buffer, "DISK") == 0)
                 {
-                    Disk* disk_ptr;
-                    if(parseDiskEntry(&disk_ptr, fp, so->materials, mat_names, num_mat))
-                    {
-                        so->obj_ptrs[so->num_obj] = disk_ptr;
-                        so->obj_types[so->num_obj] = DISK;
-                        (so->num_obj)++;
-                    }
+                    parse_status = parseDiskEntry(&obj, fp, sm, num_mat);
                 }else if(strcmp(buffer, "TORUS") == 0)
                 {
-                    Torus* torus_ptr;
-                    if(parseTorusEntry(&torus_ptr, fp, so->materials, mat_names, num_mat))
-                    {
-                        so->obj_ptrs[so->num_obj] = torus_ptr;
-                        so->obj_types[so->num_obj] = TORUS;
-                        (so->num_obj)++;
-                    }
+                    parse_status = parseTorusEntry(&obj, fp, sm, num_mat);
                 }else if(strcmp(buffer, "MESH") == 0)
                 {
                     /*
-                      parseMesh should return an array of mesh triangles, each containing a pointer
-                      to the mesh
-                      all the triangles will then be dumped into the object array
+                      loadOBJ returns an array of OBJShapes
+                      the shapes should be thrown into an array
+                      an object from an obj file can have many groups
+                      
                      */
+                }
+
+                if(parse_status)
+                {
+                    SceneObjects_push_obj(so, obj);
                 }
             }   
         }
@@ -201,9 +150,11 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
         float y = (float)rand() / (float)RAND_MAX * 18.0f - 10.0f;
         float z = (float)rand() / (float)RAND_MAX * -10.0f - 2.0f;
         vec3_assign(sphere->center, x, y, z);
-        so->obj_ptrs[so->num_obj] = sphere;
-        so->obj_types[so->num_obj] = SPHERE;
-        (so->num_obj)++;
+        //so->obj_ptrs[so->num_obj] = sphere;
+        //so->obj_types[so->num_obj] = SPHERE;
+        //(so->num_obj)++;
+        Object_t obj = {sphere, SPHERE};
+        SceneObjects_push_obj(so, obj);
     }
     */
     for(int i = 0; i < sl->num_lights; i++)
@@ -212,9 +163,9 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, const char* scene
         {
             if(so->num_obj < MAX_OBJECTS)
             {
-                so->obj_ptrs[so->num_obj] = ((AreaLight*)(sl->light_ptrs[i]))->obj_ptr;
-                so->obj_types[so->num_obj] = ((AreaLight*)(sl->light_ptrs[i]))->obj_type;
-                (so->num_obj)++;
+                AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
+                Object_t obj = {area_light_ptr->obj_ptr, area_light_ptr->obj_type};
+                
             }
         }
     }
@@ -339,45 +290,28 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     initEnvLight(sl, num_samples, num_sets);
 }
 
-void initScene(SceneObjects* so, SceneLights* sl, const int num_samples, const int num_sets,
+void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, const int num_samples, const int num_sets,
                const char* scenefile)
 {
     // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
     initSceneLights(sl, num_samples, num_sets);    
-    initSceneObjects(so, sl, scenefile);
+    initSceneObjects(so, sl, sm, scenefile);
     mvNonGridObjToStart(so);
 
-    so->accel = GRID;
+    so->accel = BVH;
     if(so->accel == GRID)
     {
-        UniformGrid* rg = UniformGrid_create((so->obj_ptrs), so->obj_types, &(so->num_obj), so->num_non_grid_obj, 2);
+        //UniformGrid* rg = UniformGrid_create(so->obj_ptrs, so->obj_types, &(so->num_obj), so->num_non_grid_obj, 2);
+        UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, 2);
         so->accel_ptr = rg;
     }else if(so->accel == BVH)
     {
-        BVHNode* tree;    
-        BVH_build(&tree, &(so->obj_ptrs[so->num_non_grid_obj]), &(so->obj_types[so->num_non_grid_obj]),
-                  so->num_obj - so->num_non_grid_obj, 0);
+        BVHNode* tree;
+        BVH_build(&tree, &(so->objects[so->num_non_grid_obj]), so->num_obj - so->num_non_grid_obj, 0);        
         int leaf_count = 0;
         printBVH(tree, &leaf_count, 0);        
         so->accel_ptr = tree;
     }
-
-    /*
-    UniformGrid* rg_ptr = (UniformGrid*)(so->accel_ptr);          
-    for(int i = 0; i < rg_ptr->num_cells; ++i)
-    {
-        if(rg_ptr->cells[i].size > 0)
-        {
-            printf("cell_index %d: ", i);
-
-            for(int j = 0; j < rg_ptr->cells[i].size; ++j)
-            {
-                printf("%d ", IntVector_get(&(rg_ptr->cells[i]), j));
-            }
-            printf("\n");
-        }
-    }
-    */
 }
 
 void initBackgroundColor(vec3 r, const SceneLights* sl, const vec3 default_color)
