@@ -8,6 +8,10 @@
 #include "hashtable.h"
 
 #define NAME_LENGTH 30
+#ifndef _MSC_VER
+#define strcpy_s(a, b, c) strcpy((a), (c))
+#define strncpy_s(a, b, c, d) strncpy((a), (c), (d))
+#endif
 
 typedef struct
 {
@@ -250,7 +254,11 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
 int loadOBJ(OBJShape** shapes, const char*  file_name)
 {
     FILE* fp;
+#ifdef _MSC_VER
     fopen_s(&fp, file_name, "r");
+#else
+    fp = fopen(file_name, "r");
+#endif
     if(!fp)
     {
         fprintf(stderr, "Cannot open file %s\n", file_name);
