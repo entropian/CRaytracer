@@ -46,7 +46,7 @@
 #include "buildscene.h"
 #include "intersect.h"
 
-#define SHOW_PROGRESS 1
+#define SHOW_PROGRESS 0
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -94,7 +94,7 @@ int main()
     
     // Samples
     srand((unsigned int)time(NULL));    
-    const int num_samples = 4;
+    const int num_samples = 16;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;
@@ -149,6 +149,7 @@ int main()
     time(&startTime);        
     unsigned sample_index = 0;
 
+    int prev_percent = 0;
     //drawSamples(image, &disk_samples, frame_res_width, frame_res_height, num_pixels);
     //drawHemisphereSamples2D(image, &h_samples, frame_res_width, frame_res_height, num_pixels);
 //#if 0
@@ -231,7 +232,7 @@ int main()
                                     in_shadow = true;
                                 }                            
                             }
-                            //in_shadow = false;
+                            //in_shadow = false;                            
                             if(!in_shadow)
                             {
                                 if(scene_lights.light_types[i] == AREALIGHT)
@@ -281,7 +282,11 @@ int main()
         
         if(SHOW_PROGRESS)
         {
-            printf("%f%\n", (float)i / (float)(num_pixels) * 100.0f);
+            int cur_percent = (float)i / (float)(num_pixels) * 100.0f;
+            if(cur_percent > prev_percent)
+            {
+                printf("%d%%\n", cur_percent);
+            }
         }
     }
 //#endif 

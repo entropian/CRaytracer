@@ -99,7 +99,6 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                     int num_file_names = 0;
                     MeshEntry mesh_entry;
                     num_mesh = parseMesh(&mesh_entry, &shapes, mesh_file_names, &num_file_names, fp);
-                    
                     if(num_mesh > 0)
                     {
                         for(int i = 0; i < num_mesh; i++)
@@ -117,7 +116,6 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                             if(strcmp(mesh_entry.mesh_name, s_meshes->meshes[i].mesh_name) == 0)
                             {
                                 OBJShape* mesh = &(s_meshes->meshes[i]);
-                                printf("mesh mat_name %s\n", mesh_entry.mat_name);
                                 Material* mat = findMaterial(mesh_entry.mat_name, sm);
                                 for(int j = 0; j < mesh->num_indices; j += 3)
                                 {
@@ -329,7 +327,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     // Directional light
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
-    float intensity = 2.0f;
+    float intensity = 0.0f;
     vec3 direction = {10.0f, 10.0f, 10.0f};
     vec3_normalize(direction, direction);
     assignDirLight(dir_light_ptr, intensity, WHITE, direction);
@@ -351,7 +349,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
 
     sl->env_light_ptr = NULL;
     //initAreaLights(sl, num_samples, num_sets);
-    //initEnvLight(sl, num_samples, num_sets);
+    initEnvLight(sl, num_samples, num_sets);
 }
 
 void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshes* s_meshes,
@@ -375,7 +373,7 @@ void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshe
         BVHNode* tree;
         BVH_build(&tree, &(so->objects[so->num_non_grid_obj]), so->num_obj - so->num_non_grid_obj, 0);
         int leaf_count = 0;
-        printBVH(tree, &leaf_count, 0);        
+        //printBVH(tree, &leaf_count, 0);        
         so->accel_ptr = tree;
     }
 }

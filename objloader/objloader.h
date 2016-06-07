@@ -279,6 +279,20 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     DBuffer in_positions = DBuffer_create(float);
     DBuffer in_normals = DBuffer_create(float);
     DBuffer in_texcoords = DBuffer_create(float);
+
+    /*
+                            .       .       .       .       .       .       .      
+                            .       .       .       .       .       .       .      
+                            .       .       .       .       .       .       .      
+                            .       .       .       .       .       .       .
+                            VI      VI      VI      VI      VI      Vi      VI
+                            VI      VI      VI      VI      VI      Vi      VI
+                            VI      VI      VI      VI      VI      Vi      VI                            
+      in_face_group.data -> DBuffer DBuffer DBuffer DBuffer DBuffer DBuffer DBuffer......
+                    size
+                    max
+                    element_size
+     */
     DBuffer in_face_group = DBuffer_create(DBuffer);    
     
     while(OBJGetLine(fp, &read_result, line_buffer, 1024))
@@ -330,8 +344,12 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
                 VertexIndex vi = OBJParseFaceTriple(&line_ptr);
                 vi.v_idx -= 1;
                 vi.vt_idx -= 1;
-                vi.vn_idx -= 1;                
-                DBuffer_push(face, vi);
+                vi.vn_idx -= 1;
+                // TODO: fix this
+                if(vi.v_idx != -1)
+                {
+                    DBuffer_push(face, vi);
+                }
             }            
             DBuffer_push(in_face_group, face);
         }
@@ -372,6 +390,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     OBJShape shape;
     if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
     {
+        strcpy_s(shape.mesh_name, NAME_LENGTH, mesh_name);
+        strcpy_s(shape.mat_name, NAME_LENGTH, cur_mat_name);        
         DBuffer_push(obj_shapes, shape);
     }
     printf("num shapes %d\n", DBuffer_size(obj_shapes));
@@ -444,7 +464,7 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
         VertexIndex* vi_ptr = (VertexIndex*)(face_ptr[i].data);
         printf("face size %d\n", DBuffer_size(face_ptr[i]));
         printf("face max %d\n", DBuffer_max_elements(face_ptr[i]));
-        for(int j = 0; j < DBuffer_size(face_ptr[i]); j++)
+        For(int j = 0; j < DBuffer_size(face_ptr[i]); j++)
         {
             printf("%d/%d/%d ", vi_ptr[j].v_idx, vi_ptr[j].vt_idx, vi_ptr[j].vn_idx);
         }
