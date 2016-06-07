@@ -48,6 +48,9 @@ float rayIntersectObject(ShadeRec* sr, const Object_t obj, const Ray ray)
     case COMPOUND:
         t = rayIntersectCompound(sr, (CompoundObject*)obj.ptr, ray);
         break;
+    case MESH_TRIANGLE:
+        t = rayIntersectMeshTriangle(sr, (MeshTriangle*)obj.ptr, ray);
+        break;        
     }
     return t;
 }
@@ -87,6 +90,9 @@ float shadowRayIntersectObject(const Object_t obj, const Ray ray)
     case COMPOUND:
         t = shadowRayIntersectCompound((CompoundObject*)obj.ptr, ray);
         break;
+    case MESH_TRIANGLE:
+        t = shadowRayIntersectMeshTriangle((MeshTriangle*)obj.ptr, ray);
+        break;                
     }
     return t;
 }   
@@ -159,6 +165,27 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
             aabb->max[i] += K_FLAT_AABB;
         }
     } break;
+    case MESH_TRIANGLE:
+    {
+        MeshTriangle* mesh_tri = (MeshTriangle*)obj.ptr;
+        vec3 v0, v1, v2;
+        getMeshTriangleVertPos(v0, v1, v2, mesh_tri);
+        vec3_copy(aabb->min, v0);
+        vec3_copy(aabb->max, v0);
+
+        for(int i = 0; i < 3; i++)
+        {
+            if(v1[i] < aabb->min[i]){aabb->min[i] = v1[i];}
+            if(v1[i] > aabb->max[i]){aabb->max[i] = v1[i];}
+            if(v2[i] < aabb->min[i]){aabb->min[i] = v2[i];}
+            if(v2[i] > aabb->max[i]){aabb->max[i] = v2[i];}
+        }
+        for(int i = 0; i < 3; i++)
+        {
+            aabb->min[i] -= K_FLAT_AABB;
+            aabb->max[i] += K_FLAT_AABB;
+        }
+    } break;    
     case OPENCYLINDER:
     {
         OpenCylinder* oc = (OpenCylinder*)obj.ptr;

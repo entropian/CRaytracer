@@ -102,6 +102,7 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
             {
                 for(int p = min_ix; p <= max_ix; ++p)
                 {
+                    int cell_index = j*ug->nx*ug->nz + k*ug->nx + p;
                     IntVector_push(&(ug->cells[j*ug->nx*ug->nz + k*ug->nx + p]), i + num_non_grid_obj);
                 }
             }

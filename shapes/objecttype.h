@@ -11,13 +11,14 @@ enum ObjectType
     DISK,
     TORUS,
     INSTANCED,
-    COMPOUND
+    COMPOUND,
+    MESH_TRIANGLE
 };
 
 typedef struct
 {
-    void* ptr;
     ObjectType type;
+    void* ptr;    
 }Object_t;
 
 bool isGridObjType(const ObjectType obj_type)
@@ -31,6 +32,7 @@ bool isGridObjType(const ObjectType obj_type)
     case OPENCYLINDER:
     case DISK:
     case TORUS:
+    case MESH_TRIANGLE:
         return true;
     }
     return false;
@@ -60,6 +62,9 @@ void printObjType(const ObjectType obj_type)
         break;
     case TORUS:
         printf("TORUS\n");
+        break;
+    case MESH_TRIANGLE:
+        printf("MESH_TRIANGLE\n");
         break;
     }
 }

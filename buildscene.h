@@ -25,7 +25,7 @@ void initSolidCylinder(SceneObjects* so)
     initDefaultPhongMat(&mat, YELLOW);
     float radius = 1.0f, half_height = 0.5f, phi = (float)PI;
     SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
-    Object_t obj = {sc, COMPOUND};
+    Object_t obj = {COMPOUND, sc};
     SceneObjects_push_obj(so, obj);
 }
 
@@ -61,11 +61,12 @@ void initInstanced(SceneObjects* so, SceneMaterials* sm)
     vec3 scaling = {2.0f, 2.0f, 2.0f};    
     defaultInvTransform(is->inv_transform, scaling, rotate_axis, theta, translation);
 
-    Object_t obj = {is, INSTANCED};
+    Object_t obj = {INSTANCED, is};
     SceneObjects_push_obj(so, obj);
 }
 
-void initSceneObjects(SceneObjects *so, const SceneLights *sl, SceneMaterials *sm, const char* scenefile)
+void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshes,
+                      const SceneLights* sl, const char* scenefile)
 {
 #ifdef _MSC_VER
 
@@ -74,8 +75,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, SceneMaterials *s
 #endif
     if(fp)
     {
-        parseMaterials(sm, fp);
-        int num_mat = sm->size;
+        int num_mat = parseMaterials(sm, fp);
         char buffer[128];
         while(getNextTokenInFile(buffer, fp))
         {
@@ -85,46 +85,109 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, SceneMaterials *s
             }
             if(strcmp(buffer, "OBJECT") == 0)
             {
-                Object_t obj;
-                bool parse_status = false;
                 getNextTokenInFile(buffer, fp);
-                if(strcmp(buffer, "SPHERE") == 0)
-                {
-                    parse_status = parseSphereEntry(&obj, fp, sm, num_mat);
-                }else if(strcmp(buffer, "PLANE") == 0)
-                {
-                    parse_status = parsePlaneEntry(&obj, fp, sm, num_mat);
-                }else if(strcmp(buffer, "RECTANGLE") == 0)
-                {
-                    parse_status = parseRectEntry(&obj, fp, sm, num_mat);
-                }else if(strcmp(buffer, "TRIANGLE") == 0)
-                {
-                    parse_status = parseTriangleEntry(&obj, fp, sm, num_mat);
-                }else if(strcmp(buffer, "AABOX") == 0)
-                {
-                    parse_status = parseAABoxEntry(&obj, fp, sm, num_mat);
-                }else if(strcmp(buffer, "OPENCYLINDER") == 0)
-                {
-                    parse_status = parseOpenCylEntry(&obj, fp, sm, num_mat);
-                }else if(strcmp(buffer, "DISK") == 0)
-                {
-                    parse_status = parseDiskEntry(&obj, fp, sm, num_mat);
-                }else if(strcmp(buffer, "TORUS") == 0)
-                {
-                    parse_status = parseTorusEntry(&obj, fp, sm, num_mat);
-                }else if(strcmp(buffer, "MESH") == 0)
+                if(strcmp(buffer, "MESH") == 0)
                 {
                     /*
-                      loadOBJ returns an array of OBJShapes
-                      the shapes should be thrown into an array
-                      an object from an obj file can have many groups
-                      
+                      Since we are  ignoring mtl files for now, parseMesh() should return an array of OBJShape
+                      then mesh triangles are generated with those OBJshape
                      */
-                }
+                    OBJShape* shapes;
+                    int num_mesh;
+                    char mesh_file_names[MAX_MESH][NAME_LENGTH];
+                    int num_file_names = 0;
+                    MeshEntry mesh_entry;
+                    num_mesh = parseMesh(&mesh_entry, &shapes, mesh_file_names, &num_file_names, fp);
+                    
+                    if(num_mesh > 0)
+                    {
+                        for(int i = 0; i < num_mesh; i++)
+                        {
+                            SceneMeshes_push(s_meshes, shapes[i]);
+                        }
+                    }
+                    free(shapes);
 
-                if(parse_status)
+                    // Mesh Triangle generation
+                    if(num_mesh != -1)
+                    {
+                        for(int i = 0; i < s_meshes->size; i++)
+                        {
+                            if(strcmp(mesh_entry.mesh_name, s_meshes->meshes[i].mesh_name) == 0)
+                            {
+                                OBJShape* mesh = &(s_meshes->meshes[i]);
+                                printf("mesh mat_name %s\n", mesh_entry.mat_name);
+                                Material* mat = findMaterial(mesh_entry.mat_name, sm);
+                                for(int j = 0; j < mesh->num_indices; j += 3)
+                                {
+                                    MeshTriangle* mesh_tri = (MeshTriangle*)malloc(sizeof(MeshTriangle));
+                                    mesh_tri->i0 = mesh->indices[j];
+                                    mesh_tri->i1 = mesh->indices[j + 1];
+                                    mesh_tri->i2 = mesh->indices[j + 2];
+                                    mesh_tri->shadow = mesh_entry.shadow;
+                                    mesh_tri->mesh_ptr = mesh;
+
+                                    if(mesh->num_normals == 0)
+                                    {
+                                        vec3 v0, v1, v2;
+                                        int index = mesh_tri->i0 * 3;
+                                        vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
+                                                    mesh->positions[index+2]);
+                                        index = mesh_tri->i1 * 3;    
+                                        vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
+                                                    mesh->positions[index+2]);
+                                        index = mesh_tri->i2 * 3;
+                                        vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
+                                                    mesh->positions[index+2]);
+                                        calcTriangleNormal(mesh_tri->normal, v0, v1, v2);
+                                    }else
+                                    {
+                                        int index = mesh->indices[j] * 3;
+                                        vec3_assign(mesh_tri->normal, mesh->normals[index],
+                                                    mesh->normals[index+1], mesh->normals[index+2]);
+                                    }
+
+                                    mesh_tri->mat = mat;
+                                    
+                                    Object_t obj = {MESH_TRIANGLE, mesh_tri};
+                                    SceneObjects_push_obj(so, obj);
+                                }
+                            }
+                        }
+                    }
+                }else
                 {
-                    SceneObjects_push_obj(so, obj);
+                    Object_t obj;
+                    bool parse_status = false;
+                    if(strcmp(buffer, "SPHERE") == 0)
+                    {
+                        parse_status = parseSphereEntry(&obj, fp, sm, num_mat);
+                    }else if(strcmp(buffer, "PLANE") == 0)
+                    {
+                        parse_status = parsePlaneEntry(&obj, fp, sm, num_mat);
+                    }else if(strcmp(buffer, "RECTANGLE") == 0)
+                    {
+                        parse_status = parseRectEntry(&obj, fp, sm, num_mat);
+                    }else if(strcmp(buffer, "TRIANGLE") == 0)
+                    {
+                        parse_status = parseTriangleEntry(&obj, fp, sm, num_mat);
+                    }else if(strcmp(buffer, "AABOX") == 0)
+                    {
+                        parse_status = parseAABoxEntry(&obj, fp, sm, num_mat);
+                    }else if(strcmp(buffer, "OPENCYLINDER") == 0)
+                    {
+                        parse_status = parseOpenCylEntry(&obj, fp, sm, num_mat);
+                    }else if(strcmp(buffer, "DISK") == 0)
+                    {
+                        parse_status = parseDiskEntry(&obj, fp, sm, num_mat);
+                    }else if(strcmp(buffer, "TORUS") == 0)
+                    {
+                        parse_status = parseTorusEntry(&obj, fp, sm, num_mat);
+                    }
+                    if(parse_status)
+                    {
+                        SceneObjects_push_obj(so, obj);
+                    }
                 }
             }   
         }
@@ -153,7 +216,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, SceneMaterials *s
         //so->obj_ptrs[so->num_obj] = sphere;
         //so->obj_types[so->num_obj] = SPHERE;
         //(so->num_obj)++;
-        Object_t obj = {sphere, SPHERE};
+        Object_t obj = {SPHERE, sphere};
         SceneObjects_push_obj(so, obj);
     }
     */
@@ -164,7 +227,7 @@ void initSceneObjects(SceneObjects *so, const SceneLights *sl, SceneMaterials *s
             if(so->num_obj < MAX_OBJECTS)
             {
                 AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
-                Object_t obj = {area_light_ptr->obj_ptr, area_light_ptr->obj_type};
+                Object_t obj = {area_light_ptr->obj_type, area_light_ptr->obj_ptr};
                 
             }
         }
@@ -265,7 +328,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     // Directional light
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
-    float intensity = 0.0f;
+    float intensity = 2.0f;
     vec3 direction = {10.0f, 10.0f, 10.0f};
     vec3_normalize(direction, direction);
     assignDirLight(dir_light_ptr, intensity, WHITE, direction);
@@ -287,16 +350,18 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
 
     sl->env_light_ptr = NULL;
     //initAreaLights(sl, num_samples, num_sets);
-    initEnvLight(sl, num_samples, num_sets);
+    //initEnvLight(sl, num_samples, num_sets);
 }
 
-void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, const int num_samples, const int num_sets,
-               const char* scenefile)
+void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshes* s_meshes,
+               const int num_samples, const int num_sets, const char* scenefile)
 {
     // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
     initSceneLights(sl, num_samples, num_sets);    
-    initSceneObjects(so, sl, sm, scenefile);
+    initSceneObjects(so, sm, s_meshes, sl, scenefile);
     mvNonGridObjToStart(so);
+    printf("num_obj %d\n", so->num_obj);
+    printf("non grid obj %d\n", so->num_non_grid_obj);
 
     so->accel = BVH;
     if(so->accel == GRID)
@@ -307,7 +372,7 @@ void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, const int 
     }else if(so->accel == BVH)
     {
         BVHNode* tree;
-        BVH_build(&tree, &(so->objects[so->num_non_grid_obj]), so->num_obj - so->num_non_grid_obj, 0);        
+        BVH_build(&tree, &(so->objects[so->num_non_grid_obj]), so->num_obj - so->num_non_grid_obj, 0);
         int leaf_count = 0;
         printBVH(tree, &leaf_count, 0);        
         so->accel_ptr = tree;

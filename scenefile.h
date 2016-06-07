@@ -344,7 +344,7 @@ bool parseTriangleEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm, const int 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word V2
     if(!parseVec3(tri_ptr->v2, fp)){return false;}
 
-    calcTriangleNormal(tri_ptr);
+    calcTriangleNormal(tri_ptr->normal, tri_ptr->v0, tri_ptr->v1, tri_ptr->v2);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
@@ -508,4 +508,61 @@ bool parseTorusEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm, const int num
     obj->ptr = torus_ptr;
     obj->type = TORUS;
     return true;
+}
+
+typedef struct
+{
+    bool shadow;    
+    char mesh_name[NAME_LENGTH];
+    char mat_name[NAME_LENGTH];
+}MeshEntry;
+
+// Return -1 if the file cannot be read
+int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][NAME_LENGTH],
+              int* num_file_names, FILE* fp)
+{
+    char buffer[128];
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word FILE_NAME
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
+    bool file_not_read = true;
+    for(int i = 0; i < *num_file_names; i++)
+    {
+        if(strcmp(buffer, mesh_file_names[i]) == 0)
+        {
+            file_not_read = false;
+            break;
+        }
+    }
+    
+    int num_mesh = 0;
+    if(file_not_read)
+    {
+        num_mesh = loadOBJ(shapes, buffer);
+    }else
+    {
+        strcpy(mesh_file_names[(*num_file_names)++], buffer);
+    }
+
+    if(num_mesh != -1)
+    {
+        int len = strcspn(buffer, ".");
+        strncpy(mesh_entry->mesh_name, buffer, len);
+        mesh_entry->mesh_name[len] = '\0';
+    }    
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    if(strcmp(buffer, "yes") == 0)
+    {
+        mesh_entry->shadow = true;
+    }else
+    {
+        mesh_entry->shadow = false;
+    }
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    strcpy(mesh_entry->mat_name, buffer);
+    
+    return num_mesh;
 }

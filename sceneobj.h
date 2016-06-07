@@ -111,6 +111,39 @@ Material* findMaterial(const char* mat_name, const SceneMaterials* sm)
     return NULL;    
 }
 
+typedef struct
+{
+    OBJShape* meshes;
+    int size;
+    int max;
+}SceneMeshes;
+
+SceneMeshes SceneMeshes_create()
+{
+    SceneMeshes s_meshes;
+    s_meshes.meshes = (OBJShape*)malloc(sizeof(OBJShape) * MAX_MESH);
+    s_meshes.size = 0;
+    s_meshes.max = MAX_MESH;
+    return s_meshes;
+}
+
+OBJShape* SceneMeshes_push(SceneMeshes* s_meshes, const OBJShape obj_shape)
+{
+    DBuffer mesh_buffer;
+    mesh_buffer.data = (char*)s_meshes->meshes;
+    mesh_buffer.size = s_meshes->size * sizeof(OBJShape);
+    mesh_buffer.max = s_meshes->max * sizeof(OBJShape);
+    mesh_buffer.element_size = sizeof(OBJShape);
+
+    DBuffer_push(mesh_buffer, obj_shape);
+
+    s_meshes->meshes = (OBJShape*)(mesh_buffer.data);
+    s_meshes->size = DBuffer_size(mesh_buffer);
+    s_meshes->max = DBuffer_max_elements(mesh_buffer);
+
+    return &(s_meshes->meshes[s_meshes->size - 1]);
+}
+
 /* old
 typedef struct SceneObjects
 {

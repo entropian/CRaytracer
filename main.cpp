@@ -46,6 +46,8 @@
 #include "buildscene.h"
 #include "intersect.h"
 
+#define SHOW_PROGRESS 1
+
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
 // TODO: not finished
@@ -82,16 +84,17 @@ int main()
     
     unsigned char *image;
     //int frame_res_width = 900, frame_res_height = 900;
-    //int frame_res_width = 360, frame_res_height = 360;
+    int frame_res_width = 360, frame_res_height = 360;
     //int frame_res_width = 480, frame_res_height = 480;
     //int frame_res_width = 720, frame_res_height = 720;
-    int frame_res_width = 512, frame_res_height = 512;
+    //int frame_res_width = 512, frame_res_height = 512;
+    //int frame_res_width = 180, frame_res_height = 180;
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
     // Samples
     srand((unsigned int)time(NULL));    
-    const int num_samples = 16;
+    const int num_samples = 4;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;
@@ -108,11 +111,13 @@ int main()
     float amb_ls = 0.0f;
     bool amb_occlusion = false;
 
-    // Scene 
+    // Scene data structures
     SceneLights scene_lights;
     SceneObjects scene_objects = SceneObjects_create();
     SceneMaterials scene_materials = SceneMaterials_create();
-    initScene(&scene_objects, &scene_lights, &scene_materials, num_samples, num_sets, "test_scene.txt");
+    SceneMeshes scene_meshes = SceneMeshes_create();
+    initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes,
+              num_samples, num_sets, "test_scene2.txt");
 
     // vec3 bg_color = {0.0f, 0.0f, 0.0f}; 
     vec3 bg_color;
@@ -126,8 +131,10 @@ int main()
     //camera.lens_radius = 0.2f;
     
     //vec3 position = {0.0f, 0.5f, 5.0f};
-    vec3 position = {0.0f, 3.0f, 6.0f};
-    vec3 look_point = {0.0f, 0.0f, -4.0f};
+    //vec3 position = {0.0f, 3.0f, 6.0f};
+    vec3 position = {0.0f, 60.0f, 90.0f};
+    //vec3 look_point = {0.0f, 0.0f, -4.0f};
+    vec3 look_point = {0.0f, 10.0f, -4.0f};
     //vec3 look_point = {0.0f, 0.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
@@ -271,6 +278,11 @@ int main()
         image[i*3] = (char)(color[0] * 255.0f);
         image[i*3 + 1] = (char)(color[1] * 255.0f);
         image[i*3 + 2] = (char)(color[2] * 255.0f);
+        
+        if(SHOW_PROGRESS)
+        {
+            printf("%f%\n", (float)i / (float)(num_pixels) * 100.0f);
+        }
     }
 //#endif 
     time(&endTime);
