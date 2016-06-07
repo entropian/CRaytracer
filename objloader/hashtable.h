@@ -12,7 +12,7 @@ typedef struct
 
 typedef struct
 {
-    DBuffer table;        // Fill it with HashNodes
+    DBuffer table;
     int size;
     int used;
 }HashTable;
@@ -70,22 +70,12 @@ void rehash(HashTable* ht);
 
 int insertTable(HashTable* index_table, const uint64_t key, const int index)
 {
-    float load = (index_table->used + 1) / index_table->size;
+    float load = (float)(index_table->used + 1) / (float)index_table->size;
     if(load >= 0.7f)
     {
         rehash(index_table);
     }
-    /*
-    uint64_t key;
-    key = vi->v_idx;
-    key *= 1000000;
-    key += vi->vt_idx;
-    key *= 1000000;
-    key += vi->vn_idx;
-    */
-    //int hash_index = hashFunc(key, DBuffer_max_elements(*index_table));
     int hash_index = hashFunc(key, index_table->size);    
-    //HashNode* table_ptr = (HashNode*)(index_table->data);
     HashNode* table_ptr = HashTable_array(*index_table);
     for(int i = hash_index; i < index_table->size; i++)
     {
@@ -97,6 +87,8 @@ int insertTable(HashTable* index_table, const uint64_t key, const int index)
             return index;
         }
     }
+    fprintf(stderr, "Cannot insert into table.\n");
+    return -1;
 }
 
 void rehash(HashTable* ht)

@@ -15,7 +15,7 @@ typedef struct
     float* normals;
     float* texcoords;
     int* indices;
-    float num_positions, num_normals, num_texcoords, num_indices;
+    int num_positions, num_normals, num_texcoords, num_indices;
     char mat_name[NAME_LENGTH];
     char mesh_name[NAME_LENGTH];
 }OBJShape;
@@ -138,7 +138,7 @@ void OBJParseString(char buffer[], const char** str)
 {
     *str += strspn(*str, " \t");
     int length = strcspn(*str, " \t\r\0");
-    strncpy(buffer, *str, length);
+    strncpy_s(buffer, 128, *str, length);
     buffer[length] = '\0';
     *str += length;
 }
@@ -249,7 +249,8 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
 
 int loadOBJ(OBJShape** shapes, const char*  file_name)
 {
-    FILE* fp = fopen(file_name, "r");
+    FILE* fp;
+    fopen_s(&fp, file_name, "r");
     if(!fp)
     {
         fprintf(stderr, "Cannot open file %s\n", file_name);
@@ -262,7 +263,7 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     char mesh_name[128];
     int i;
     for(i = 0; file_name[i] != '.'; i++){}
-    strncpy(mesh_name, file_name, i);
+    strncpy_s(mesh_name, NAME_LENGTH, file_name, i);
     mesh_name[i] = '\0';
 
     DBuffer obj_shapes = DBuffer_create(OBJShape);
@@ -332,9 +333,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
             OBJShape shape;
             if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
             {
-                int i;
-                strcpy(shape.mesh_name, mesh_name);
-                strcpy(shape.mat_name, cur_mat_name);
+                strcpy_s(shape.mesh_name, NAME_LENGTH, mesh_name);
+                strcpy_s(shape.mat_name, NAME_LENGTH, cur_mat_name);
                 DBuffer_push(obj_shapes, shape);
             }
         }
@@ -344,8 +344,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
             OBJShape shape;
             if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
             {
-                strcpy(shape.mesh_name, mesh_name);
-                strcpy(shape.mat_name, cur_mat_name);
+                strcpy_s(shape.mesh_name, NAME_LENGTH, mesh_name);
+                strcpy_s(shape.mat_name, NAME_LENGTH, cur_mat_name);
                 DBuffer_push(obj_shapes, shape);
             }
             line_ptr += 6;    // Skip over "usemtl"

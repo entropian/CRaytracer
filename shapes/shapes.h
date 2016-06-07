@@ -120,7 +120,6 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
         // NOTE: shit code
         Rectangle* rect = (Rectangle*)obj.ptr;
         vec3 pts[4];
-        vec3 pt1, pt2, pt3, pt4;
         vec3_copy(pts[0], rect->point);
         vec3_add(pts[1], pts[0], rect->width);
         vec3_add(pts[2], pts[0], rect->height);

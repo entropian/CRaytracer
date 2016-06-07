@@ -1,4 +1,4 @@
-#pragma onece
+#pragma once
 
 #include <cstdio>
 #include <cstdlib>
@@ -111,7 +111,7 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
         mat->mat_type = PHONG;
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
         if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-        strcpy(*name, buffer);
+        strcpy_s(*name, NAME_LENGTH, buffer);
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
         if(!getNextTokenInFile(buffer, fp)){return false;}            
         if(strcmp(buffer, "yes") == 0)
@@ -123,13 +123,13 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
         }
         
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_COLOR
-        if(!parseColor(mat->cd, fp));
+        if(!parseColor(mat->cd, fp)){return false;};
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_COLOR
-        if(!parseColor(mat->cs, fp));        
+        if(!parseColor(mat->cs, fp)){return false;}
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
-        if(!parseColor(mat->ca, fp));        
+        if(!parseColor(mat->ca, fp)){return false;}
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_CONSTANT
         if(!getNextTokenInFile(buffer, fp)){return false;}
@@ -148,7 +148,7 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
         mat->mat_type = MATTE;
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
         if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-        strcpy(*name, buffer);        
+        strcpy_s(*name, NAME_LENGTH, buffer);        
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
         if(!getNextTokenInFile(buffer, fp)){return false;}            
         if(strcmp(buffer, "yes") == 0)
@@ -160,10 +160,10 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
         }
         
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_COLOR
-        if(!parseColor(mat->cd, fp));        
+        if(!parseColor(mat->cd, fp)){return false;}
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
-        if(!parseColor(mat->ca, fp));                
+        if(!parseColor(mat->ca, fp)){return false;}  
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_CONSTANT
         if(!getNextTokenInFile(buffer, fp)){return false;}
@@ -540,13 +540,13 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
         num_mesh = loadOBJ(shapes, buffer);
     }else
     {
-        strcpy(mesh_file_names[(*num_file_names)++], buffer);
+        strcpy_s(mesh_file_names[(*num_file_names)++], NAME_LENGTH, buffer);
     }
 
     if(num_mesh != -1)
     {
         int len = strcspn(buffer, ".");
-        strncpy(mesh_entry->mesh_name, buffer, len);
+        strncpy_s(mesh_entry->mesh_name, NAME_LENGTH, buffer, len);
         mesh_entry->mesh_name[len] = '\0';
     }    
 
@@ -562,7 +562,7 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    strcpy(mesh_entry->mat_name, buffer);
+    strcpy_s(mesh_entry->mat_name, NAME_LENGTH, buffer);
     
     return num_mesh;
 }

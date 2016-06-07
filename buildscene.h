@@ -57,7 +57,7 @@ void initInstanced(SceneObjects* so, SceneMaterials* sm)
     vec3 translation = {2.0f, 0.0f, 0.0f};
     vec3 rotate_axis = {1.0f, 1.0f, -1.0f};
     vec3_normalize(rotate_axis, rotate_axis);
-    float theta = PI / 4.0f;    
+    float theta = (float)PI / 4.0f;    
     vec3 scaling = {2.0f, 2.0f, 2.0f};    
     defaultInvTransform(is->inv_transform, scaling, rotate_axis, theta, translation);
 
@@ -68,10 +68,11 @@ void initInstanced(SceneObjects* so, SceneMaterials* sm)
 void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshes,
                       const SceneLights* sl, const char* scenefile)
 {
+    FILE* fp;
 #ifdef _MSC_VER
-
+    fopen_s(&fp, scenefile, "r");
 #else
-    FILE* fp = fopen(scenefile, "r");
+    fp = fopen(scenefile, "r");
 #endif
     if(fp)
     {

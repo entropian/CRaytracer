@@ -87,7 +87,7 @@ Material* SceneMaterials_push(SceneMaterials* sm, const Material mat, const char
     name_buffer.element_size = sizeof(char*);
 
     char* mat_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
-    strcpy(mat_name, name);
+    strcpy_s(mat_name, NAME_LENGTH, name);
     DBuffer_push(name_buffer, mat_name);
     
     sm->materials = (Material*)(mat_buffer.data);

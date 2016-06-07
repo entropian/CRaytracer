@@ -18,7 +18,7 @@ typedef struct
 
 void DBuffer_push_f(DBuffer* dbuf, const char* new_element, const size_t element_size)
 {
-    if(dbuf->size + element_size > dbuf->max)
+    if(dbuf->size + element_size > (unsigned)dbuf->max)
     {
         int new_max = dbuf->max * 2;
         char* new_data = (char*)realloc(dbuf->data, new_max);

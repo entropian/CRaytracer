@@ -15,9 +15,9 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
     float t0;
     if(isInsideAABB(&(rg->aabb), ray.origin))
     {
-        ix = clamp((ray.origin[0] - rg->aabb.min[0]) / rg->wx * rg->nx, 0, rg->nx - 1);
-        iy = clamp((ray.origin[1] - rg->aabb.min[1]) / rg->wy * rg->ny, 0, rg->ny - 1);
-        iz = clamp((ray.origin[2] - rg->aabb.min[2]) / rg->wz * rg->nz, 0, rg->nz - 1);
+        ix = (int)clamp((ray.origin[0] - rg->aabb.min[0]) / rg->wx * rg->nx, 0.0f, (float)rg->nx - 1);
+        iy = (int)clamp((ray.origin[1] - rg->aabb.min[1]) / rg->wy * rg->ny, 0.0f, (float)rg->ny - 1);
+        iz = (int)clamp((ray.origin[2] - rg->aabb.min[2]) / rg->wz * rg->nz, 0.0f, (float)rg->nz - 1);
         hits_grid = true;
     }else
     {
@@ -27,9 +27,9 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
         {
             vec3 point;
             getPointOnRay(point, ray, t0);
-            ix = clamp((point[0] - rg->aabb.min[0]) / rg->wx * rg->nx, 0, rg->nx - 1);
-            iy = clamp((point[1] - rg->aabb.min[1]) / rg->wy * rg->ny, 0, rg->ny - 1);
-            iz = clamp((point[2] - rg->aabb.min[2]) / rg->wz * rg->nz, 0, rg->nz - 1);
+            ix = (int)clamp((point[0] - rg->aabb.min[0]) / rg->wx * rg->nx, 0.0f, (float)rg->nx - 1);
+            iy = (int)clamp((point[1] - rg->aabb.min[1]) / rg->wy * rg->ny, 0.0f, (float)rg->ny - 1);
+            iz = (int)clamp((point[2] - rg->aabb.min[2]) / rg->wz * rg->nz, 0.0f, (float)rg->nz - 1);
             hits_grid = true;
         }
     }
@@ -154,9 +154,9 @@ float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
     float t0;
     if(isInsideAABB(&(rg->aabb), shadow_ray.origin))
     {
-        ix = clamp((shadow_ray.origin[0] - rg->aabb.min[0]) / rg->wx * rg->nx, 0, rg->nx - 1);
-        iy = clamp((shadow_ray.origin[1] - rg->aabb.min[1]) / rg->wy * rg->ny, 0, rg->ny - 1);
-        iz = clamp((shadow_ray.origin[2] - rg->aabb.min[2]) / rg->wz * rg->nz, 0, rg->nz - 1);
+        ix = (int)clamp((shadow_ray.origin[0] - rg->aabb.min[0]) / rg->wx * rg->nx, 0.0f, (float)rg->nx - 1);
+        iy = (int)clamp((shadow_ray.origin[1] - rg->aabb.min[1]) / rg->wy * rg->ny, 0.0f, (float)rg->ny - 1);
+        iz = (int)clamp((shadow_ray.origin[2] - rg->aabb.min[2]) / rg->wz * rg->nz, 0.0f, (float)rg->nz - 1);
         hits_grid = true;
     }else
     {
@@ -166,9 +166,9 @@ float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
         {
             vec3 point;
             getPointOnRay(point, shadow_ray, t0);
-            ix = clamp((point[0] - rg->aabb.min[0]) / rg->wx * rg->nx, 0, rg->nx - 1);
-            iy = clamp((point[1] - rg->aabb.min[1]) / rg->wy * rg->ny, 0, rg->ny - 1);
-            iz = clamp((point[2] - rg->aabb.min[2]) / rg->wz * rg->nz, 0, rg->nz - 1);
+            ix = (int)clamp((point[0] - rg->aabb.min[0]) / rg->wx * rg->nx, 0.0f, (float)rg->nx - 1);
+            iy = (int)clamp((point[1] - rg->aabb.min[1]) / rg->wy * rg->ny, 0.0f, (float)rg->ny - 1);
+            iz = (int)clamp((point[2] - rg->aabb.min[2]) / rg->wz * rg->nz, 0.0f, (float)rg->nz - 1);
             hits_grid = true;
         }
     }
@@ -219,7 +219,6 @@ float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
         {
             cell_index = iy*rg->nz*rg->nx + iz*rg->nx + ix;                
             float obj_t = TMAX;
-            ShadeRec obj_sr;
             if(rg->cells[cell_index].size > 0)
             {
                 float t = TMAX;

@@ -73,12 +73,15 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
     printVec3WithText("aabb.max", ug->aabb.max);
     printVec3WithText("aabb.min", ug->aabb.min);    
 
-    //float s = pow(ug->wx * ug->wy * ug->wz / *num_obj, 0.33333);
-    float s = pow(ug->wx * ug->wy * ug->wz / *num_obj, 0.33333);
-    ug->nx = ug->wx * multiplier / s + 1;
-    ug->ny = ug->wy * multiplier / s + 1;
-    ug->nz = ug->wz * multiplier / s + 1;
+    //float s = powf(ug->wx * ug->wy * ug->wz / *num_obj, 0.33333f);
+    float s = powf(ug->wx * ug->wy * ug->wz / *num_obj, 0.33333f);
+    ug->nx = (int)(ug->wx * multiplier / s + 1);
+    ug->ny = (int)(ug->wy * multiplier / s + 1);
+    ug->nz = (int)(ug->wz * multiplier / s + 1);
     ug->num_cells = ug->nx * ug->ny * ug->nz;
+    
+    int nx = ug->nx, ny = ug->ny, nz = ug->nz;
+    float wx = ug->wx, wy = ug->wy, wz = ug->wz;
 
     ug->cells = (IntVector*)malloc(ug->num_cells * sizeof(IntVector));
     for(int i = 0; i < ug->num_cells; ++i)
@@ -88,13 +91,13 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
 
     for(int i = 0; i < num_aabb; ++i)
     {
-        int min_ix = clamp(((aabb_array[i].min[0] - ug->aabb.min[0]) / ug->wx) * ug->nx, 0, ug->nx - 1);
-        int min_iy = clamp(((aabb_array[i].min[1] - ug->aabb.min[1]) / ug->wy) * ug->ny, 0, ug->ny - 1);
-        int min_iz = clamp(((aabb_array[i].min[2] - ug->aabb.min[2]) / ug->wz) * ug->nz, 0, ug->nz - 1);
+        int min_ix = (int)clamp(((aabb_array[i].min[0] - ug->aabb.min[0]) / wx) * nx, 0.0f, (float)nx - 1);
+        int min_iy = (int)clamp(((aabb_array[i].min[1] - ug->aabb.min[1]) / wy) * ny, 0.0f, (float)ny - 1);
+        int min_iz = (int)clamp(((aabb_array[i].min[2] - ug->aabb.min[2]) / wz) * nz, 0.0f, (float)nz - 1);
 
-        int max_ix = clamp(((aabb_array[i].max[0] - ug->aabb.min[0]) / ug->wx) * ug->nx, 0, ug->nx - 1);
-        int max_iy = clamp(((aabb_array[i].max[1] - ug->aabb.min[1]) / ug->wy) * ug->ny, 0, ug->ny - 1);
-        int max_iz = clamp(((aabb_array[i].max[2] - ug->aabb.min[2]) / ug->wz) * ug->nz, 0, ug->nz - 1);
+        int max_ix = (int)clamp(((aabb_array[i].max[0] - ug->aabb.min[0]) / wx) * nx, 0.0f, (float)nx - 1);
+        int max_iy = (int)clamp(((aabb_array[i].max[1] - ug->aabb.min[1]) / wy) * ny, 0.0f, (float)ny - 1);
+        int max_iz = (int)clamp(((aabb_array[i].max[2] - ug->aabb.min[2]) / wz) * nz, 0.0f, (float)nz - 1);
 
         for(int j = min_iy; j <= max_iy; ++j)
         {
@@ -102,8 +105,8 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
             {
                 for(int p = min_ix; p <= max_ix; ++p)
                 {
-                    int cell_index = j*ug->nx*ug->nz + k*ug->nx + p;
-                    IntVector_push(&(ug->cells[j*ug->nx*ug->nz + k*ug->nx + p]), i + num_non_grid_obj);
+                    int cell_index = j*nx*nz + k*nx + p;
+                    IntVector_push(&(ug->cells[j*nx*nz + k*nx + p]), i + num_non_grid_obj);
                 }
             }
         }
@@ -123,6 +126,6 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
     }
     free(aabb_array);
     printf("wx = %f, wy = %f, wz = %f\n", ug->wx, ug->wy, ug->wz);
-    printf("nx = %d, ny = %d, nz = %d\n", ug->nx, ug->ny, ug->nz);
+    printf("nx = %d, ny = %d, nz = %d\n", nx, ny, nz);
     return ug;
 }
