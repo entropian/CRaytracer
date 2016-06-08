@@ -3,6 +3,8 @@
 #include "vec.h"
 
 const int MAX_OBJECTS = 1000;
+const int INITIAL_NUM_OBJECTS = 20;
+const int INITIAL_NUM_TRIANGLES = 200;
 const int MAX_LIGHTS = 10;
 const int MAX_MESH = 20;
 const int DEFAULT_MATERIAL = 20;

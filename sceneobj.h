@@ -14,43 +14,34 @@ enum AccelType
     BVH
 };
 
-typedef struct
-{
-    DBuffer objects;
-} scene_obj_data;
-
-/*
-  Rethink SceneObjects
-  other relevant data: mesh array
- */
-
-typedef struct SceneObjects
+typedef struct 
 {
     AccelType accel;    
     int num_obj;
-    int num_mat;    
     int num_non_grid_obj;
+    int max;
     void* accel_ptr;    
     Object_t* objects;
-    scene_obj_data* data;
 } SceneObjects;
 
 SceneObjects SceneObjects_create()
 {
     SceneObjects so;
     so.accel = NONE;
-    so.num_obj = so.num_mat = so.num_non_grid_obj = 0;
-    so.data = (scene_obj_data*)malloc(sizeof(scene_obj_data));
-    so.data->objects = DBuffer_create(Object_t);
-    so.objects = (Object_t*)(so.data->objects.data);
+    so.num_obj = so.num_non_grid_obj = 0;
+    so.objects = (Object_t*)malloc(sizeof(Object_t) * INITIAL_NUM_OBJECTS);
+    so.max = INITIAL_NUM_OBJECTS;
     return so;
 }
 
 void SceneObjects_push_obj(SceneObjects* so, Object_t obj)
 {
-    DBuffer_push(so->data->objects, obj);
-    so->objects = (Object_t*)(so->data->objects.data);
-    so->num_obj = DBuffer_size(so->data->objects);
+    DBuffer obj_buffer;
+    DBuffer_assume(&obj_buffer, (char*)so->objects, so->num_obj, so->max, sizeof(Object_t));    
+    DBuffer_push(obj_buffer, obj);
+    so->objects = (Object_t*)(obj_buffer.data);
+    so->num_obj = DBuffer_size(obj_buffer);
+    so->max = DBuffer_max_elements(obj_buffer);
 }
 
 typedef struct
@@ -74,18 +65,11 @@ SceneMaterials SceneMaterials_create()
 Material* SceneMaterials_push(SceneMaterials* sm, const Material mat, const char* name)
 {
     DBuffer mat_buffer;
-    DBuffer name_buffer;
-    mat_buffer.data = (char*)(sm->materials);
-    mat_buffer.size = sm->size * sizeof(Material);
-    mat_buffer.max = sm->max * sizeof(Material);
-    mat_buffer.element_size = sizeof(Material);
+    DBuffer_assume(&mat_buffer, (char*)sm->materials, sm->size, sm->max, sizeof(Material));
     DBuffer_push(mat_buffer, mat);    
-    
-    name_buffer.data = (char*)(sm->names);
-    name_buffer.size = sm->size * sizeof(char*);
-    name_buffer.max = sm->max * sizeof(char*);
-    name_buffer.element_size = sizeof(char*);
 
+    DBuffer name_buffer;
+    DBuffer_assume(&name_buffer, (char*)sm->names, sm->size, sm->max, sizeof(char*));
     char* mat_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
     strcpy_s(mat_name, NAME_LENGTH, name);
     DBuffer_push(name_buffer, mat_name);
@@ -113,9 +97,9 @@ Material* findMaterial(const char* mat_name, const SceneMaterials* sm)
 
 typedef struct
 {
-    OBJShape* meshes;
     int size;
-    int max;
+    int max;    
+    OBJShape* meshes;
 }SceneMeshes;
 
 SceneMeshes SceneMeshes_create()
@@ -130,33 +114,14 @@ SceneMeshes SceneMeshes_create()
 OBJShape* SceneMeshes_push(SceneMeshes* s_meshes, const OBJShape obj_shape)
 {
     DBuffer mesh_buffer;
-    mesh_buffer.data = (char*)s_meshes->meshes;
-    mesh_buffer.size = s_meshes->size * sizeof(OBJShape);
-    mesh_buffer.max = s_meshes->max * sizeof(OBJShape);
-    mesh_buffer.element_size = sizeof(OBJShape);
-
+    DBuffer_assume(&mesh_buffer, (char*)s_meshes->meshes, s_meshes->size, s_meshes->max, sizeof(OBJShape));
     DBuffer_push(mesh_buffer, obj_shape);
 
     s_meshes->meshes = (OBJShape*)(mesh_buffer.data);
     s_meshes->size = DBuffer_size(mesh_buffer);
     s_meshes->max = DBuffer_max_elements(mesh_buffer);
-
     return &(s_meshes->meshes[s_meshes->size - 1]);
 }
-
-/* old
-typedef struct SceneObjects
-{
-    AccelType accel;    
-    int num_obj;
-    int num_mat;    
-    int num_non_grid_obj;
-    ObjectType obj_types[MAX_OBJECTS];    // TODO: use dynamic buffer 
-    void* obj_ptrs[MAX_OBJECTS];
-    Material materials[MAX_MATERIAL];    
-    void* accel_ptr;
-} SceneObjects;
-*/
 
 typedef struct SceneLights
 {
@@ -192,7 +157,7 @@ void freeSceneObjects(SceneObjects* so)
         }
     }
 
-    DBuffer_destroy(&(so->data->objects));
+    free(so->objects);
     switch(so->accel)
     {
     case GRID:

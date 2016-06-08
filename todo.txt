@@ -1,5 +1,9 @@
 Add mesh scaling
 Add mesh location and orientation
+put mesh triangles in an array
+Combaine light pointer and light type into a struct?
+change some push function arguments to pointers?
+Add scaling, location, and orientation to MeshEntry
 
 Other:
 optimize mesh triangle

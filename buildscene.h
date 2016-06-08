@@ -126,19 +126,25 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                                     mesh_tri->shadow = mesh_entry.shadow;
                                     mesh_tri->mesh_ptr = mesh;
 
+                                    vec3 v0, v1, v2;
+                                    int index = mesh_tri->i0 * 3;
+                                    vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
+                                                mesh->positions[index+2]);
+                                    index = mesh_tri->i1 * 3;    
+                                    vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
+                                                mesh->positions[index+2]);
+                                    index = mesh_tri->i2 * 3;
+                                    vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
+                                                mesh->positions[index+2]);
+                                    vec3_copy(mesh_tri->v0, v0);
+                                    vec3_copy(mesh_tri->v1, v1);
+                                    vec3_copy(mesh_tri->v2, v2);
+                                    
                                     if(mesh->num_normals == 0)
                                     {
-                                        vec3 v0, v1, v2;
-                                        int index = mesh_tri->i0 * 3;
-                                        vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
-                                                    mesh->positions[index+2]);
-                                        index = mesh_tri->i1 * 3;    
-                                        vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
-                                                    mesh->positions[index+2]);
-                                        index = mesh_tri->i2 * 3;
-                                        vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
-                                                    mesh->positions[index+2]);
+
                                         calcTriangleNormal(mesh_tri->normal, v0, v1, v2);
+
                                     }else
                                     {
                                         int index = mesh->indices[j] * 3;
@@ -364,17 +370,16 @@ void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshe
     printf("num_obj %d\n", so->num_obj);
     printf("non grid obj %d\n", so->num_non_grid_obj);
 
-    so->accel = BVH;
+    so->accel = GRID;
     if(so->accel == GRID)
     {
-        //UniformGrid* rg = UniformGrid_create(so->obj_ptrs, so->obj_types, &(so->num_obj), so->num_non_grid_obj, 2);
         UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, 2);
         so->accel_ptr = rg;
     }else if(so->accel == BVH)
     {
         BVHNode* tree;
         BVH_build(&tree, &(so->objects[so->num_non_grid_obj]), so->num_obj - so->num_non_grid_obj, 0);
-        int leaf_count = 0;
+        //int leaf_count = 0;
         //printBVH(tree, &leaf_count, 0);        
         so->accel_ptr = tree;
     }

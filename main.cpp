@@ -50,7 +50,7 @@
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
-// TODO: not finished
+// TODO: 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if(action == GLFW_PRESS)
@@ -83,8 +83,8 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    //int frame_res_width = 900, frame_res_height = 900;
-    int frame_res_width = 360, frame_res_height = 360;
+    int frame_res_width = 900, frame_res_height = 900;
+    //int frame_res_width = 360, frame_res_height = 360;
     //int frame_res_width = 480, frame_res_height = 480;
     //int frame_res_width = 720, frame_res_height = 720;
     //int frame_res_width = 512, frame_res_height = 512;
@@ -350,7 +350,7 @@ int main()
     freeSamples2D(&unit_square_samples);
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
-    freeSceneObjects(&scene_objects);
+    //freeSceneObjects(&scene_objects);
     freeSceneLights(&scene_lights);
 
     while(true)

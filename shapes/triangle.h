@@ -19,6 +19,7 @@ typedef struct
 {
     bool shadow;
     int i0, i1, i2;
+    vec3 v0, v1, v2;
     vec3 normal;
     OBJShape* mesh_ptr;
     Material* mat;
@@ -111,6 +112,18 @@ float rayIntersectTriangle(ShadeRec* sr, Triangle* tri, const Ray ray)
 
 float rayIntersectMeshTriangle(ShadeRec* sr, MeshTriangle* tri, const Ray ray)
 {
+    float t = calcTriangleIntersect(tri->v0, tri->v1, tri->v2, ray);
+
+    vec3_copy(sr->normal, tri->normal);
+    getPointOnRay(sr->hit_point, ray, t);
+    vec3_negate(sr->wo, ray.direction);    
+    sr->mat = tri->mat;
+    return t;
+}
+
+/*
+float rayIntersectMeshTriangle(ShadeRec* sr, MeshTriangle* tri, const Ray ray)
+{
     vec3 v0, v1, v2;
     getMeshTriangleVertPos(v0, v1, v2, tri);    
     float t = calcTriangleIntersect(v0, v1, v2, ray);
@@ -121,6 +134,7 @@ float rayIntersectMeshTriangle(ShadeRec* sr, MeshTriangle* tri, const Ray ray)
     sr->mat = tri->mat;
     return t;
 }
+*/
 
 float shadowRayIntersectTriangle(const Triangle* tri, const Ray ray)
 {
@@ -129,17 +143,14 @@ float shadowRayIntersectTriangle(const Triangle* tri, const Ray ray)
 
 float shadowRayIntersectMeshTriangle(const MeshTriangle* tri, const Ray ray)
 {
-    /*
-    OBJShape* mesh = tri->mesh_ptr;
-    vec3 v0, v1, v2;    
-    int index = tri->i0 * 3;
-    vec3_assign(v0, mesh->positions[index], mesh->positions[index+1], mesh->positions[index+2]);
-    index = tri->i1 * 3;    
-    vec3_assign(v1, mesh->positions[index], mesh->positions[index+1], mesh->positions[index+2]);
-    index = tri->i2 * 3;
-    vec3_assign(v2, mesh->positions[index], mesh->positions[index+1], mesh->positions[index+2]);
-    */
+    return calcTriangleIntersect(tri->v0, tri->v1, tri->v2, ray);
+}
+
+/*
+float shadowRayIntersectMeshTriangle(const MeshTriangle* tri, const Ray ray)
+{
     vec3 v0, v1, v2;
     getMeshTriangleVertPos(v0, v1, v2, tri);
     return calcTriangleIntersect(v0, v1, v2, ray);
 }
+*/

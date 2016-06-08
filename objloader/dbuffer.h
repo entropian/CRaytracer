@@ -73,6 +73,14 @@ void DBuffer_erase(DBuffer* dbuf)
     dbuf->size = 0;
 }
 
+void DBuffer_assume(DBuffer* dbuf, char* data_ptr, const int size, const int max, const size_t element_size)
+{
+    dbuf->data = data_ptr;
+    dbuf->size = size * element_size;
+    dbuf->max = max * element_size;
+    dbuf->element_size = element_size;
+}
+
 void DBuffer_destroy(DBuffer* dbuf)
 {
     if(dbuf->data){free(dbuf->data);}
