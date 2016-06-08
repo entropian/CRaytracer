@@ -1,5 +1,5 @@
-Fix tesslation
-Fix teapot top not loading
+Add mesh scaling
+Add mesh location and orientation
 
 Other:
 optimize mesh triangle

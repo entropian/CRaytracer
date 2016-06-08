@@ -46,7 +46,7 @@
 #include "buildscene.h"
 #include "intersect.h"
 
-#define SHOW_PROGRESS 0
+#define SHOW_PROGRESS 1
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -94,7 +94,7 @@ int main()
     
     // Samples
     srand((unsigned int)time(NULL));    
-    const int num_samples = 16;
+    const int num_samples = 64;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;
@@ -273,7 +273,7 @@ int main()
             }
             //vec3 depth = {min_t/factor, min_t/factor, min_t/factor};
             //vec3_add(color, color, depth);
-        }
+        }        
         vec3_scale(color, color, 1.0f/num_samples);
         maxToOne(color, color);
         image[i*3] = (char)(color[0] * 255.0f);
@@ -285,7 +285,8 @@ int main()
             int cur_percent = (float)i / (float)(num_pixels) * 100.0f;
             if(cur_percent > prev_percent)
             {
-                printf("%d%%\n", cur_percent);
+                prev_percent = cur_percent;
+                printf("%d%%\n", cur_percent);                
             }
         }
     }

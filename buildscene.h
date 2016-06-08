@@ -333,6 +333,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     assignDirLight(dir_light_ptr, intensity, WHITE, direction);
     sl->shadow[sl->num_lights] = true;
     sl->light_ptrs[sl->num_lights] = dir_light_ptr;
+    sl->light_types[sl->num_lights] = DIRECTIONAL;
     (sl->num_lights)++;
     
     // Point light
@@ -344,6 +345,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     assignPointLight(point_light_ptr, intensity, WHITE, point);
     sl->shadow[sl->num_lights] = true;    
     sl->light_ptrs[sl->num_lights] = point_light_ptr;
+    sl->light_ptrs[sl->num_lights] = POINTLIGHT;    
     (sl->num_lights)++;
     */
 

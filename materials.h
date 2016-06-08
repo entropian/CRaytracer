@@ -21,6 +21,7 @@ void printMaterial(const Material* mat)
 {
     printf("shadow %s\n", mat->shadow ? "true" : "false");
     printf("ka %f, kd %f\n", mat->ka, mat->kd);
+    printVec3WithText("cd", mat->cd);
 }
 
 void initDefaultMatteMat(Material* mat, const vec3 color)

@@ -285,9 +285,9 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
                             .       .       .       .       .       .       .      
                             .       .       .       .       .       .       .      
                             .       .       .       .       .       .       .
-                            VI      VI      VI      VI      VI      Vi      VI
-                            VI      VI      VI      VI      VI      Vi      VI
-                            VI      VI      VI      VI      VI      Vi      VI                            
+                            VI      VI      VI      VI      VI      VI      VI
+                            VI      VI      VI      VI      VI      VI      VI
+                            VI      VI      VI      VI      VI      VI      VI                            
       in_face_group.data -> DBuffer DBuffer DBuffer DBuffer DBuffer DBuffer DBuffer......
                     size
                     max
