@@ -48,7 +48,7 @@
 #include "buildscene.h"
 #include "intersect.h"
 
-#define SHOW_PROGRESS 1
+#define SHOW_PROGRESS 0
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 

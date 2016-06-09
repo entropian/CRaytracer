@@ -150,7 +150,7 @@ void mat2_mult(mat2 r, const mat2 a, const mat2 b)
     }
 }
 
-void mat3_mult(mat3 r, const mat3 a, const mat2 b)
+void mat3_mult(mat3 r, const mat3 a, const mat3 b)
 {
     for(int i = 0; i < 3; i++)
     {
@@ -200,8 +200,8 @@ void mat2_rotate(mat2 r, const float theta)
     float cos_theta = (float)cos(theta);    
     r[0][0] = cos_theta;
     r[0][1] = sin_theta;
-    r[1][0] = -cos_theta;
-    r[1][1] = sin_theta;
+    r[1][0] = -sin_theta;
+    r[1][1] = cos_theta;
 }
 
 void mat3_rotate_x(mat3 r, const float theta)
@@ -233,8 +233,8 @@ void mat3_rotate_y(mat3 r, const float theta)
     mat3_identity(r);
     r[0][0] = cos_theta;
     r[0][2] = sin_theta;
-    r[2][0] = -cos_theta;
-    r[2][2] = sin_theta;
+    r[2][0] = -sin_theta;
+    r[2][2] = cos_theta;
 }
 
 void mat4_rotate_y(mat4 r, const float theta)

@@ -47,6 +47,34 @@ void defaultInvTransform(mat4 r, const vec3 scaling, const vec3 axis, const floa
     mat4_mult(r, tmp, inv_translation);
 }
 
+void printMat3(mat3 a)
+{
+    for(int i = 0; i < 3; i++)
+    {
+        printf("%f %f %f\n", a[i][0], a[i][1], a[i][2]);
+    }
+}
+
+inline float degToRad(const float degree)
+{
+    return degree / 180.0f * PI;
+}
+
+void eulerAngToMat3(mat3 r, const vec3 euler_ang)
+{
+    float z_rad, y_rad, x_rad;
+    z_rad = degToRad(euler_ang[2]);
+    x_rad = degToRad(euler_ang[1]);
+    y_rad = degToRad(euler_ang[0]);    
+    
+    mat3 z_rot, y_rot, x_rot, tmp;
+    mat3_rotate_z(z_rot, z_rad);
+    mat3_rotate_x(x_rot, x_rad);        
+    mat3_rotate_y(y_rot, y_rad);    
+    mat3_mult(tmp, x_rot, z_rot);
+    mat3_mult(r, y_rot, tmp);
+}
+
 
 /*
   Utility functions to find cubic and quartic roots.

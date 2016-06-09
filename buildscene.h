@@ -68,6 +68,10 @@ void initInstanced(SceneObjects* so, SceneMaterials* sm)
 void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const SceneMaterials *sm,
                            const SceneMeshes* s_meshes)
 {
+    // Calculate rotation matrix
+    mat3 rotation;
+    eulerAngToMat3(rotation, mesh_entry.orientation);
+    
     for(int i = 0; i < s_meshes->size; i++)
     {
         if(strcmp(mesh_entry.mesh_name, s_meshes->meshes[i].mesh_name) == 0)
@@ -108,15 +112,20 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
                 vec3_mult(v0, mesh_entry.scaling, v0);
                 vec3_mult(v1, mesh_entry.scaling, v1);
                 vec3_mult(v2, mesh_entry.scaling, v2);
+
+                vec3 new_v0, new_v1, new_v2;
+                mat3_mult_vec3(new_v0, rotation, v0);
+                mat3_mult_vec3(new_v1, rotation, v1);
+                mat3_mult_vec3(new_v2, rotation, v2);                
                 
-                vec3_add(v0, mesh_entry.location, v0);
-                vec3_add(v1, mesh_entry.location, v1);
-                vec3_add(v2, mesh_entry.location, v2);
+                vec3_add(new_v0, mesh_entry.location, new_v0);
+                vec3_add(new_v1, mesh_entry.location, new_v1);
+                vec3_add(new_v2, mesh_entry.location, new_v2);
                 
                                     
-                vec3_copy(mesh_tri->v0, v0);
-                vec3_copy(mesh_tri->v1, v1);
-                vec3_copy(mesh_tri->v2, v2);
+                vec3_copy(mesh_tri->v0, new_v0);
+                vec3_copy(mesh_tri->v1, new_v1);
+                vec3_copy(mesh_tri->v2, new_v2);
 
                 mesh_tri->mat = mat;                                    
                 Object_t obj = {MESH_TRIANGLE, mesh_tri};

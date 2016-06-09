@@ -38,7 +38,8 @@ OBJECT MESH
 FILE teapot.obj
 CAST_SHADOW yes
 SCALING 0.1 0.1 0.1
-LOCATION  1.0 0.0 0.0
+LOCATION 0.0 0.0 0.0
+Orientation 30 0 0
 MATERIAL matte2
 
 

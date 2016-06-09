@@ -515,6 +515,7 @@ typedef struct
     bool shadow;
     vec3 scaling;
     vec3 location;
+    vec3 orientation; // Euler angle
     char mesh_name[NAME_LENGTH];
     char mat_name[NAME_LENGTH];
 }MeshEntry;
@@ -566,7 +567,10 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
     if(!parseVec3(mesh_entry->scaling, fp)){return false;}
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
-    if(!parseVec3(mesh_entry->location, fp)){return false;}        
+    if(!parseVec3(mesh_entry->location, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word ORIENTATION
+    if(!parseVec3(mesh_entry->orientation, fp)){return false;}      
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}
