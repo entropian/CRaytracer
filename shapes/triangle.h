@@ -121,6 +121,7 @@ float rayIntersectMeshTriangle(ShadeRec* sr, MeshTriangle* tri, const Ray ray)
     return t;
 }
 
+
 /*
 float rayIntersectMeshTriangle(ShadeRec* sr, MeshTriangle* tri, const Ray ray)
 {

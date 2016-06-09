@@ -119,7 +119,7 @@ VertexIndex OBJParseFaceTriple(const char** str)
 
     if((*str)[0] == '/')    // No texcoord -- v//vn
     {
-        *str++;
+        (*str)++;
         vi.vn_idx = atoi(*str);
         return vi;
     }

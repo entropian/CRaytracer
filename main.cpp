@@ -20,6 +20,8 @@
       What design pattern is this?
      */
 
+
+
 #include <GL/glew.h>
 
 #if __GNUG__
@@ -94,7 +96,7 @@ int main()
     
     // Samples
     srand((unsigned int)time(NULL));    
-    const int num_samples = 64;
+    const int num_samples = 1;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;
@@ -132,9 +134,9 @@ int main()
     
     //vec3 position = {0.0f, 0.5f, 5.0f};
     //vec3 position = {0.0f, 3.0f, 6.0f};
-    vec3 position = {0.0f, 60.0f, 90.0f};
+    vec3 position = {0.0f, 6.0f, 7.0f};
     //vec3 look_point = {0.0f, 0.0f, -4.0f};
-    vec3 look_point = {0.0f, 10.0f, -4.0f};
+    vec3 look_point = {0.0f, 3.0f, -4.0f};
     //vec3 look_point = {0.0f, 0.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);

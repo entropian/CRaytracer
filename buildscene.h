@@ -65,6 +65,67 @@ void initInstanced(SceneObjects* so, SceneMaterials* sm)
     SceneObjects_push_obj(so, obj);
 }
 
+void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const SceneMaterials *sm,
+                           const SceneMeshes* s_meshes)
+{
+    for(int i = 0; i < s_meshes->size; i++)
+    {
+        if(strcmp(mesh_entry.mesh_name, s_meshes->meshes[i].mesh_name) == 0)
+        {
+            OBJShape* mesh = &(s_meshes->meshes[i]);
+            Material* mat = findMaterial(mesh_entry.mat_name, sm);
+            for(int j = 0; j < mesh->num_indices; j += 3)
+            {
+                MeshTriangle* mesh_tri = (MeshTriangle*)malloc(sizeof(MeshTriangle));
+                mesh_tri->i0 = mesh->indices[j];
+                mesh_tri->i1 = mesh->indices[j + 1];
+                mesh_tri->i2 = mesh->indices[j + 2];
+                mesh_tri->shadow = mesh_entry.shadow;
+                mesh_tri->mesh_ptr = mesh;
+
+                vec3 v0, v1, v2;
+                int index;
+                index = mesh_tri->i0 * 3;
+                vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
+                            mesh->positions[index+2]);
+                index = mesh_tri->i1 * 3;    
+                vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
+                            mesh->positions[index+2]);
+                index = mesh_tri->i2 * 3;
+                vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
+                            mesh->positions[index+2]);
+
+                if(mesh->num_normals == 0)
+                {
+                    calcTriangleNormal(mesh_tri->normal, v0, v1, v2);
+                }else
+                {
+                    int index = mesh->indices[j] * 3;
+                    vec3_assign(mesh_tri->normal, mesh->normals[index],
+                                mesh->normals[index+1], mesh->normals[index+2]);
+                }
+
+                vec3_mult(v0, mesh_entry.scaling, v0);
+                vec3_mult(v1, mesh_entry.scaling, v1);
+                vec3_mult(v2, mesh_entry.scaling, v2);
+                
+                vec3_add(v0, mesh_entry.location, v0);
+                vec3_add(v1, mesh_entry.location, v1);
+                vec3_add(v2, mesh_entry.location, v2);
+                
+                                    
+                vec3_copy(mesh_tri->v0, v0);
+                vec3_copy(mesh_tri->v1, v1);
+                vec3_copy(mesh_tri->v2, v2);
+
+                mesh_tri->mat = mat;                                    
+                Object_t obj = {MESH_TRIANGLE, mesh_tri};
+                SceneObjects_push_obj(so, obj);
+            }
+        }
+    }
+}
+
 void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshes,
                       const SceneLights* sl, const char* scenefile)
 {
@@ -89,10 +150,6 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                 getNextTokenInFile(buffer, fp);
                 if(strcmp(buffer, "MESH") == 0)
                 {
-                    /*
-                      Since we are  ignoring mtl files for now, parseMesh() should return an array of OBJShape
-                      then mesh triangles are generated with those OBJshape
-                     */
                     OBJShape* shapes;
                     int num_mesh;
                     char mesh_file_names[MAX_MESH][NAME_LENGTH];
@@ -107,58 +164,9 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                         }
                     }
                     free(shapes);
-
-                    // Mesh Triangle generation
                     if(num_mesh != -1)
                     {
-                        for(int i = 0; i < s_meshes->size; i++)
-                        {
-                            if(strcmp(mesh_entry.mesh_name, s_meshes->meshes[i].mesh_name) == 0)
-                            {
-                                OBJShape* mesh = &(s_meshes->meshes[i]);
-                                Material* mat = findMaterial(mesh_entry.mat_name, sm);
-                                for(int j = 0; j < mesh->num_indices; j += 3)
-                                {
-                                    MeshTriangle* mesh_tri = (MeshTriangle*)malloc(sizeof(MeshTriangle));
-                                    mesh_tri->i0 = mesh->indices[j];
-                                    mesh_tri->i1 = mesh->indices[j + 1];
-                                    mesh_tri->i2 = mesh->indices[j + 2];
-                                    mesh_tri->shadow = mesh_entry.shadow;
-                                    mesh_tri->mesh_ptr = mesh;
-
-                                    vec3 v0, v1, v2;
-                                    int index = mesh_tri->i0 * 3;
-                                    vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
-                                                mesh->positions[index+2]);
-                                    index = mesh_tri->i1 * 3;    
-                                    vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
-                                                mesh->positions[index+2]);
-                                    index = mesh_tri->i2 * 3;
-                                    vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
-                                                mesh->positions[index+2]);
-                                    vec3_copy(mesh_tri->v0, v0);
-                                    vec3_copy(mesh_tri->v1, v1);
-                                    vec3_copy(mesh_tri->v2, v2);
-                                    
-                                    if(mesh->num_normals == 0)
-                                    {
-
-                                        calcTriangleNormal(mesh_tri->normal, v0, v1, v2);
-
-                                    }else
-                                    {
-                                        int index = mesh->indices[j] * 3;
-                                        vec3_assign(mesh_tri->normal, mesh->normals[index],
-                                                    mesh->normals[index+1], mesh->normals[index+2]);
-                                    }
-
-                                    mesh_tri->mat = mat;
-                                    
-                                    Object_t obj = {MESH_TRIANGLE, mesh_tri};
-                                    SceneObjects_push_obj(so, obj);
-                                }
-                            }
-                        }
+                        generateMeshTriangles(so, mesh_entry, sm, s_meshes);
                     }
                 }else
                 {
@@ -331,9 +339,10 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     }
     sl->num_lights = 0;
     // Directional light
+
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
-    float intensity = 0.0f;
+    float intensity = 2.0f;
     vec3 direction = {10.0f, 10.0f, 10.0f};
     vec3_normalize(direction, direction);
     assignDirLight(dir_light_ptr, intensity, WHITE, direction);
@@ -341,6 +350,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     sl->light_ptrs[sl->num_lights] = dir_light_ptr;
     sl->light_types[sl->num_lights] = DIRECTIONAL;
     (sl->num_lights)++;
+
     
     // Point light
     /*
@@ -357,7 +367,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
 
     sl->env_light_ptr = NULL;
     //initAreaLights(sl, num_samples, num_sets);
-    initEnvLight(sl, num_samples, num_sets);
+    //initEnvLight(sl, num_samples, num_sets);
 }
 
 void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshes* s_meshes,

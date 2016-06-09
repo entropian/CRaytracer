@@ -167,17 +167,15 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
     case MESH_TRIANGLE:
     {
         MeshTriangle* mesh_tri = (MeshTriangle*)obj.ptr;
-        vec3 v0, v1, v2;
-        getMeshTriangleVertPos(v0, v1, v2, mesh_tri);
-        vec3_copy(aabb->min, v0);
-        vec3_copy(aabb->max, v0);
+        vec3_copy(aabb->min, mesh_tri->v0);
+        vec3_copy(aabb->max, mesh_tri->v0);
 
         for(int i = 0; i < 3; i++)
         {
-            if(v1[i] < aabb->min[i]){aabb->min[i] = v1[i];}
-            if(v1[i] > aabb->max[i]){aabb->max[i] = v1[i];}
-            if(v2[i] < aabb->min[i]){aabb->min[i] = v2[i];}
-            if(v2[i] > aabb->max[i]){aabb->max[i] = v2[i];}
+            if(mesh_tri->v1[i] < aabb->min[i]){aabb->min[i] = mesh_tri->v1[i];}
+            if(mesh_tri->v1[i] > aabb->max[i]){aabb->max[i] = mesh_tri->v1[i];}
+            if(mesh_tri->v2[i] < aabb->min[i]){aabb->min[i] = mesh_tri->v2[i];}
+            if(mesh_tri->v2[i] > aabb->max[i]){aabb->max[i] = mesh_tri->v2[i];}
         }
         for(int i = 0; i < 3; i++)
         {

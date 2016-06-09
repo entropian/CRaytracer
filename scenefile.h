@@ -512,7 +512,9 @@ bool parseTorusEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm, const int num
 
 typedef struct
 {
-    bool shadow;    
+    bool shadow;
+    vec3 scaling;
+    vec3 location;
     char mesh_name[NAME_LENGTH];
     char mat_name[NAME_LENGTH];
 }MeshEntry;
@@ -559,6 +561,12 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
     {
         mesh_entry->shadow = false;
     }
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SCALING
+    if(!parseVec3(mesh_entry->scaling, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
+    if(!parseVec3(mesh_entry->location, fp)){return false;}        
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}
