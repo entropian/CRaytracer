@@ -246,12 +246,9 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
     {
         if(sl->light_types[i] == AREALIGHT)
         {
-            if(so->num_obj < MAX_OBJECTS)
-            {
-                AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
-                Object_t obj = {area_light_ptr->obj_type, area_light_ptr->obj_ptr};
-                
-            }
+            AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
+            Object_t obj = {area_light_ptr->obj_type, area_light_ptr->obj_ptr};
+            SceneObjects_push_obj(so, obj);
         }
     }
 }
@@ -299,7 +296,7 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     // Sphere
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
-    vec3_assign(sphere->center, -2.0f, 3.0f, -2.0f);
+    vec3_assign(sphere->center, -4.0f, 5.0f, 1.0f);
     sphere->radius = 1.0f;
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;
@@ -348,7 +345,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     }
     sl->num_lights = 0;
     // Directional light
-
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 2.0f;
@@ -359,7 +356,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     sl->light_ptrs[sl->num_lights] = dir_light_ptr;
     sl->light_types[sl->num_lights] = DIRECTIONAL;
     (sl->num_lights)++;
-
+    */
     
     // Point light
     /*
@@ -376,7 +373,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
 
     sl->env_light_ptr = NULL;
     //initAreaLights(sl, num_samples, num_sets);
-    //initEnvLight(sl, num_samples, num_sets);
+    initEnvLight(sl, num_samples, num_sets);
 }
 
 void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshes* s_meshes,

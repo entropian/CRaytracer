@@ -8,13 +8,14 @@ enum MatType
     PHONG,
     EMISSIVE
 };
+
 // NOTE: this looks like it sucks
 typedef struct 
 {
     bool shadow;
     MatType mat_type;
-    float ka, kd, ks, ke, exp;
-    vec3 ca, cd, cs, ce;
+    float ka, kd, ks, ke, kr, exp;
+    vec3 ca, cd, cs, ce, cr;
 }Material;
 
 void printMaterial(const Material* mat)

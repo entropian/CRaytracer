@@ -48,7 +48,7 @@
 #include "buildscene.h"
 #include "intersect.h"
 
-#define SHOW_PROGRESS 0
+#define SHOW_PROGRESS 1
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -87,23 +87,17 @@ int main()
     unsigned char *image;
     int frame_res_width = 900, frame_res_height = 900;
     //int frame_res_width = 360, frame_res_height = 360;
-    //int frame_res_width = 480, frame_res_height = 480;
-    //int frame_res_width = 720, frame_res_height = 720;
-    //int frame_res_width = 512, frame_res_height = 512;
-    //int frame_res_width = 180, frame_res_height = 180;
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
     // Samples
     srand((unsigned int)time(NULL));    
-    const int num_samples = 1;
+    const int num_samples = 64;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;
     Samples3D h_samples = Samples3D_default;
     genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
-    //genHammersleySamples(&unit_square_samples, num_samples, num_sets);
-    //genRegularSamples(&unit_square_samples, num_samples, num_sets);
     mapSamplesToDisk(&disk_samples, &unit_square_samples);
     mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
     
@@ -127,16 +121,14 @@ int main()
 
     // Camera
     Camera camera;
-    initPinholeCameraDefault(&camera);
-    //initThinLensCameraDefault(&camera);
-    //camera.focal_length = 4.0f;
-    //camera.lens_radius = 0.2f;
+    //initPinholeCameraDefault(&camera);
+    initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS, num_samples, num_sets);
     
-    //vec3 position = {0.0f, 0.5f, 5.0f};
+    vec3 position = {0.0f, 1.0f, 7.0f};
     //vec3 position = {0.0f, 3.0f, 6.0f};
-    vec3 position = {0.0f, 6.0f, 7.0f};
-    //vec3 look_point = {0.0f, 0.0f, -4.0f};
-    vec3 look_point = {0.0f, 3.0f, -4.0f};
+    //vec3 position = {0.0f, 6.0f, 7.0f};
+    //vec3 look_point = {0.0f, 0.0f, 4.0f};
+    vec3 look_point = {0.0f, 1.0f, -4.0f};
     //vec3 look_point = {0.0f, 0.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
@@ -167,19 +159,7 @@ int main()
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
             
             Ray ray;
-            switch(camera.camera_type)
-            {
-            case Pinhole:
-            {
-                calcRayPinhole(&ray, imageplane_coord, &camera);
-            } break;
-            case ThinLens:
-            {
-                vec2 disk_sample;
-                getNextSample2D(disk_sample, &disk_samples);            
-                calcRayThinLens(&ray, imageplane_coord, disk_sample, &camera);
-            } break;
-            }
+            calcCameraRay(&ray, imageplane_coord, &camera);
 
             float min_t = TMAX;
             ShadeRec min_sr;
@@ -219,47 +199,11 @@ int main()
                         float ndotwi = vec3_dot(light_dir, min_sr.normal);
                         if(ndotwi > 0)
                         {
-                            // Shadow test
-                            bool in_shadow = false;
-                            if(scene_lights.shadow[i] && min_sr.mat->shadow)
-                            {
-                                Ray shadow_ray;
-                                vec3_copy(shadow_ray.origin, min_sr.hit_point);
-                                vec3_copy(shadow_ray.direction, light_dir);
-                                float min_t = shadowIntersectTest(&scene_objects, shadow_ray);     
-                                float t = calcLightDistance(scene_lights.light_types[i],
-                                                            scene_lights.light_ptrs[i], min_sr.hit_point);
-                                if(min_t < t)
-                                {
-                                    in_shadow = true;
-                                }                            
-                            }
-                            //in_shadow = false;                            
+                            bool in_shadow = shadowTest(i, &scene_lights, &scene_objects, light_dir, &min_sr);
                             if(!in_shadow)
                             {
-                                if(scene_lights.light_types[i] == AREALIGHT)
-                                {
-                                    //printf("light_dir = %f, %f, %f\n", light_dir[0], light_dir[1], light_dir[2]);
-                                    AreaLight* area_light_ptr = (AreaLight*)(scene_lights.light_ptrs[i]);
-                                    areaLightShading(radiance, ndotwi, light_dir, area_light_ptr, &min_sr);
-                                }else if(scene_lights.light_types[i] == ENVLIGHT)
-                                {
-                                    EnvLight* env_light_ptr = (EnvLight*)(scene_lights.light_ptrs[i]);
-                                    envLightShading(radiance, ndotwi, light_dir, env_light_ptr, &min_sr);
-                                }else
-                                {
-                                    // Diffuse component
-                                    // kd*cd/PI * inc_radiance_cos
-                                    vec3 inc_radiance_cos, tmp;
-                                    getIncRadiance(tmp, scene_lights.light_types[i], scene_lights.light_ptrs[i]);
-                                    vec3_scale(inc_radiance_cos, tmp, ndotwi);
-                                    diffuseShading(radiance, inc_radiance_cos,  &min_sr);
-                                    if(min_sr.mat->mat_type == PHONG)
-                                    {
-                                        // Specular component
-                                        specularShading(radiance, light_dir, inc_radiance_cos, &min_sr);
-                                    }
-                                }
+                                lightShading(radiance, ndotwi, light_dir, scene_lights.light_ptrs[i],
+                                             scene_lights.light_types[i], &min_sr);
                             }
                         }
                     }
@@ -297,54 +241,6 @@ int main()
     double sec = difftime(endTime, startTime);
     printf("%f seconds.\n", sec);
 
-    /*
-    {
-        vec4 a = {1.0f, 2.0f, 3.0f, 4.0f};
-        mat4 matrix;
-    
-        //mat4_identity(m4);
-        mat4_scale(matrix, 2.0f, 5.5f, 11.0f);
-        for(int i = 0; i < 4; i++)
-        {
-            for(int j = 0; j < 4; j++)
-            {
-                printf("%f ", matrix[i][j]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-        
-        Ray src_ray, dest_ray;
-        vec3_assign(src_ray.origin, 0.0f, 0.0f, 0.0f);
-        vec3_assign(src_ray.direction, 0.0f, 0.0f, -1.0f);
-        mat4 translation, inv_translation;
-        mat4_translate(translation, 1.0f, 0.0f, 0.0f);
-        for(int i = 0; i < 4; i++)
-        {
-            for(int j = 0; j < 4; j++)
-            {
-                printf("%f ", translation[i][j]);
-            }
-            printf("\n");
-        }    
-        mat4_invert_translation(inv_translation, translation);
-        mat4_scale(matrix, 2.0f, 5.5f, 11.0f);
-        for(int i = 0; i < 4; i++)
-        {
-            for(int j = 0; j < 4; j++)
-            {
-                printf("%f ", inv_translation[i][j]);
-            }
-            printf("\n");
-        }
-        printf("\n");    
-        transformRay(&dest_ray, inv_translation, src_ray);
-        printf("src origin = %f, %f, %f\n", src_ray.origin[0], src_ray.origin[1], src_ray.origin[2]);
-        printf("src direction = %f, %f, %f\n", src_ray.direction[0], src_ray.direction[1], src_ray.direction[2]);
-        printf("dest origin = %f, %f, %f\n", dest_ray.origin[0], dest_ray.origin[1], dest_ray.origin[2]);
-        printf("dest direction = %f, %f, %f\n", dest_ray.direction[0], dest_ray.direction[1], dest_ray.direction[2]);
-    }
-    */
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
 
     // Clean up
@@ -352,8 +248,11 @@ int main()
     freeSamples2D(&unit_square_samples);
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
-    //freeSceneObjects(&scene_objects);
+    freeSceneObjects(&scene_objects);
     freeSceneLights(&scene_lights);
+    Camera_destroy(&camera);
+    SceneMaterials_destroy(&scene_materials);
+    SceneMeshes_destroy(&scene_meshes);
 
     while(true)
     {

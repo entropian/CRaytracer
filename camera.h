@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sampling.h"
 #include "util/vec.h"
 #include "util/constants.h"
 #include "util/ray.h"
@@ -12,18 +13,33 @@ enum CameraType
 
 typedef struct Camera
 {
+    CameraType camera_type;    
+    float focal_pt_dist;                // Distance between focal_point and the view plane
+    float focal_length;                 // Distance between the view plane and focal plane
+    float lens_radius;    
     vec3 position;
     vec3 x_axis;
     vec3 y_axis;
     vec3 z_axis;
     vec3 focal_point;
-    float focal_pt_dist;                // Distance between focal_point and the view plane
-    float focal_length;                 // Distance between the view plane and focal plane
-    float lens_radius;
-    CameraType camera_type;
+    Samples2D* samples;
 } Camera;
 
-void initPinholeCameraDefault(Camera *camera)
+void Camera_destroy(Camera* camera)
+{
+    freeSamples2D(camera->samples);
+    free(camera->samples);
+    camera->focal_pt_dist = 0.0f;
+    camera->focal_length = 0.0f;
+    camera->lens_radius = 0.0f;
+    vec3_copy(camera->position, ORIGIN);
+    vec3_copy(camera->x_axis, ORIGIN);
+    vec3_copy(camera->y_axis, ORIGIN);
+    vec3_copy(camera->z_axis, ORIGIN);
+    vec3_copy(camera->focal_point, ORIGIN);        
+}
+
+void initPinholeCameraDefault(Camera *camera, const int num_samples, const int num_sets)
 {
     vec3 position = {0.0f, 0.0f, 0.0f};
     vec3 x_axis = {1.0f, 0.0f, 0.0f};
@@ -39,11 +55,16 @@ void initPinholeCameraDefault(Camera *camera)
     camera->camera_type = Pinhole;
     camera->focal_length = 0.0f;
     camera->lens_radius = 0.0f;
+    camera->samples = (Samples2D*)malloc(sizeof(Samples2D));
+    *(camera->samples) = Samples2D_default;
+    genMultijitteredSamples(camera->samples, num_samples, num_sets);
+    mapSamplesToDisk(camera->samples, camera->samples);
 }
 
-void initThinLensCameraDefault(Camera *camera)
+void initThinLensCameraDefault(Camera *camera, const float focal_length, const float lens_radius, const int num_samples,
+    const int num_sets)
 {
-    initPinholeCameraDefault(camera);
+    initPinholeCameraDefault(camera, num_samples, num_sets);
     camera->camera_type = ThinLens;
     camera->focal_length = DEFAULT_FOCAL_LENGTH;
     camera->lens_radius = DEFAULT_LENS_RADIUS;    
@@ -90,8 +111,10 @@ void calcRayPinhole(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
 }
 
 // Compute a ray for thin lens camera
-void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const vec2 disk_sample, const Camera *camera)
+void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
 {
+    vec2 disk_sample;
+    getNextSample2D(disk_sample, camera->samples);
     // NOTE: consider doing the calculations in camera space instead of transforming the resulting ray to camera space
     vec3 point_viewplane = {viewplane_coord[0], viewplane_coord[1], 0.0f};
     vec3_copy(ray->origin, camera->focal_point);
@@ -121,3 +144,17 @@ void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const vec2 disk_sampl
     vec3_add(ray->origin, tmp_vec_1, camera->position);
 }
 
+void calcCameraRay(Ray* ray, const vec2 imageplane_coord, const Camera* camera)
+{
+    switch(camera->camera_type)
+    {
+    case Pinhole:
+    {
+        calcRayPinhole(ray, imageplane_coord, camera);
+    } break;
+    case ThinLens:
+    {
+        calcRayThinLens(ray, imageplane_coord, camera);
+    } break;
+    }
+}

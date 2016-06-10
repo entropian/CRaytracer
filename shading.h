@@ -130,3 +130,52 @@ void maxToOne(vec3 r, const vec3 a)
         vec3_scale(r, a, 1.0f/max);
     }
 }
+
+void lightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const void* light_ptr,
+                  const LightType light_type, const ShadeRec* sr)
+{
+    switch(light_type)
+    {
+    case AREALIGHT:
+    {
+        AreaLight* area_light_ptr = (AreaLight*)light_ptr;
+        areaLightShading(radiance, ndotwi, light_dir, area_light_ptr, sr);
+    } break;
+    case ENVLIGHT:
+    {
+        EnvLight* env_light_ptr = (EnvLight*)light_ptr;
+        envLightShading(radiance, ndotwi, light_dir, env_light_ptr, sr);
+    } break;
+    default:
+        // Diffuse component
+        // kd*cd/PI * inc_radiance_cos
+        vec3 inc_radiance_cos, tmp;
+        getIncRadiance(tmp, light_type, light_ptr);
+        vec3_scale(inc_radiance_cos, tmp, ndotwi);
+        diffuseShading(radiance, inc_radiance_cos,  sr);
+        if(sr->mat->mat_type == PHONG)
+        {
+            // Specular component
+            specularShading(radiance, light_dir, inc_radiance_cos, sr);
+        }
+    }
+}
+
+bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects* so,
+                const vec3 light_dir, const ShadeRec* sr)
+{
+    if(sl->shadow[light_index] && sr->mat->shadow)
+    {
+        Ray shadow_ray;
+        vec3_copy(shadow_ray.origin, sr->hit_point);
+        vec3_copy(shadow_ray.direction, light_dir);
+        float min_t = shadowIntersectTest(so, shadow_ray);     
+        float t = calcLightDistance(sl->light_types[light_index],
+                                    sl->light_ptrs[light_index], sr->hit_point);
+        if(min_t < t)
+        {
+            return true;
+        }
+        return false;
+    }    
+}

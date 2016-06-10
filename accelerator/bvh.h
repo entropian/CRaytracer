@@ -90,6 +90,17 @@ void BVH_build(BVHNode **tree, Object_t objects[], int num_obj, const int axis_i
     }
 }
 
+void BVH_destroy(BVHNode *tree)
+{
+    if(tree->type == NODE)
+    {
+        BVH_destroy(tree->left);
+        BVH_destroy(tree->right);
+        free(tree->left);
+        free(tree->right);
+    }
+}
+
 void printBVH(BVHNode* tree, int* leaf_count, int depth)
 {
     for(int i = 0; i < depth; ++i)

@@ -62,6 +62,18 @@ SceneMaterials SceneMaterials_create()
     return sm;
 }
 
+void SceneMaterials_destroy(SceneMaterials* sm)
+{
+    free(sm->materials);
+    for(int i = 0; i < sm->size; i++)
+    {
+        free(sm->names[i]);
+    }
+    free(sm->names);
+    sm->size = 0;
+    sm->max = 0;
+}
+
 Material* SceneMaterials_push(SceneMaterials* sm, const Material mat, const char* name)
 {
     DBuffer mat_buffer;
@@ -123,6 +135,13 @@ OBJShape* SceneMeshes_push(SceneMeshes* s_meshes, const OBJShape obj_shape)
     return &(s_meshes->meshes[s_meshes->size - 1]);
 }
 
+void SceneMeshes_destroy(SceneMeshes* s_meshes)
+{
+    free(s_meshes->meshes);
+    s_meshes->size = 0;
+    s_meshes->max = 0;    
+}
+
 typedef struct SceneLights
 {
     int num_lights;
@@ -164,7 +183,7 @@ void freeSceneObjects(SceneObjects* so)
         UniformGrid_destroy((UniformGrid*)(so->accel_ptr));
         break;
     case BVH:
-        // TODO
+        BVH_destroy((BVHNode*)(so->accel_ptr));
         break;
     }
     

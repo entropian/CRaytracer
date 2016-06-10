@@ -1,9 +1,7 @@
-Add mesh scaling
-Add mesh location and orientation
 put mesh triangles in an array
-Combaine light pointer and light type into a struct?
+Combine light pointer and light type into a struct?
 change some push function arguments to pointers?
-Add scaling, location, and orientation to MeshEntry
+Change it so that the image plane isn't totally reliant on fov as input.
+the eventual image plane struct could have a samples pointer of its own.
+Update the clean up section.
 
-Other:
-optimize mesh triangle
