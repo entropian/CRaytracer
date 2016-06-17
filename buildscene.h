@@ -68,7 +68,6 @@ void initInstanced(SceneObjects* so, SceneMaterials* sm)
 void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const SceneMaterials *sm,
                            const SceneMeshes* s_meshes)
 {
-    // Calculate rotation matrix
     mat3 rotation;
     eulerAngToMat3(rotation, mesh_entry.orientation);
     
@@ -99,16 +98,6 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
                 vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
                             mesh->positions[index+2]);
 
-                if(mesh->num_normals == 0)
-                {
-                    calcTriangleNormal(mesh_tri->normal, v0, v1, v2);
-                }else
-                {
-                    int index = mesh->indices[j] * 3;
-                    vec3_assign(mesh_tri->normal, mesh->normals[index],
-                                mesh->normals[index+1], mesh->normals[index+2]);
-                }
-
                 vec3_mult(v0, mesh_entry.scaling, v0);
                 vec3_mult(v1, mesh_entry.scaling, v1);
                 vec3_mult(v2, mesh_entry.scaling, v2);
@@ -122,10 +111,21 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
                 vec3_add(new_v1, mesh_entry.location, new_v1);
                 vec3_add(new_v2, mesh_entry.location, new_v2);
                 
-                                    
                 vec3_copy(mesh_tri->v0, new_v0);
                 vec3_copy(mesh_tri->v1, new_v1);
                 vec3_copy(mesh_tri->v2, new_v2);
+
+                if(mesh->num_normals == 0)
+                {
+                    calcTriangleNormal(mesh_tri->normal, new_v0, new_v1, new_v2);
+                }else
+                {
+                    // TODO: fix this for rotated mesh
+                    int index = mesh->indices[j] * 3;
+                    vec3_assign(mesh_tri->normal, mesh->normals[index],
+                                mesh->normals[index+1], mesh->normals[index+2]);
+                }
+                
 
                 mesh_tri->mat = mat;                                    
                 Object_t obj = {MESH_TRIANGLE, mesh_tri};
@@ -179,34 +179,8 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                     }
                 }else
                 {
-                    Object_t obj;
-                    bool parse_status = false;
-                    if(strcmp(buffer, "SPHERE") == 0)
-                    {
-                        parse_status = parseSphereEntry(&obj, fp, sm, num_mat);
-                    }else if(strcmp(buffer, "PLANE") == 0)
-                    {
-                        parse_status = parsePlaneEntry(&obj, fp, sm, num_mat);
-                    }else if(strcmp(buffer, "RECTANGLE") == 0)
-                    {
-                        parse_status = parseRectEntry(&obj, fp, sm, num_mat);
-                    }else if(strcmp(buffer, "TRIANGLE") == 0)
-                    {
-                        parse_status = parseTriangleEntry(&obj, fp, sm, num_mat);
-                    }else if(strcmp(buffer, "AABOX") == 0)
-                    {
-                        parse_status = parseAABoxEntry(&obj, fp, sm, num_mat);
-                    }else if(strcmp(buffer, "OPENCYLINDER") == 0)
-                    {
-                        parse_status = parseOpenCylEntry(&obj, fp, sm, num_mat);
-                    }else if(strcmp(buffer, "DISK") == 0)
-                    {
-                        parse_status = parseDiskEntry(&obj, fp, sm, num_mat);
-                    }else if(strcmp(buffer, "TORUS") == 0)
-                    {
-                        parse_status = parseTorusEntry(&obj, fp, sm, num_mat);
-                    }
-                    if(parse_status)
+                    Object_t obj;                    
+                    if(parsePrimitive(&obj, fp, sm, buffer))
                     {
                         SceneObjects_push_obj(so, obj);
                     }
@@ -320,32 +294,52 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     (sl->num_lights)++;
 }
 
-void initEnvLight(SceneLights*sl, const int num_samples, const int num_sets)
+void initEnvLight(SceneLights* sl, const int num_samples, const int num_sets)
 {
     if(sl->num_lights == MAX_LIGHTS){return;}
-    EnvLight* env_light_ptr = (EnvLight*)malloc(sizeof(EnvLight));
-    env_light_ptr->intensity = 1.0f;
-    vec3_copy(env_light_ptr->color, WHITE);
+    EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
+    env_light->intensity = 1.0f;
+    vec3_copy(env_light->color, WHITE);
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, num_samples, num_sets);
 
-    env_light_ptr->samples3D = samples;
+    env_light->samples3D = samples;
     sl->shadow[sl->num_lights] = true;
-    sl->light_ptrs[sl->num_lights] = env_light_ptr;
+    sl->light_ptrs[sl->num_lights] = env_light;
     sl->light_types[sl->num_lights] = ENVLIGHT;
     (sl->num_lights)++;
-    sl->env_light_ptr = env_light_ptr;
+    sl->env_light = env_light;
+}
+
+void initAmbLight(SceneLights *sl)
+{
+    sl->amb_light = (AmbientLight*)malloc(sizeof(AmbientLight));
+    vec3_copy(sl->amb_light->color, WHITE);
+    sl->amb_light->intensity = 0.2f;
+    sl->amb_light->amb_occlusion = false;
+}
+
+void initBackgroundColor(SceneLights* sl)
+{
+    if(sl->env_light != NULL)
+    {
+        getIncRadiance(sl->bg_color, ENVLIGHT, sl->env_light);
+    }else
+    {
+        vec3_copy(sl->bg_color, WHITE);
+    }
 }
 
 void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
 {
+    sl->env_light = NULL;    
     for(int i = 0; i < MAX_LIGHTS; i++)
     {
         sl->light_ptrs[i] = NULL;
     }
     sl->num_lights = 0;
     // Directional light
-    /*
+
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 2.0f;
@@ -356,7 +350,7 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     sl->light_ptrs[sl->num_lights] = dir_light_ptr;
     sl->light_types[sl->num_lights] = DIRECTIONAL;
     (sl->num_lights)++;
-    */
+
     
     // Point light
     /*
@@ -371,9 +365,11 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     (sl->num_lights)++;
     */
 
-    sl->env_light_ptr = NULL;
+
     //initAreaLights(sl, num_samples, num_sets);
-    initEnvLight(sl, num_samples, num_sets);
+    //initEnvLight(sl, num_samples, num_sets);
+    initAmbLight(sl);
+    initBackgroundColor(sl);
 }
 
 void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshes* s_meshes,
@@ -398,16 +394,5 @@ void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshe
         //int leaf_count = 0;
         //printBVH(tree, &leaf_count, 0);        
         so->accel_ptr = tree;
-    }
-}
-
-void initBackgroundColor(vec3 r, const SceneLights* sl, const vec3 default_color)
-{
-    if(sl->env_light_ptr != NULL)
-    {
-        getIncRadiance(r, ENVLIGHT, sl->env_light_ptr);
-    }else
-    {
-        vec3_copy(r, default_color);
     }
 }

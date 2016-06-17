@@ -57,7 +57,7 @@ void printMat3(mat3 a)
 
 inline float degToRad(const float degree)
 {
-    return degree / 180.0f * PI;
+    return degree / 180.0f * (float)PI;
 }
 
 void eulerAngToMat3(mat3 r, const vec3 euler_ang)

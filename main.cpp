@@ -47,6 +47,7 @@
 #include "shading.h"
 #include "buildscene.h"
 #include "intersect.h"
+#include "trace.h"
 
 #define SHOW_PROGRESS 1
 
@@ -85,14 +86,13 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 900, frame_res_height = 900;
-    //int frame_res_width = 360, frame_res_height = 360;
+    int frame_res_width = 480, frame_res_height = 480;
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
     // Samples
     srand((unsigned int)time(NULL));    
-    const int num_samples = 64;
+    const int num_samples = 100;
     const int num_sets = 83;
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;
@@ -100,13 +100,9 @@ int main()
     genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
     mapSamplesToDisk(&disk_samples, &unit_square_samples);
     mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
-    
-    // Ambient light
-    // TODO: move this into scene lights
-    vec3 amb_color = {1.0f, 1.0f, 1.0f};
-    float amb_ls = 0.0f;
-    bool amb_occlusion = false;
 
+    initOtherSampler(num_samples, num_sets);
+    
     // Scene data structures
     SceneLights scene_lights;
     SceneObjects scene_objects = SceneObjects_create();
@@ -115,21 +111,13 @@ int main()
     initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes,
               num_samples, num_sets, "test_scene2.txt");
 
-    // vec3 bg_color = {0.0f, 0.0f, 0.0f}; 
-    vec3 bg_color;
-    initBackgroundColor(bg_color, &scene_lights, BLACK);
-
     // Camera
     Camera camera;
-    //initPinholeCameraDefault(&camera);
-    initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS, num_samples, num_sets);
+    initPinholeCameraDefault(&camera, num_samples, num_sets);
+    //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS, num_samples, num_sets);
     
-    vec3 position = {0.0f, 1.0f, 7.0f};
-    //vec3 position = {0.0f, 3.0f, 6.0f};
-    //vec3 position = {0.0f, 6.0f, 7.0f};
-    //vec3 look_point = {0.0f, 0.0f, 4.0f};
+    vec3 position = {0.0f, 1.0f, 4.0f};
     vec3 look_point = {0.0f, 1.0f, -4.0f};
-    //vec3 look_point = {0.0f, 0.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -161,64 +149,13 @@ int main()
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera);
 
-            float min_t = TMAX;
-            ShadeRec min_sr;
-            min_t = intersectTest(&min_sr, &scene_objects, ray);
-            
-            // Shading
-            if(min_t < TMAX)
-            {
-                vec3 radiance = {0.0f, 0.0f, 0.0f};                
-                if(min_sr.mat->mat_type == EMISSIVE)
-                {
-                    vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
-                    maxToOne(radiance, radiance);
-                }else
-                {
-                    // Ambient component
-                    // ka*ca * amb_inc_radiance
-                    vec3 amb_inc_radiance;
-                    vec3_scale(amb_inc_radiance, amb_color, amb_ls);
-                    vec3 reflectance;
-                    vec3_scale(reflectance, min_sr.mat->ca, min_sr.mat->ka);
-                    if(amb_occlusion && AOTest(&h_samples, &scene_objects, &min_sr) < TMAX)
-                    {
-                        // Ambient Occlusion                        
-                        vec3 min_amb;
-                        vec3_scale(min_amb, amb_color, 0.01f);
-                        vec3_copy(radiance, min_amb);
-                    }else
-                    {
-                        vec3_mult(radiance, amb_inc_radiance, reflectance);
-                    }
-
-                    for(int i = 0; i < scene_lights.num_lights; i++)
-                    {
-                        vec3 light_dir;
-                        getLightDir(light_dir, scene_lights.light_types[i], scene_lights.light_ptrs[i], &min_sr);
-                        float ndotwi = vec3_dot(light_dir, min_sr.normal);
-                        if(ndotwi > 0)
-                        {
-                            bool in_shadow = shadowTest(i, &scene_lights, &scene_objects, light_dir, &min_sr);
-                            if(!in_shadow)
-                            {
-                                lightShading(radiance, ndotwi, light_dir, scene_lights.light_ptrs[i],
-                                             scene_lights.light_types[i], &min_sr);
-                            }
-                        }
-                    }
-                }
-                vec3_add(color, color, radiance);
-                //vec3_add(color, color, min_sr.normal);
-                //float factor = 8.0f;
-                //vec3 depth = {min_t/factor, min_t/factor, min_t/factor};
-                //vec3_add(color, color, depth);
-            }else
-            {
-                vec3_add(color, color, bg_color);
-            }
-            //vec3 depth = {min_t/factor, min_t/factor, min_t/factor};
-            //vec3_add(color, color, depth);
+            vec3 h_sample;
+            getNextSample3D(h_sample, &h_samples);
+            vec3 radiance;
+            //traceRay(radiance, &h_samples, ray, &scene_objects, &scene_lights);
+            //traceRay(radiance, sample, ray, &scene_objects, &scene_lights);
+            whittedTraceRay(radiance, 1, sample, ray, &scene_objects, &scene_lights);
+            vec3_add(color, color, radiance);
         }        
         vec3_scale(color, color, 1.0f/num_samples);
         maxToOne(color, color);

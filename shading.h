@@ -44,14 +44,34 @@ void specularShading(vec3 radiance, const vec3 light_dir,
     vec3_add(radiance, radiance, tmp);
 }
 
-float AOTest(Samples3D* samples, const SceneObjects *so, const ShadeRec* sr)
+float AOTest(const vec3 h_sample, const SceneObjects *so, const ShadeRec* sr)
 {
-    vec3 h_sample;
-    getNextSample3D(h_sample, samples);
+    //vec3 h_sample;
+    //getNextSample3D(h_sample, samples);
     Ray shadow_ray;
     getVec3InLocalBasis(shadow_ray.direction, h_sample, sr->normal);
     vec3_copy(shadow_ray.origin, sr->hit_point);
     return shadowIntersectTest(so, shadow_ray);
+}
+
+void ambientShading(vec3 radiance, const AmbientLight* amb_light, const vec3 sample,
+                    const SceneObjects* so, const ShadeRec* sr)
+{
+    // ka*ca * amb_inc_radiance    
+    vec3 amb_inc_radiance;
+    vec3_scale(amb_inc_radiance, amb_light->color, amb_light->intensity);
+    vec3 reflectance;
+    vec3_scale(reflectance, sr->mat->ca, sr->mat->ka);
+    if(amb_light->amb_occlusion && AOTest(sample, so, sr) < TMAX)
+    {
+        // Ambient Occlusion                        
+        vec3 min_amb;
+        vec3_scale(min_amb, amb_light->color, 0.01f);
+        vec3_copy(radiance, min_amb);
+    }else
+    {
+        vec3_mult(radiance, amb_inc_radiance, reflectance);
+    }
 }
 
 void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const AreaLight* area_light_ptr, const ShadeRec* sr)
@@ -131,7 +151,7 @@ void maxToOne(vec3 r, const vec3 a)
     }
 }
 
-void lightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const void* light_ptr,
+void directIllumShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const void* light_ptr,
                   const LightType light_type, const ShadeRec* sr)
 {
     switch(light_type)

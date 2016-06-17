@@ -6,7 +6,8 @@ enum MatType
 {
     MATTE,
     PHONG,
-    EMISSIVE
+    EMISSIVE,
+    REFLECTIVE
 };
 
 // NOTE: this looks like it sucks

@@ -57,7 +57,10 @@ SceneMaterials SceneMaterials_create()
     SceneMaterials sm;
     sm.materials = (Material*)malloc(sizeof(Material) * DEFAULT_MATERIAL);
     sm.names = (char**)malloc(sizeof(char*) * DEFAULT_MATERIAL);
-    sm.size = 0;
+    initDefaultMatteMat(&(sm.materials[0]), GREY);
+    sm.names[0] = (char*)malloc(sizeof(char) * NAME_LENGTH);
+    strcpy_s(sm.names[0], NAME_LENGTH, "DEFAULT");
+    sm.size = 1;
     sm.max = DEFAULT_MATERIAL;
     return sm;
 }
@@ -102,9 +105,9 @@ Material* findMaterial(const char* mat_name, const SceneMaterials* sm)
             return &(sm->materials[i]);
         }
     }
-    // TODO: return a default material
-    fprintf(stderr, "Material not found\n");
-    return NULL;    
+    
+    fprintf(stderr, "Material not found. Default material returned\n");
+    return &(sm->materials[0]);
 }
 
 typedef struct
@@ -148,7 +151,9 @@ typedef struct SceneLights
     bool shadow[MAX_LIGHTS];    
     LightType light_types[MAX_LIGHTS];
     void* light_ptrs[MAX_LIGHTS];
-    EnvLight* env_light_ptr;
+    EnvLight* env_light;
+    AmbientLight* amb_light;
+    vec3 bg_color;
 } SceneLights;
 
 Material* tmp_mat = (Material*)malloc(sizeof(Material));
@@ -210,6 +215,7 @@ void freeSceneLights(SceneLights* sl)
                 }
             }else if(sl->light_types[i] == ENVLIGHT)
             {
+                // TODO: should this be here?
                 EnvLight* env_light_ptr = (EnvLight*)(sl->light_ptrs[i]);
                 if(env_light_ptr->samples3D != NULL)
                 {
@@ -221,6 +227,7 @@ void freeSceneLights(SceneLights* sl)
             sl->light_ptrs[i] = NULL;
         }
     }
+    free(sl->amb_light);
 }
 
 void mvNonGridObjToStart(SceneObjects *so)

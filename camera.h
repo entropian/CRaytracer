@@ -55,6 +55,7 @@ void initPinholeCameraDefault(Camera *camera, const int num_samples, const int n
     camera->camera_type = Pinhole;
     camera->focal_length = 0.0f;
     camera->lens_radius = 0.0f;
+    // TODO: move below into initThinLensCameraDefault
     camera->samples = (Samples2D*)malloc(sizeof(Samples2D));
     *(camera->samples) = Samples2D_default;
     genMultijitteredSamples(camera->samples, num_samples, num_sets);

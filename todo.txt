@@ -1,5 +1,6 @@
 put mesh triangles in an array
 Combine light pointer and light type into a struct?
+Improve objloader so that it can load the dragon
 change some push function arguments to pointers?
 Change it so that the image plane isn't totally reliant on fov as input.
 the eventual image plane struct could have a samples pointer of its own.

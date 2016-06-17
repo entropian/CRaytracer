@@ -13,21 +13,21 @@ enum LightType
     ENVLIGHT
 };
 
-typedef struct DirLight
+typedef struct DirLight_s
 {
     float intensity;
     vec3 color;
     vec3 direction;
-} DirLight;
+}DirLight;
 
-typedef struct PointLight
+typedef struct PointLight_s
 {
     float intensity;
     vec3 color;
     vec3 point;
-} PointLight;
+}PointLight;
 
-typedef struct AreaLight
+typedef struct AreaLight_s
 {
     ObjectType obj_type;
     void* obj_ptr;
@@ -37,14 +37,21 @@ typedef struct AreaLight
     Samples3D* samples3D;
     vec3 sample_point;
     vec3 color;
-} AreaLight;
+}AreaLight;
 
-typedef struct EnvLight
+typedef struct EnvLight_s
 {
     float intensity;
     Samples3D* samples3D;
     vec3 color;
-} EnvLight;
+}EnvLight;
+
+typedef struct AmbientLight_s
+{
+    bool amb_occlusion;
+    float intensity;
+    vec3 color;
+}AmbientLight;
 
 void getAreaLightNormal(vec3 r, const AreaLight* area_light_ptr, const vec3 hit_point)
 {
