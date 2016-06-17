@@ -11,6 +11,7 @@
 #include "lights.h"
 #include "materials.h"
 #include "objloader/dbuffer.h"
+#include "sampling.h"
 
 void printSphere(const Sphere* sphere)
 {
@@ -145,7 +146,9 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_EXPONENT
         if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->exp = (float)atof(buffer);        
+        mat->exp = (float)atof(buffer);
+
+        mat->h_samples = genHemisphereSamples(MULTIJITTERED, mat->exp);
         return true;
     }else if(strcmp(buffer, "MATTE") == 0)
     {
@@ -176,7 +179,9 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_CONSTANT
         if(!getNextTokenInFile(buffer, fp)){return false;}
         mat->ka = (float)atof(buffer);
-         return true;
+
+        mat->h_samples = NULL;
+        return true;
     }else
     {
         fprintf(stderr, "Invalid material type %s.\n", buffer);
@@ -184,7 +189,6 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
     }    
 }
 
-//int parseMaterials(Material** materials, char*** names, FILE* fp)
 int parseMaterials(SceneMaterials* sm, FILE* fp)
 {
     char buffer[128];

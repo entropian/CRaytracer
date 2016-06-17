@@ -6,6 +6,18 @@
 #include "util/vec.h"
 #include "util/util.h"
 
+/*
+  All sampling structs share the same number of samples and sets
+ */
+int NUM_SAMPLES = 0;
+int NUM_SAMPLE_SETS = 0;
+
+void setNumSamplesAndSets(const int num_samples, const int num_sets)
+{
+    NUM_SAMPLES = num_samples;
+    NUM_SAMPLE_SETS = num_sets;
+}
+
 enum SamplesType
 {
     REGULAR,
@@ -85,23 +97,23 @@ void getNextSample3D(vec3 r, Samples3D *samples)
                                                                             samples->count++ % samples->num_samples]]);
 }
 
-void shuffleIndices(int **indices, const int num_sets, const int num_samples)
+void shuffleIndices(int **indices)
 {
-    *indices = (int*)malloc(sizeof(int) * num_samples * num_sets);
-    for(int i = 0; i < num_sets; i++)
+    *indices = (int*)malloc(sizeof(int) * NUM_SAMPLES * NUM_SAMPLE_SETS);
+    for(int i = 0; i < NUM_SAMPLE_SETS; i++)
     {
-        int offset = i * num_samples;
-        for(int j = 0; j < num_samples; j++)
+        int offset = i * NUM_SAMPLES;
+        for(int j = 0; j < NUM_SAMPLES; j++)
         {
             (*indices)[j + offset] = j;
         }
     }
-    for(int i = 0; i < num_sets; i++)
+    for(int i = 0; i < NUM_SAMPLE_SETS; i++)
     {
-        int offset = i * num_samples;
-        for(int j = 0; j < num_samples; j++)
+        int offset = i * NUM_SAMPLES;
+        for(int j = 0; j < NUM_SAMPLES; j++)
         {
-            int random_index = (rand() % num_samples) + offset;
+            int random_index = (rand() % NUM_SAMPLES) + offset;
             int tmp = (*indices)[j + offset];
             (*indices)[j + offset] = (*indices)[random_index];
             (*indices)[random_index] = tmp;
@@ -109,7 +121,7 @@ void shuffleIndices(int **indices, const int num_sets, const int num_samples)
     }    
 }
 
-void prepSample2DStruct(Samples2D *samples, const int num_samples, const int num_sets)
+void prepSample2DStruct(Samples2D *samples)
 {
     if(samples->samples != NULL)
     {
@@ -120,13 +132,13 @@ void prepSample2DStruct(Samples2D *samples, const int num_samples, const int num
         free(samples->shuffled_indices);
     }
     samples->count = samples->jump = 0;
-    samples->samples = (vec2*)malloc(sizeof(vec2) * num_samples * num_sets);    
-    samples->num_samples = num_samples;
-    samples->num_sets = num_sets;
-    shuffleIndices(&(samples->shuffled_indices), num_sets, num_samples);
+    samples->samples = (vec2*)malloc(sizeof(vec2) * NUM_SAMPLES * NUM_SAMPLE_SETS);    
+    samples->num_samples = NUM_SAMPLES;
+    samples->num_sets = NUM_SAMPLE_SETS;
+    shuffleIndices(&(samples->shuffled_indices));
 }
 
-void prepSample3DStruct(Samples3D *samples, const int num_samples, const int num_sets)
+void prepSample3DStruct(Samples3D *samples)
 {
     if(samples->samples != NULL)
     {
@@ -137,23 +149,23 @@ void prepSample3DStruct(Samples3D *samples, const int num_samples, const int num
         free(samples->shuffled_indices);
     }
     samples->count = samples->jump = 0;
-    samples->samples = (vec3*)malloc(sizeof(vec3) * num_samples * num_sets);    
-    samples->num_samples = num_samples;
-    samples->num_sets = num_sets;
-    shuffleIndices(&(samples->shuffled_indices), num_sets, num_samples);
+    samples->samples = (vec3*)malloc(sizeof(vec3) * NUM_SAMPLES * NUM_SAMPLE_SETS);    
+    samples->num_samples = NUM_SAMPLES;
+    samples->num_sets = NUM_SAMPLE_SETS;
+    shuffleIndices(&(samples->shuffled_indices));
 }
 
-void genRegularSamples(Samples2D *samples, const int num_samples, const int num_sets)
+void genRegularSamples(Samples2D *samples)
 {
-    int samples_per_row = (int)sqrt(num_samples);    
-    if(samples_per_row * samples_per_row != num_samples)
+    int samples_per_row = (int)sqrt(NUM_SAMPLES);    
+    if(samples_per_row * samples_per_row != NUM_SAMPLES)
     {
         fprintf(stderr, "num_samples must be a perfect square.\n");
         return ;
     }
-    prepSample2DStruct(samples, num_samples, num_sets);
+    prepSample2DStruct(samples);
     int sample_index = 0;
-    for(int p = 0; p < num_sets; p++)
+    for(int p = 0; p < NUM_SAMPLE_SETS; p++)
     {
         for(int i = 0; i < samples_per_row; i++)
         {
@@ -167,17 +179,17 @@ void genRegularSamples(Samples2D *samples, const int num_samples, const int num_
     }
 }
 
-void genMultijitteredSamples(Samples2D *samples, const int num_samples, const int num_sets)
+void genMultijitteredSamples(Samples2D *samples)
 {
-    int samples_per_row = (int)sqrt(num_samples);    
-    if(samples_per_row * samples_per_row != num_samples)
+    int samples_per_row = (int)sqrt(NUM_SAMPLES);    
+    if(samples_per_row * samples_per_row != NUM_SAMPLES)
     {
         fprintf(stderr, "num_samples must be a perfect square.\n");
         return ;
     }
-    prepSample2DStruct(samples, num_samples, num_sets);    
+    prepSample2DStruct(samples);    
     int sample_index = 0;
-    for(int p = 0; p < num_sets; p++)
+    for(int p = 0; p < NUM_SAMPLE_SETS; p++)
     {
         for(int i = 0; i < samples_per_row; i++)
         {
@@ -186,9 +198,9 @@ void genMultijitteredSamples(Samples2D *samples, const int num_samples, const in
                 float x = (float)rand() / (float)RAND_MAX;
                 float y = (float)rand() / (float)RAND_MAX;                
                 x += (float)(i + j * samples_per_row);
-                x /= (float)(num_samples);
+                x /= (float)(NUM_SAMPLES);
                 y += (float)(j + i * samples_per_row);
-                y /= (float)(num_samples);
+                y /= (float)(NUM_SAMPLES);
                 
                 samples->samples[sample_index][0] = x;
                 samples->samples[sample_index][1] = y;
@@ -227,50 +239,50 @@ void genMultijitteredSamples(Samples2D *samples, const int num_samples, const in
 
 /*
 // Book's implementation, sort of
-void genMultijitteredSamples(Samples *samples, const int num_samples, const int num_sets)
+void genMultijitteredSamples(Samples *samples)
 {
-	// num_samples needs to be a perfect square			
+	// NUM_SAMPLES needs to be a perfect square			
 	int n = (int)sqrt((float)num_samples);
-	float subcell_width = 1.0f / ((float) num_samples);
+	float subcell_width = 1.0f / ((float) NUM_SAMPLES);
 	
 	// fill the samples array with dummy points to allow us to use the [ ] notation when we set the 
 	// initial patterns
-    prepSampleStruct(samples, num_samples, num_sets);        
+    prepSampleStruct(samples, NUM_SAMPLES, NUM_SAMPLE_SETS);        
 		
 	// distribute points in the initial patterns
 	
-	for (int p = 0; p < num_sets; p++) 
+	for (int p = 0; p < NUM_SAMPLE_SETS; p++) 
 		for (int i = 0; i < n; i++)		
 			for (int j = 0; j < n; j++) {
                 float rand_float = (float)rand() / (float)(RAND_MAX/subcell_width);
-                samples->samples[i * n + j + p * num_samples][0] = (i * n + j) * subcell_width + rand_float;
+                samples->samples[i * n + j + p * NUM_SAMPLES][0] = (i * n + j) * subcell_width + rand_float;
                 rand_float = (float)rand() / (float)(RAND_MAX/subcell_width);                
-				samples->samples[i * n + j + p * num_samples][1] = (j * n + i) * subcell_width + rand_float;
+				samples->samples[i * n + j + p * NUM_SAMPLES][1] = (j * n + i) * subcell_width + rand_float;
 			}
 	
 	// shuffle x coordinates
 	
-	for (int p = 0; p < num_sets; p++) 
+	for (int p = 0; p < NUM_SAMPLE_SETS; p++) 
 		for (int i = 0; i < n; i++)		
 			for (int j = 0; j < n; j++) {
 				//int k = rand_int(j, n - 1);
                 int k = rand() % (n - j) + j;
                 
-				float t = samples->samples[i * n + j + p * num_samples][0];
-				samples->samples[i * n + j + p * num_samples][0] = samples->samples[i * n + k + p * num_samples][0];
-				samples->samples[i * n + k + p * num_samples][0] = t;
+				float t = samples->samples[i * n + j + p * NUM_SAMPLES][0];
+				samples->samples[i * n + j + p * NUM_SAMPLES][0] = samples->samples[i * n + k + p * NUM_SAMPLES][0];
+				samples->samples[i * n + k + p * NUM_SAMPLES][0] = t;
 			}
 
 	// shuffle y coordinates
 	
-	for (int p = 0; p < num_sets; p++)
+	for (int p = 0; p < NUM_SAMPLE_SETS; p++)
 		for (int i = 0; i < n; i++)		
 			for (int j = 0; j < n; j++) {
 				//int k = rand_int(j, n - 1);
                 int k = rand() % (n - j) + j;
-				float t = samples->samples[j * n + i + p * num_samples][1];
-				samples->samples[j * n + i + p * num_samples][1] = samples->samples[k * n + i + p * num_samples][1];
-				samples->samples[k * n + i + p * num_samples][1] = t;
+				float t = samples->samples[j * n + i + p * NUM_SAMPLES][1];
+				samples->samples[j * n + i + p * NUM_SAMPLES][1] = samples->samples[k * n + i + p * NUM_SAMPLES][1];
+				samples->samples[k * n + i + p * NUM_SAMPLES][1] = t;
 		}
 }
 */
@@ -289,22 +301,22 @@ float radicalInverse(unsigned int j)
     return x;
 }
 
-void genHammersleySamples(Samples2D *samples, const int num_samples, const int num_sets)
+void genHammersleySamples(Samples2D *samples)
 {
-    int samples_per_row = (int)sqrt(num_samples);    
-    if(samples_per_row * samples_per_row != num_samples)
+    int samples_per_row = (int)sqrt(NUM_SAMPLES);    
+    if(samples_per_row * samples_per_row != NUM_SAMPLES)
     {
         fprintf(stderr, "num_samples must be a perfect square.\n");
         return ;
     }
-    prepSample2DStruct(samples, num_samples, num_sets);
+    prepSample2DStruct(samples);
     int sample_index = 0;
-    for(int p = 0; p < num_sets; p++)
+    for(int p = 0; p < NUM_SAMPLE_SETS; p++)
     {
-        for(unsigned int i = 0; i < (unsigned)num_samples; i++)
+        for(unsigned int i = 0; i < (unsigned)NUM_SAMPLES; i++)
         {
-            samples->samples[i + p*num_samples][0] = (float)i / (float)num_samples;
-            samples->samples[i + p*num_samples][1] = radicalInverse(i);
+            samples->samples[i + p*NUM_SAMPLES][0] = (float)i / (float)NUM_SAMPLES;
+            samples->samples[i + p*NUM_SAMPLES][1] = radicalInverse(i);
         }
     }
 }
@@ -321,7 +333,7 @@ void mapSamplesToDisk(Samples2D *dest_samples, const Samples2D *src_samples)
         fprintf(stderr, "Samples pointers can't be the same.\n");
         return;
     }
-    prepSample2DStruct(dest_samples, src_samples->num_samples, src_samples->num_sets);
+    prepSample2DStruct(dest_samples);
 
     float r, phi;    
     float x, y;
@@ -373,7 +385,7 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
         fprintf(stderr, "No samples to be mapped to hemisphere.\n");
         return;
     }
-    prepSample3DStruct(dest_samples, src_samples->num_samples, src_samples->num_sets);
+    prepSample3DStruct(dest_samples);
     unsigned int size = src_samples->num_samples * src_samples->num_sets;    
     for(unsigned int i = 0; i < size; i++)
     {
@@ -389,7 +401,7 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
     }
 }
 
-Samples3D* genHemisphereSamples(const SamplesType st, const int num_samples, const int num_sets)
+Samples3D* genHemisphereSamples(const SamplesType st, const float exp)
 {
     Samples3D *samples = (Samples3D*)malloc(sizeof(Samples3D));    
     Samples2D unit_square_samples = Samples2D_default;
@@ -399,19 +411,19 @@ Samples3D* genHemisphereSamples(const SamplesType st, const int num_samples, con
     {
     case REGULAR:
     {
-    genRegularSamples(&unit_square_samples, num_samples, num_sets);
+    genRegularSamples(&unit_square_samples);
     }break;
     case MULTIJITTERED:
     {
-        genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
+        genMultijitteredSamples(&unit_square_samples);
     }break;
     case HAMMERSLEY:
     {
-        genHammersleySamples(&unit_square_samples, num_samples, num_sets);
+        genHammersleySamples(&unit_square_samples);
     }break;    
     }
     mapSamplesToDisk(&disk_samples, &unit_square_samples);
-    mapSamplesToHemisphere(&hemisphere_samples, &disk_samples, 1);
+    mapSamplesToHemisphere(&hemisphere_samples, &disk_samples, exp);
     *samples = hemisphere_samples;
     freeSamples2D(&unit_square_samples);
     freeSamples2D(&disk_samples);    

@@ -91,30 +91,29 @@ int main()
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
     // Samples
-    srand((unsigned int)time(NULL));    
-    const int num_samples = 100;
+    const int num_samples = 25;
     const int num_sets = 83;
+    setNumSamplesAndSets(num_samples, num_sets);    // This sets the number of samples and sets for every 
+                                                    // sample struct that follows
+    srand((unsigned int)time(NULL));    
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;
     Samples3D h_samples = Samples3D_default;
-    genMultijitteredSamples(&unit_square_samples, num_samples, num_sets);
+    genMultijitteredSamples(&unit_square_samples);
     mapSamplesToDisk(&disk_samples, &unit_square_samples);
     mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
 
-    initOtherSampler(num_samples, num_sets);
-    
     // Scene data structures
     SceneLights scene_lights;
     SceneObjects scene_objects = SceneObjects_create();
     SceneMaterials scene_materials = SceneMaterials_create();
     SceneMeshes scene_meshes = SceneMeshes_create();
-    initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes,
-              num_samples, num_sets, "test_scene2.txt");
+    initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes, "test_scene2.txt");
 
     // Camera
     Camera camera;
-    initPinholeCameraDefault(&camera, num_samples, num_sets);
-    //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS, num_samples, num_sets);
+    initPinholeCameraDefault(&camera);
+    //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
     vec3 position = {0.0f, 1.0f, 4.0f};
     vec3 look_point = {0.0f, 1.0f, -4.0f};
@@ -149,12 +148,12 @@ int main()
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera);
 
+            // Hemisphere sample for ambient occlusion
             vec3 h_sample;
             getNextSample3D(h_sample, &h_samples);
+            
             vec3 radiance;
-            //traceRay(radiance, &h_samples, ray, &scene_objects, &scene_lights);
-            //traceRay(radiance, sample, ray, &scene_objects, &scene_lights);
-            whittedTraceRay(radiance, 1, sample, ray, &scene_objects, &scene_lights);
+            whittedTraceRay(radiance, 1, h_sample, ray, &scene_objects, &scene_lights);
             vec3_add(color, color, radiance);
         }        
         vec3_scale(color, color, 1.0f/num_samples);

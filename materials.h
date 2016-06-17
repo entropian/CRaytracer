@@ -1,13 +1,13 @@
 #pragma once
 
 #include "util/vec.h"
+#include "sampling.h"
 
 enum MatType
 {
     MATTE,
     PHONG,
-    EMISSIVE,
-    REFLECTIVE
+    EMISSIVE
 };
 
 // NOTE: this looks like it sucks
@@ -17,6 +17,7 @@ typedef struct
     MatType mat_type;
     float ka, kd, ks, ke, kr, exp;
     vec3 ca, cd, cs, ce, cr;
+    Samples3D* h_samples;
 }Material;
 
 void printMaterial(const Material* mat)
@@ -33,7 +34,8 @@ void initDefaultMatteMat(Material* mat, const vec3 color)
     mat->kd = 0.6f;
     mat->ka = 1.0f;
     mat->mat_type  = MATTE;
-    mat->shadow = true;    
+    mat->shadow = true;
+    mat->h_samples = NULL;
 }       
 
 void initDefaultPhongMat(Material* mat, const vec3 color)
@@ -47,4 +49,5 @@ void initDefaultPhongMat(Material* mat, const vec3 color)
     mat->exp = 10.0f;            
     mat->mat_type = PHONG;
     mat->shadow = true;
+    mat->h_samples = genHemisphereSamples(MULTIJITTERED, DEFAULT_GLOSSINESS);
 }

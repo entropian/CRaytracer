@@ -67,11 +67,16 @@ SceneMaterials SceneMaterials_create()
 
 void SceneMaterials_destroy(SceneMaterials* sm)
 {
-    free(sm->materials);
     for(int i = 0; i < sm->size; i++)
     {
+        if(sm->materials[i].h_samples)
+        {
+            freeSamples3D(sm->materials[i].h_samples);
+            free(sm->materials[i].h_samples);
+        }
         free(sm->names[i]);
-    }
+    }    
+    free(sm->materials);
     free(sm->names);
     sm->size = 0;
     sm->max = 0;

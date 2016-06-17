@@ -227,7 +227,7 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
     }
 }
 
-void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
+void initAreaLights(SceneLights* sl)
 {
     // Area light
     if(sl->num_lights == MAX_LIGHTS){return;}
@@ -253,8 +253,8 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     Samples2D* samples = (Samples2D*)malloc(sizeof(Samples2D));
     samples->samples = NULL;
     samples->shuffled_indices = NULL;
-    prepSample2DStruct(samples, num_samples, num_sets);
-    genMultijitteredSamples(samples, num_samples, num_sets);
+    prepSample2DStruct(samples);
+    genMultijitteredSamples(samples);
 
     area_light_ptr->pdf = 1.0f/(width * height);
     area_light_ptr->samples2D = samples;
@@ -281,7 +281,7 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     sphere->mat->ke = area_light_ptr->intensity;    
     sphere->mat->mat_type = EMISSIVE;
 
-    Samples3D* samples = genHemisphereSamples(MULTIJITTERED, num_samples, num_sets);    
+    Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);    
 
     area_light_ptr->pdf = 1.0f / (4.0f * (float)PI * sphere->radius * sphere->radius);
     area_light_ptr->samples2D = NULL;
@@ -294,14 +294,14 @@ void initAreaLights(SceneLights* sl, const int num_samples, const int num_sets)
     (sl->num_lights)++;
 }
 
-void initEnvLight(SceneLights* sl, const int num_samples, const int num_sets)
+void initEnvLight(SceneLights* sl)
 {
     if(sl->num_lights == MAX_LIGHTS){return;}
     EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
     env_light->intensity = 1.0f;
     vec3_copy(env_light->color, WHITE);
 
-    Samples3D* samples = genHemisphereSamples(MULTIJITTERED, num_samples, num_sets);
+    Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
 
     env_light->samples3D = samples;
     sl->shadow[sl->num_lights] = true;
@@ -330,7 +330,7 @@ void initBackgroundColor(SceneLights* sl)
     }
 }
 
-void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
+void initSceneLights(SceneLights* sl)
 {
     sl->env_light = NULL;    
     for(int i = 0; i < MAX_LIGHTS; i++)
@@ -366,17 +366,17 @@ void initSceneLights(SceneLights* sl, const int num_samples, const int num_sets)
     */
 
 
-    //initAreaLights(sl, num_samples, num_sets);
-    //initEnvLight(sl, num_samples, num_sets);
+    //initAreaLights(sl);
+    //initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
 }
 
 void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshes* s_meshes,
-               const int num_samples, const int num_sets, const char* scenefile)
+               const char* scenefile)
 {
     // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
-    initSceneLights(sl, num_samples, num_sets);    
+    initSceneLights(sl);    
     initSceneObjects(so, sm, s_meshes, sl, scenefile);
     mvNonGridObjToStart(so);
     printf("num_obj %d\n", so->num_obj);

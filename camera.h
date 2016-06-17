@@ -39,7 +39,7 @@ void Camera_destroy(Camera* camera)
     vec3_copy(camera->focal_point, ORIGIN);        
 }
 
-void initPinholeCameraDefault(Camera *camera, const int num_samples, const int num_sets)
+void initPinholeCameraDefault(Camera *camera)
 {
     vec3 position = {0.0f, 0.0f, 0.0f};
     vec3 x_axis = {1.0f, 0.0f, 0.0f};
@@ -58,14 +58,14 @@ void initPinholeCameraDefault(Camera *camera, const int num_samples, const int n
     // TODO: move below into initThinLensCameraDefault
     camera->samples = (Samples2D*)malloc(sizeof(Samples2D));
     *(camera->samples) = Samples2D_default;
-    genMultijitteredSamples(camera->samples, num_samples, num_sets);
+    genMultijitteredSamples(camera->samples);
     mapSamplesToDisk(camera->samples, camera->samples);
 }
 
 void initThinLensCameraDefault(Camera *camera, const float focal_length, const float lens_radius, const int num_samples,
     const int num_sets)
 {
-    initPinholeCameraDefault(camera, num_samples, num_sets);
+    initPinholeCameraDefault(camera);
     camera->camera_type = ThinLens;
     camera->focal_length = DEFAULT_FOCAL_LENGTH;
     camera->lens_radius = DEFAULT_LENS_RADIUS;    

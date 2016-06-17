@@ -10,6 +10,9 @@ const int MAX_MESH = 20;
 const int DEFAULT_MATERIAL = 20;
 const int MAX_NAME_LENGTH = 128;
 
+const float DEFAULT_GLOSSINESS = 100.0f;
+
+// Directions
 const vec3 ORIGIN = {0.0f, 0.0f, 0.0f};
 const vec3 UP = {0.0f, 1.0f, 0.0f};
 const vec3 DOWN = {0.0f, -1.0f, 0.0f};
@@ -19,6 +22,7 @@ const vec3 FORWARD = {0.0f, 0.0f, -1.0f};
 const vec3 BACKWARD = {0.0f, 0.0f, 1.0f};
 const vec3 JITTERED_UP = {0.0072f, 1.0f, 0.0034f};
 
+// RGB values
 const vec3 RED = {1.0f, 0.0f, 0.0f};
 const vec3 GREEN = {0.0f, 1.0f, 0.0f};
 const vec3 BLUE = {0.0f, 0.0f, 1.0f};
@@ -29,6 +33,7 @@ const vec3 CYAN = {0.0f, 1.0f, 1.0f};
 const vec3 PINK = {1.0f, 0.0f, 1.0f};
 const vec3 GREY = {0.5f, 0.5f, 0.5f};
 
+// Camera
 const float DEFAULT_FOCAL_LENGTH = 3.0f;
 const float DEFAULT_LENS_RADIUS = 0.2f;
 
