@@ -48,6 +48,7 @@
 #include "buildscene.h"
 #include "intersect.h"
 #include "trace.h"
+#include "configfile.h"
 
 #define SHOW_PROGRESS 1
 
@@ -83,24 +84,22 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 int main()
 {
-    //parseConfigFile();
+    ConfigParams params;
+    parseConfigFile(&params);
     
-    int window_width = 900, window_height = 900;
-    GLFWwindow* window = initWindow(window_width, window_height);
+    GLFWwindow* window = initWindow(params.window_width, params.window_height);
     glfwSetKeyCallback(window, keyCallback);
     
     GlViewport viewport;
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 900, frame_res_height = 900;
+    int frame_res_width = params.image_width, frame_res_height = params.image_height;
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
     // Samples
-    const int num_samples = 25;
-    const int num_sets = 83;
-    setNumSamplesAndSets(num_samples, num_sets);    // This sets the number of samples and sets for every 
+    setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 
                                                     // sample struct that follows
     srand((unsigned int)time(NULL));    
     Samples2D unit_square_samples = Samples2D_default;
@@ -115,7 +114,7 @@ int main()
     SceneObjects scene_objects = SceneObjects_create();
     SceneMaterials scene_materials = SceneMaterials_create();
     SceneMeshes scene_meshes = SceneMeshes_create();
-    initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes, "test_scene2.txt");
+    initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes, params.file_name);
 
     // Camera
     Camera camera;
@@ -135,7 +134,6 @@ int main()
 
     time_t startTime, endTime;
     time(&startTime);        
-    unsigned sample_index = 0;
 
     int prev_percent = 0;
     //drawSamples(image, &disk_samples, frame_res_width, frame_res_height, num_pixels);
@@ -144,7 +142,7 @@ int main()
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
-        for(int p = 0; p < num_samples; p++)
+        for(int p = 0; p < NUM_SAMPLES; p++)
         {
             // NOTE: put the code below into a function
             vec2 sample, imageplane_coord;
@@ -164,7 +162,7 @@ int main()
             pathTrace(radiance, 2, h_sample, ray, &scene_objects, &scene_lights);
             vec3_add(color, color, radiance);
         }        
-        vec3_scale(color, color, 1.0f/num_samples);
+        vec3_scale(color, color, 1.0f/NUM_SAMPLES);
         maxToOne(color, color);
         image[i*3] = (char)(color[0] * 255.0f);
         image[i*3 + 1] = (char)(color[1] * 255.0f);
@@ -188,7 +186,6 @@ int main()
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
 
     // Clean up
-    free(image);
     freeSamples2D(&unit_square_samples);
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
@@ -202,5 +199,6 @@ int main()
     {
         glfwPollEvents();
     }
+    free(image);    
     return 0;
 }

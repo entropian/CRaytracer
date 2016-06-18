@@ -111,7 +111,7 @@ void initViewport(GlViewport *viewport)
     glUniform1i(textureUniform, 0);    
 }
 
-GLFWwindow* initWindow(int width, int height)
+GLFWwindow* initWindow(unsigned int width, unsigned int height)
 {
     // Init GLFW
     if(glfwInit() != GL_TRUE)
