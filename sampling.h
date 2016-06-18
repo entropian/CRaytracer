@@ -4,7 +4,12 @@
 #include <ctime>
 #include <cstdio>
 #include "util/vec.h"
+#ifdef __APPLE__
+#define abs(a) std::abs((a))
+#endif
 #include "util/util.h"
+
+
 
 /*
   All sampling structs share the same number of samples and sets
@@ -391,7 +396,7 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
     {
         float cos_phi = cos(2.0f * (float)PI * src_samples->samples[i][0]);
         float sin_phi = sin(2.0f * (float)PI * src_samples->samples[i][0]);
-        float cos_theta = pow((1.0f - abs(src_samples->samples[i][1])), 1.0f / (e + 1.0f));
+        float cos_theta = powf((1.0f - abs(src_samples->samples[i][1])), 1.0f / (e + 1.0f));
         //float cos_theta = pow((1.0f - (src_samples->samples[i][1])), 1.0f / (e + 1.0f));
         float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
         float pu = sin_theta * cos_phi;

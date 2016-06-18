@@ -16,7 +16,7 @@
 
     /*
       Camera related things: fov, resolution, position, orientation.
-      Be cool and throw them into a class?
+
       What design pattern is this?
      */
 
@@ -158,6 +158,7 @@ int main()
             getNextSample3D(h_sample, &h_samples);
             
             vec3 radiance;
+	    //traceRay(radiance, h_sample, ray, &scene_objects, &scene_lights);
             //whittedTrace(radiance, 1, h_sample, ray, &scene_objects, &scene_lights);
             pathTrace(radiance, 2, h_sample, ray, &scene_objects, &scene_lights);
             vec3_add(color, color, radiance);

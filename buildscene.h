@@ -315,7 +315,7 @@ void initAmbLight(SceneLights *sl)
 {
     sl->amb_light = (AmbientLight*)malloc(sizeof(AmbientLight));
     vec3_copy(sl->amb_light->color, WHITE);
-    sl->amb_light->intensity = 0.2f;
+    sl->amb_light->intensity = 0.0f;
     sl->amb_light->amb_occlusion = false;
 }
 
@@ -339,7 +339,7 @@ void initSceneLights(SceneLights* sl)
     }
     sl->num_lights = 0;
     // Directional light
-
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 2.0f;
@@ -350,7 +350,7 @@ void initSceneLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = dir_light_ptr;
     sl->light_types[sl->num_lights] = DIRECTIONAL;
     (sl->num_lights)++;
-
+    */
     
     // Point light
     /*
@@ -382,7 +382,7 @@ void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshe
     printf("num_obj %d\n", so->num_obj);
     printf("non grid obj %d\n", so->num_non_grid_obj);
 
-    so->accel = GRID;
+    so->accel = BVH;
     if(so->accel == GRID)
     {
         UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, 2);
