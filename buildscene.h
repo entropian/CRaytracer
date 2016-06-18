@@ -326,7 +326,7 @@ void initBackgroundColor(SceneLights* sl)
         getIncRadiance(sl->bg_color, ENVLIGHT, sl->env_light);
     }else
     {
-        vec3_copy(sl->bg_color, WHITE);
+        vec3_copy(sl->bg_color, BLACK);
     }
 }
 
@@ -367,7 +367,7 @@ void initSceneLights(SceneLights* sl)
 
 
     //initAreaLights(sl);
-    //initEnvLight(sl);
+    initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
 }

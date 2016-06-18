@@ -51,6 +51,8 @@
 
 #define SHOW_PROGRESS 1
 
+bool EXIT = false;
+
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
 // TODO: 
@@ -71,13 +73,18 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             break;
         case GLFW_KEY_S:
             cam_position[2] += 0.01f;
-            break;            
+            break;
+        case GLFW_KEY_Q:
+            EXIT = true;
+            break;
         }
     }
 }
 
 int main()
 {
+    //parseConfigFile();
+    
     int window_width = 900, window_height = 900;
     GLFWwindow* window = initWindow(window_width, window_height);
     glfwSetKeyCallback(window, keyCallback);
@@ -86,7 +93,7 @@ int main()
     initViewport(&viewport);
     
     unsigned char *image;
-    int frame_res_width = 480, frame_res_height = 480;
+    int frame_res_width = 900, frame_res_height = 900;
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
     
@@ -153,7 +160,8 @@ int main()
             getNextSample3D(h_sample, &h_samples);
             
             vec3 radiance;
-            whittedTraceRay(radiance, 1, h_sample, ray, &scene_objects, &scene_lights);
+            //whittedTrace(radiance, 1, h_sample, ray, &scene_objects, &scene_lights);
+            pathTrace(radiance, 2, h_sample, ray, &scene_objects, &scene_lights);
             vec3_add(color, color, radiance);
         }        
         vec3_scale(color, color, 1.0f/num_samples);
@@ -190,9 +198,9 @@ int main()
     SceneMaterials_destroy(&scene_materials);
     SceneMeshes_destroy(&scene_meshes);
 
-    while(true)
+    while(!EXIT)
     {
-
+        glfwPollEvents();
     }
     return 0;
 }

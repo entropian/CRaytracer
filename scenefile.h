@@ -180,7 +180,7 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
         if(!getNextTokenInFile(buffer, fp)){return false;}
         mat->ka = (float)atof(buffer);
 
-        mat->h_samples = NULL;
+        mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);        
         return true;
     }else
     {

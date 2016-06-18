@@ -128,7 +128,8 @@ GLFWwindow* initWindow(int width, int height)
 
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    GLFWwindow *window = glfwCreateWindow(width, height, "Ray Tracer", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(width, height, "CRaytracer", NULL, NULL);
+    glfwSetWindowPos(window, 600, 100);
     glfwMakeContextCurrent(window);
 
     // Init GLEW

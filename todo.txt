@@ -1,3 +1,4 @@
+create a config file, put some window parameters into it.
 put mesh triangles in an array
 Combine light pointer and light type into a struct?
 Improve objloader so that it can load the dragon

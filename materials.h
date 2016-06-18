@@ -35,7 +35,7 @@ void initDefaultMatteMat(Material* mat, const vec3 color)
     mat->ka = 1.0f;
     mat->mat_type  = MATTE;
     mat->shadow = true;
-    mat->h_samples = NULL;
+    mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);    
 }       
 
 void initDefaultPhongMat(Material* mat, const vec3 color)
