@@ -48,7 +48,7 @@
 #include "buildscene.h"
 #include "intersect.h"
 #include "trace.h"
-#include "configfile.h"
+#include "config.h"
 
 #define SHOW_PROGRESS 1
 

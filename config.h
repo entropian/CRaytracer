@@ -20,7 +20,11 @@ typedef struct
 void parseConfigFile(ConfigParams* cp)
 {
     FILE *fp;
+#ifdef _MSC_VER
     fopen_s(&fp, "config.txt", "r");
+#else
+    fp = fopen("config.txt", "r");
+#endif
     char buffer[128];
     if(!fp)
     {

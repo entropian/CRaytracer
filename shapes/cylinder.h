@@ -120,7 +120,7 @@ float shadowRayIntersectOpenCylinder(const OpenCylinder* oc, const Ray ray)
         if(t > K_EPSILON)
         {
             getPointOnRay(hit_point, ray, t);            
-            if(abs(hit_point[1]) <= oc->half_height)
+            if(abs((float)hit_point[1]) <= oc->half_height)
             {
                 float phi = (float)atan2(hit_point[0], hit_point[2]);
                 if(abs(phi) <= oc->phi)

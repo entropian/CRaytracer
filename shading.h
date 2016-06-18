@@ -197,5 +197,6 @@ bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects
             return true;
         }
         return false;
-    }    
+    }
+    return false;
 }

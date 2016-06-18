@@ -75,6 +75,9 @@ float rayIntersectInstanced(ShadeRec* sr, InstancedShape* is, const Ray src_ray)
     case TRIANGLE:
         t = rayIntersectTriangle(sr, (Triangle*)is->obj.ptr, ray);
         break;
+    case MESH_TRIANGLE:
+      t = rayIntersectMeshTriangle(sr, (MeshTriangle*)is->obj.ptr, ray);
+      break;
     case OPENCYLINDER:
         t = rayIntersectOpenCylinder(sr, (OpenCylinder*)is->obj.ptr, ray);            
         break;
@@ -128,6 +131,9 @@ float shadowRayIntersectInstanced(InstancedShape* is, const Ray src_ray)
         case TRIANGLE:
             t = shadowRayIntersectTriangle((Triangle*)is->obj.ptr, shadow_ray);
             break;
+        case MESH_TRIANGLE:
+            t = shadowRayIntersectMeshTriangle((MeshTriangle*)is->obj.ptr, shadow_ray);
+            break;
         case OPENCYLINDER:
             t = shadowRayIntersectOpenCylinder((OpenCylinder*)is->obj.ptr, shadow_ray);            
             break;
@@ -176,6 +182,9 @@ float rayIntersectCompound(ShadeRec* sr, CompoundObject* co, const Ray ray)
         case TRIANGLE:
             tmp_t = rayIntersectTriangle(&tmp_sr, (Triangle*)obj_ptr, ray);
             break;
+        case MESH_TRIANGLE:
+            tmp_t = rayIntersectMeshTriangle(&tmp_sr, (MeshTriangle*)obj_ptr, ray);
+            break;
         case OPENCYLINDER:
             tmp_t = rayIntersectOpenCylinder(&tmp_sr, (OpenCylinder*)obj_ptr, ray);            
             break;
@@ -188,6 +197,8 @@ float rayIntersectCompound(ShadeRec* sr, CompoundObject* co, const Ray ray)
         case INSTANCED:
             tmp_t = rayIntersectInstanced(&tmp_sr, (InstancedShape*)obj_ptr, ray);
             break;
+	case COMPOUND:
+	  break;
         }
         if(tmp_t < min_t)
         {
@@ -227,6 +238,9 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
         case TRIANGLE:
             t = shadowRayIntersectTriangle((Triangle*)obj_ptr, shadow_ray);
             break;
+        case MESH_TRIANGLE:
+            t = shadowRayIntersectMeshTriangle((MeshTriangle*)obj_ptr, shadow_ray);
+            break;
         case OPENCYLINDER:
             t = shadowRayIntersectOpenCylinder((OpenCylinder*)obj_ptr, shadow_ray);            
             break;
@@ -239,6 +253,8 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
         case INSTANCED:
             t = shadowRayIntersectInstanced((InstancedShape*)obj_ptr, shadow_ray);
             break;
+	case COMPOUND:
+	  break;
         }
         if(t < TMAX)
         {

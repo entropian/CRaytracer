@@ -104,6 +104,8 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
 {
     switch(obj.type)
     {
+    case PLANE:
+      break;
     case SPHERE:
     {
         Sphere* sphere = (Sphere*)obj.ptr;
