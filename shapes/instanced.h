@@ -17,9 +17,9 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray);
 
 typedef struct InstancedShape
 {
-    Material* mat;    
     Object_t obj;
     mat4 inv_transform;
+    Material* mat;        
 } InstancedShape;
 
 void freeInstancedShape(InstancedShape* is);
@@ -53,6 +53,28 @@ void freeInstancedShape(InstancedShape* is)
     }
 }
 
+typedef InstancedShape OpenCylinder;
+
+OpenCylinder* initOpenCylinder(const mat4 inv_transform, const float phi, Material* mat,
+                               const NormalType normal_type, const bool shadow)
+{
+    GenericOpenCylinder* goc = (GenericOpenCylinder*)malloc(sizeof(GenericOpenCylinder));
+    goc->shadow = shadow;
+    goc->radius = 1.0f;
+    goc->half_height = 1.0f;
+    goc->phi = phi;
+    goc->mat = mat;
+    goc->normal_type = normal_type;
+    
+    OpenCylinder* open_cyl = (OpenCylinder*)malloc(sizeof(OpenCylinder));
+    open_cyl->obj.ptr = goc;
+    open_cyl->obj.type = GENERICOPENCYLINDER;
+    open_cyl->mat = mat;
+    mat4_copy(open_cyl->inv_transform, inv_transform);
+    return open_cyl;
+}
+
+
 float rayIntersectInstanced(ShadeRec* sr, InstancedShape* is, const Ray src_ray)
 {
     Ray ray;    
@@ -78,8 +100,8 @@ float rayIntersectInstanced(ShadeRec* sr, InstancedShape* is, const Ray src_ray)
     case MESH_TRIANGLE:
       t = rayIntersectMeshTriangle(sr, (MeshTriangle*)is->obj.ptr, ray);
       break;
-    case OPENCYLINDER:
-        t = rayIntersectOpenCylinder(sr, (OpenCylinder*)is->obj.ptr, ray);            
+    case GENERICOPENCYLINDER:
+        t = rayIntersectGenericOpenCylinder(sr, (GenericOpenCylinder*)is->obj.ptr, ray);            
         break;
     case DISK:
         t = rayIntersectDisk(sr, (Disk*)is->obj.ptr, ray);
@@ -134,8 +156,8 @@ float shadowRayIntersectInstanced(InstancedShape* is, const Ray src_ray)
         case MESH_TRIANGLE:
             t = shadowRayIntersectMeshTriangle((MeshTriangle*)is->obj.ptr, shadow_ray);
             break;
-        case OPENCYLINDER:
-            t = shadowRayIntersectOpenCylinder((OpenCylinder*)is->obj.ptr, shadow_ray);            
+        case GENERICOPENCYLINDER:
+            t = shadowRayIntersectGenericOpenCylinder((GenericOpenCylinder*)is->obj.ptr, shadow_ray);            
             break;
         case DISK:
             t = shadowRayIntersectDisk((Disk*)is->obj.ptr, shadow_ray);
@@ -185,8 +207,8 @@ float rayIntersectCompound(ShadeRec* sr, CompoundObject* co, const Ray ray)
         case MESH_TRIANGLE:
             tmp_t = rayIntersectMeshTriangle(&tmp_sr, (MeshTriangle*)obj_ptr, ray);
             break;
-        case OPENCYLINDER:
-            tmp_t = rayIntersectOpenCylinder(&tmp_sr, (OpenCylinder*)obj_ptr, ray);            
+        case GENERICOPENCYLINDER:
+            tmp_t = rayIntersectGenericOpenCylinder(&tmp_sr, (GenericOpenCylinder*)obj_ptr, ray);            
             break;
         case DISK:
             tmp_t = rayIntersectDisk(&tmp_sr, (Disk*)obj_ptr, ray);
@@ -241,8 +263,8 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
         case MESH_TRIANGLE:
             t = shadowRayIntersectMeshTriangle((MeshTriangle*)obj_ptr, shadow_ray);
             break;
-        case OPENCYLINDER:
-            t = shadowRayIntersectOpenCylinder((OpenCylinder*)obj_ptr, shadow_ray);            
+        case GENERICOPENCYLINDER:
+            t = shadowRayIntersectGenericOpenCylinder((GenericOpenCylinder*)obj_ptr, shadow_ray);            
             break;
         case DISK:
             t = shadowRayIntersectDisk((Disk*)obj_ptr, shadow_ray);
@@ -266,7 +288,7 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
 
 typedef CompoundObject SolidCylinder;
 
-void calcAABBSolidCylinder(AABB* aabb, const Disk* top, const Disk* bottom, const OpenCylinder* tube)
+void calcAABBSolidCylinder(AABB* aabb, const Disk* top, const Disk* bottom, const GenericOpenCylinder* tube)
 {
     aabb->min[0] = -(tube->radius);
     aabb->min[1] = -(tube->half_height);
@@ -282,13 +304,11 @@ SolidCylinder* initSolidCylinder(const float radius, const float half_height, co
 {
     int num_obj = 3;
     SolidCylinder* sc = (SolidCylinder*)malloc(sizeof(SolidCylinder));
-    //sc->obj_ptrs = (void**)malloc(sizeof(void*) * num_obj);
-    //sc->obj_types = (ObjectType*)malloc(sizeof(ObjectType) * num_obj);
     sc->objects = (Object_t*)malloc(sizeof(Object_t) * num_obj);
     sc->shadow = shadow;
     Disk* top = (Disk*)malloc(sizeof(Disk));
     Disk* bottom = (Disk*)malloc(sizeof(Disk));
-    OpenCylinder* tube = (OpenCylinder*)malloc(sizeof(OpenCylinder));
+    GenericOpenCylinder* tube = (GenericOpenCylinder*)malloc(sizeof(GenericOpenCylinder));
     top->radius = bottom->radius = tube->radius = radius;
     tube->half_height = half_height;
     vec3_assign(top->center, 0.0f, half_height, 0.0f);
@@ -299,20 +319,12 @@ SolidCylinder* initSolidCylinder(const float radius, const float half_height, co
     tube->normal_type = OPEN;
     top->mat = bottom->mat = tube->mat = mat;
 
-    /*
-    sc->obj_ptrs[0] = top;
-    sc->obj_types[0] = DISK;
-    sc->obj_ptrs[1] = bottom;
-    sc->obj_types[1] = DISK;
-    sc->obj_ptrs[2] = tube;
-    sc->obj_types[2] = OPENCYLINDER;
-    */
     sc->objects[0].ptr = top;
     sc->objects[0].type = DISK;
     sc->objects[1].ptr = bottom;
     sc->objects[1].type = DISK;
     sc->objects[2].ptr = tube;
-    sc->objects[2].type = OPENCYLINDER;
+    sc->objects[2].type = GENERICOPENCYLINDER;
     sc->num_obj = num_obj;
     calcAABBSolidCylinder(&(sc->aabb), top, bottom, tube);
     return sc;

@@ -240,7 +240,7 @@ void mvNonGridObjToStart(SceneObjects *so)
     int j = 0;
     for(int i = 0; i < so->num_obj; ++i)
     {
-        if(!isGridObjType(so->objects[i].type))
+        if(!isGridObjType(so->objects[i]))
         {
             Object_t tmp_obj = so->objects[i];
             so->objects[i] = so->objects[j];

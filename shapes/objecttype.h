@@ -7,7 +7,7 @@ enum ObjectType
     RECTANGLE,
     AABOX,
     TRIANGLE,
-    OPENCYLINDER,
+    GENERICOPENCYLINDER,
     DISK,
     TORUS,
     INSTANCED,
@@ -20,23 +20,6 @@ typedef struct
     ObjectType type;
     void* ptr;    
 }Object_t;
-
-bool isGridObjType(const ObjectType obj_type)
-{
-    switch(obj_type)
-    {
-    case SPHERE:
-    case RECTANGLE:
-    case AABOX:
-    case TRIANGLE:
-    case OPENCYLINDER:
-    case DISK:
-    case TORUS:
-    case MESH_TRIANGLE:
-        return true;
-    }
-    return false;
-}
 
 void printObjType(const ObjectType obj_type)
 {
@@ -54,8 +37,8 @@ void printObjType(const ObjectType obj_type)
     case TRIANGLE:
         printf("TRIANGLE\n");
         break;
-    case OPENCYLINDER:
-        printf("OPENCYLINDER\n");
+    case GENERICOPENCYLINDER:
+        printf("GENERICOPENCYLINDER\n");
         break;
     case DISK:
         printf("DISK\n");

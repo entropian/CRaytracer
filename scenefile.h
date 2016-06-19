@@ -107,7 +107,7 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
 {
     char buffer[128];
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "PHONG") == 0)
+    if(strcmp(buffer, "REFLECTIVE") == 0)
     {
         mat->mat_type = PHONG;
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
@@ -394,52 +394,62 @@ bool parseAABoxEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 bool parseOpenCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 {
     char buffer[128];
-    OpenCylinder* cyl_ptr = (OpenCylinder*)malloc(sizeof(OpenCylinder));
+    bool shadow;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
     if(!getNextTokenInFile(buffer, fp)){return false;}
     if(strcmp(buffer, "yes") == 0)
     {
-        cyl_ptr->shadow = true;
+        shadow = true;
     }else
     {
-        cyl_ptr->shadow = false;
+        shadow = false;
     }
-    
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word HALF_HEIGHT
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    cyl_ptr->half_height = (float)atof(buffer);
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word RADIUS
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    cyl_ptr->radius = (float)atof(buffer);    
-    
+    float phi;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word PHI
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    cyl_ptr->phi = (float)atof(buffer);
-
+    phi = (float)atof(buffer);    
+    vec3 location;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
+    if(!parseVec3(location, fp)){return false;}    
+    vec3 scale;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SCALE
+    if(!parseVec3(scale, fp)){return false;}        
+    vec3 orientation;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word ORIENTATION
+    if(!parseVec3(orientation, fp)){return false;}        
+    NormalType normal_type;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word NORMAL_TYPE
     if(!getNextTokenInFile(buffer, fp)){return false;}
     if(strcmp(buffer, "OPEN") == 0)
     {
-        cyl_ptr->normal_type = OPEN;
+        normal_type = OPEN;
     }else if(strcmp(buffer, "CONVEX") == 0)
     {
-        cyl_ptr->normal_type = CONVEX;
+        normal_type = CONVEX;
     }else if(strcmp(buffer, "CONCAVE") == 0)
     {
-        cyl_ptr->normal_type = CONCAVE;
+        normal_type = CONCAVE;
     }else
     {
         fprintf(stderr, "Invalid normal type %s\n", buffer);
         return false;
     }
 
+    Material* mat;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    cyl_ptr->mat = findMaterial(buffer, sm);                    
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name
+    mat = findMaterial(buffer, sm);
 
-    obj->ptr = cyl_ptr;
-    obj->type = OPENCYLINDER;
+    mat4 inv_scale, rotation, inv_rotation, inv_translation, tmp, inv_transform;
+    mat4_scale_inverse(inv_scale, scale);
+    mat4_translate(inv_translation, -location[0], -location[1], -location[2]);
+    eulerAngToMat4(rotation, orientation);
+    mat4_invert_rotation(inv_rotation, rotation);
+    mat4_mult(tmp, inv_scale, inv_rotation);
+    mat4_mult(inv_transform, tmp, inv_translation);
+
+    obj->ptr = initOpenCylinder(inv_transform, phi, mat, normal_type, shadow);
+    obj->type = INSTANCED;
     return true;
 }
 

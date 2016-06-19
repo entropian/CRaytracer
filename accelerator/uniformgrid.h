@@ -35,7 +35,7 @@ void getSceneObjAABBs(AABB* aabb_array, int* num_aabb, const Object_t objects[],
     int aabb_index = 0;
     for(int i = 0; i < num_obj; ++i)
     {
-        if(isGridObjType(objects[i].type))
+        if(isGridObjType(objects[i]))
         {
             getObjectAABB(&(aabb_array[aabb_index++]), objects[i]);
         }

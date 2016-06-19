@@ -9,19 +9,7 @@
   TODO:
   gamma correction
   consider how variables should be grouped into objects?
-
-  Potential optimization:
-  use float sample_x, sample_y instead of vec2 sample?
- */
-
-    /*
-      Camera related things: fov, resolution, position, orientation.
-      Be cool and throw them into a class?
-      What design pattern is this?
-     */
-
-
-
+*/
 #include <GL/glew.h>
 
 #if __GNUG__
@@ -82,6 +70,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
+
 int main()
 {
     ConfigParams params;
@@ -114,7 +103,7 @@ int main()
     SceneObjects scene_objects = SceneObjects_create();
     SceneMaterials scene_materials = SceneMaterials_create();
     SceneMeshes scene_meshes = SceneMeshes_create();
-    initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes, params.file_name);
+    initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes, params.file_name, params.accel_type);
 
     // Camera
     Camera camera;
@@ -131,6 +120,10 @@ int main()
     float frame_length = 2.0f * (sin(fov/2.0f) * camera.focal_pt_dist);
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
     float pixel_length = frame_length/(float)(frame_res_width);
+
+    // Set trace function
+    void (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+    trace = getTraceFunc(params.trace_type);
 
     time_t startTime, endTime;
     time(&startTime);        
@@ -158,8 +151,7 @@ int main()
             getNextSample3D(h_sample, &h_samples);
             
             vec3 radiance;
-            //whittedTrace(radiance, 1, h_sample, ray, &scene_objects, &scene_lights);
-            pathTrace(radiance, 2, h_sample, ray, &scene_objects, &scene_lights);
+            trace(radiance, params.max_depth, h_sample, ray, &scene_objects, &scene_lights);
             vec3_add(color, color, radiance);
         }        
         vec3_scale(color, color, 1.0f/NUM_SAMPLES);

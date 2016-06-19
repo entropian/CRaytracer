@@ -75,6 +75,21 @@ void eulerAngToMat3(mat3 r, const vec3 euler_ang)
     mat3_mult(r, y_rot, tmp);
 }
 
+void eulerAngToMat4(mat4 r, const vec3 euler_ang)
+{
+    float z_rad, y_rad, x_rad;
+    z_rad = degToRad(euler_ang[2]);
+    x_rad = degToRad(euler_ang[1]);
+    y_rad = degToRad(euler_ang[0]);    
+    
+    mat4 z_rot, y_rot, x_rot, tmp;
+    mat4_rotate_z(z_rot, z_rad);
+    mat4_rotate_x(x_rot, x_rad);        
+    mat4_rotate_y(y_rot, y_rad);    
+    mat4_mult(tmp, x_rot, z_rot);
+    mat4_mult(r, y_rot, tmp);
+}
+
 
 /*
   Utility functions to find cubic and quartic roots.

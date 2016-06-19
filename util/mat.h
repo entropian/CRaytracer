@@ -399,3 +399,14 @@ void mat4_invert_translation(mat4 r, const mat4 a)
     r[1][3] = -a[1][3];
     r[2][3] = -a[2][3];    
 }
+
+void affine_inverse(mat4 r, const mat4 a)
+{
+    mat4_invert_translation(r, a);
+    for(int i = 0; i < 3; i++)
+    {
+        r[i][0] = a[0][i];
+        r[i][1] = a[1][i];
+        r[i][2] = a[2][i];
+    }    
+}

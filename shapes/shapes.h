@@ -33,8 +33,8 @@ float rayIntersectObject(ShadeRec* sr, const Object_t obj, const Ray ray)
     case TRIANGLE:
         t = rayIntersectTriangle(sr, (Triangle*)obj.ptr, ray);
         break;
-    case OPENCYLINDER:
-        t = rayIntersectOpenCylinder(sr, (OpenCylinder*)obj.ptr, ray);
+    case GENERICOPENCYLINDER:
+        t = rayIntersectGenericOpenCylinder(sr, (GenericOpenCylinder*)obj.ptr, ray);
         break;
     case DISK:
         t = rayIntersectDisk(sr, (Disk*)obj.ptr, ray);
@@ -75,8 +75,8 @@ float shadowRayIntersectObject(const Object_t obj, const Ray ray)
     case TRIANGLE:
         t = shadowRayIntersectTriangle((Triangle*)obj.ptr, ray);
         break;
-    case OPENCYLINDER:
-        t = shadowRayIntersectOpenCylinder((OpenCylinder*)obj.ptr, ray);
+    case GENERICOPENCYLINDER:
+        t = shadowRayIntersectGenericOpenCylinder((GenericOpenCylinder*)obj.ptr, ray);
         break;
     case DISK:
         t = shadowRayIntersectDisk((Disk*)obj.ptr, ray);
@@ -97,7 +97,28 @@ float shadowRayIntersectObject(const Object_t obj, const Ray ray)
     return t;
 }   
 
-
+bool isGridObjType(const Object_t obj)
+{
+    switch(obj.type)
+    {
+    case SPHERE:
+    case RECTANGLE:
+    case AABOX:
+    case TRIANGLE:
+    case GENERICOPENCYLINDER:
+    case DISK:
+    case TORUS:
+    case MESH_TRIANGLE:
+        return true;
+        break;
+    case INSTANCED:
+    {
+        InstancedShape* is = (InstancedShape*)(obj.ptr);
+        return isGridObjType(is->obj);
+    } break;
+    }
+    return false;
+}
 
 // TODO: add return value
 void getObjectAABB(AABB* aabb, const Object_t obj)
@@ -185,9 +206,9 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
             aabb->max[i] += K_FLAT_AABB;
         }
     } break;    
-    case OPENCYLINDER:
+    case GENERICOPENCYLINDER:
     {
-        OpenCylinder* oc = (OpenCylinder*)obj.ptr;
+        GenericOpenCylinder* oc = (GenericOpenCylinder*)obj.ptr;
         aabb->min[0] = -(oc->radius);
         aabb->min[1] = -(oc->half_height);
         aabb->min[2] = -(oc->radius);
@@ -216,6 +237,15 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
     {
         InstancedShape* is = (InstancedShape*)obj.ptr;
         getObjectAABB(aabb, is->obj);
+        mat4 transform;
+        affine_inverse(transform, is->inv_transform);
+        vec3 tmp1, tmp2;
+        vec4_assign(tmp1, aabb->min[0], aabb->min[1], aabb->min[2], 1.0f);
+        mat4_mult_vec4(tmp2, transform, tmp1);
+        vec3_assign(aabb->min, tmp2[0], tmp2[1], tmp2[2]);
+        vec4_assign(tmp1, aabb->max[0], aabb->max[1], aabb->max[2], 1.0f);
+        mat4_mult_vec4(tmp2, transform, tmp1);
+        vec3_assign(aabb->max, tmp2[0], tmp2[1], tmp2[2]);        
     } break;
     case COMPOUND:
     {

@@ -6,3 +6,5 @@ image_height  480
 num_samples  64
 num_sample_sets  83
 max_depth  2
+trace_type PATHTRACE
+accel_struct BVH

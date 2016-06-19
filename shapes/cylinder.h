@@ -16,7 +16,7 @@ enum NormalType
     CONCAVE
 };
 
-typedef struct OpenCylinder
+typedef struct GenericOpenCylinder
 {
     bool shadow;
     NormalType normal_type;
@@ -24,9 +24,9 @@ typedef struct OpenCylinder
     float radius;
     float phi; // for setting how much the cylinder is visible
     Material* mat;    
-} OpenCylinder;
+} GenericOpenCylinder;
 
-void fillShadeRecOpenCylinder(ShadeRec *sr, OpenCylinder* oc, const Ray ray, const vec3 hit_point)
+void fillShadeRecGenericOpenCylinder(ShadeRec *sr, GenericOpenCylinder* oc, const Ray ray, const vec3 hit_point)
 {
     sr->hit_status = true;
     vec3_negate(sr->wo, ray.direction);
@@ -51,9 +51,10 @@ void fillShadeRecOpenCylinder(ShadeRec *sr, OpenCylinder* oc, const Ray ray, con
     } break;
     }
     sr->mat = oc->mat;
+    //printMaterial(sr->mat);
 }
 
-float rayIntersectOpenCylinder(ShadeRec* sr, OpenCylinder* oc, const Ray ray)
+float rayIntersectGenericOpenCylinder(ShadeRec* sr, GenericOpenCylinder* oc, const Ray ray)
 {
     // intersection equation: at^2 + bt + c = 0 quadratic
     float a = ray.direction[0]*ray.direction[0] + ray.direction[2]*ray.direction[2];
@@ -78,7 +79,7 @@ float rayIntersectOpenCylinder(ShadeRec* sr, OpenCylinder* oc, const Ray ray)
                 float phi = (float)atan2(hit_point[0], hit_point[2]);
                 if(abs(phi) <= oc->phi)
                 {
-                    fillShadeRecOpenCylinder(sr, oc, ray, hit_point);
+                    fillShadeRecGenericOpenCylinder(sr, oc, ray, hit_point);
                     return t;                                        
                 }
             }
@@ -92,7 +93,7 @@ float rayIntersectOpenCylinder(ShadeRec* sr, OpenCylinder* oc, const Ray ray)
                 float phi = (float)atan2(hit_point[0], hit_point[2]);
                 if(abs(phi) <= oc->phi)
                 {
-                    fillShadeRecOpenCylinder(sr, oc, ray, hit_point);
+                    fillShadeRecGenericOpenCylinder(sr, oc, ray, hit_point);
                     return t;                    
                 }
             }
@@ -101,7 +102,7 @@ float rayIntersectOpenCylinder(ShadeRec* sr, OpenCylinder* oc, const Ray ray)
     return TMAX;
 }
 
-float shadowRayIntersectOpenCylinder(const OpenCylinder* oc, const Ray ray)
+float shadowRayIntersectGenericOpenCylinder(const GenericOpenCylinder* oc, const Ray ray)
 {
     float a = ray.direction[0]*ray.direction[0] + ray.direction[2]*ray.direction[2];
     float b = 2*(ray.origin[0]*ray.direction[0] + ray.origin[2]*ray.direction[2]);

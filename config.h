@@ -4,9 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "util/util.h"
+#include "sceneobj.h"
+#include "trace.h"
 
 typedef struct
-{
+{    
     unsigned int window_width;
     unsigned int window_height;
     unsigned int image_width;
@@ -14,6 +16,8 @@ typedef struct
     unsigned int num_samples;
     unsigned int num_sample_sets;
     unsigned int max_depth;
+    TraceType trace_type;
+    AccelType accel_type;
     char file_name[128];
 }ConfigParams;
 
@@ -64,7 +68,33 @@ void parseConfigFile(ConfigParams* cp)
         }else if(strcmp(buffer, "max_depth") == 0)
         {
             getNextTokenInFile(buffer, fp);
-            cp->max_depth = atoi(buffer);                
-        }                 
+            cp->max_depth = atoi(buffer);
+        }else if(strcmp(buffer, "trace_type") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            if(strcmp(buffer, "RAYCAST") == 0)
+            {
+                cp->trace_type = RAYCAST;
+            }else if(strcmp(buffer, "WHITTED") == 0)
+            {
+                cp->trace_type = WHITTED;
+            }else if(strcmp(buffer, "PATHTRACE") == 0)
+            {
+                cp->trace_type = PATHTRACE;
+            }
+        }else if(strcmp(buffer, "accel_struct") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            if(strcmp(buffer, "BVH") == 0)
+            {
+                cp->accel_type = BVH;
+            }else if(strcmp(buffer, "GRID") == 0)
+            {
+                cp->accel_type = GRID;
+            }else
+            {
+                cp->accel_type = NONE;
+            }
+        }
     }
 }

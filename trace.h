@@ -9,7 +9,40 @@
 #include "shading.h"
 #include "intersect.h"
 
-void traceRay(vec3 radiance, vec3 sample, const Ray ray, const SceneObjects* so, const SceneLights* sl)
+enum TraceType
+{
+    RAYCAST,
+    WHITTED,
+    PATHTRACE
+};
+
+void raycast(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+void whittedTrace(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+void pathTrace(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+
+typedef void (*traceFunc)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+
+traceFunc getTraceFunc(const TraceType trace_type)
+{
+    traceFunc func;
+    switch(trace_type)
+    {
+    case RAYCAST:
+        func = &raycast;
+        break;
+    case WHITTED:
+        func = &whittedTrace;
+        break;
+    case PATHTRACE:
+        func = &pathTrace;
+        break;
+    default:
+        func = &raycast;        
+    }
+    return func;
+}
+
+void raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray, const SceneObjects* so, const SceneLights* sl)
 {
     vec3_copy(radiance, ORIGIN);
     float min_t = TMAX;
