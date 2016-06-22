@@ -42,7 +42,7 @@ void initInstanced(SceneObjects* so, SceneMaterials* sm)
     is->obj_ptr = sc;
     is->obj_type = SOLIDCYLINDER;
     */
-
+    /*
     Torus* torus = (Torus*)malloc(sizeof(Torus));
     torus->shadow = true;
     torus->swept_radius = 2.0f;
@@ -63,6 +63,7 @@ void initInstanced(SceneObjects* so, SceneMaterials* sm)
 
     Object_t obj = {INSTANCED, is};
     SceneObjects_push_obj(so, obj);
+    */
 }
 
 void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const SceneMaterials *sm,

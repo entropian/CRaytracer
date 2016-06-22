@@ -3,6 +3,7 @@
 #include "../util/mat.h"
 #include "objecttype.h"
 #include "../aabb.h"
+#include "generic.h"
 
 typedef struct CompoundObject
 {
@@ -53,28 +54,6 @@ void freeInstancedShape(InstancedShape* is)
     }
 }
 
-typedef InstancedShape OpenCylinder;
-
-OpenCylinder* initOpenCylinder(const mat4 inv_transform, const float phi, Material* mat,
-                               const NormalType normal_type, const bool shadow)
-{
-    GenericOpenCylinder* goc = (GenericOpenCylinder*)malloc(sizeof(GenericOpenCylinder));
-    goc->shadow = shadow;
-    goc->radius = 1.0f;
-    goc->half_height = 1.0f;
-    goc->phi = phi;
-    goc->mat = mat;
-    goc->normal_type = normal_type;
-    
-    OpenCylinder* open_cyl = (OpenCylinder*)malloc(sizeof(OpenCylinder));
-    open_cyl->obj.ptr = goc;
-    open_cyl->obj.type = GENERICOPENCYLINDER;
-    open_cyl->mat = mat;
-    mat4_copy(open_cyl->inv_transform, inv_transform);
-    return open_cyl;
-}
-
-
 float rayIntersectInstanced(ShadeRec* sr, InstancedShape* is, const Ray src_ray)
 {
     Ray ray;    
@@ -106,8 +85,8 @@ float rayIntersectInstanced(ShadeRec* sr, InstancedShape* is, const Ray src_ray)
     case DISK:
         t = rayIntersectDisk(sr, (Disk*)is->obj.ptr, ray);
         break;
-    case TORUS:
-        t = rayIntersectTorus(sr, (Torus*)is->obj.ptr, ray);
+    case GENERICTORUS:
+        t = rayIntersectGenericTorus(sr, (GenericTorus*)is->obj.ptr, ray);
         break;
     case INSTANCED:
         t = rayIntersectInstanced(sr, (InstancedShape*)is->obj.ptr, ray);
@@ -162,8 +141,8 @@ float shadowRayIntersectInstanced(InstancedShape* is, const Ray src_ray)
         case DISK:
             t = shadowRayIntersectDisk((Disk*)is->obj.ptr, shadow_ray);
             break;
-        case TORUS:
-            t = shadowRayIntersectTorus((Torus*)is->obj.ptr, shadow_ray);
+        case GENERICTORUS:
+            t = shadowRayIntersectGenericTorus((GenericTorus*)is->obj.ptr, shadow_ray);
             break;
         case INSTANCED:
             t = shadowRayIntersectInstanced((InstancedShape*)is->obj.ptr, shadow_ray);
@@ -213,8 +192,8 @@ float rayIntersectCompound(ShadeRec* sr, CompoundObject* co, const Ray ray)
         case DISK:
             tmp_t = rayIntersectDisk(&tmp_sr, (Disk*)obj_ptr, ray);
             break;
-        case TORUS:
-            tmp_t = rayIntersectTorus(&tmp_sr, (Torus*)obj_ptr, ray);
+        case GENERICTORUS:
+            tmp_t = rayIntersectGenericTorus(&tmp_sr, (GenericTorus*)obj_ptr, ray);
             break;
         case INSTANCED:
             tmp_t = rayIntersectInstanced(&tmp_sr, (InstancedShape*)obj_ptr, ray);
@@ -269,8 +248,8 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
         case DISK:
             t = shadowRayIntersectDisk((Disk*)obj_ptr, shadow_ray);
             break;
-        case TORUS:
-            t = shadowRayIntersectTorus((Torus*)obj_ptr, shadow_ray);
+        case GENERICTORUS:
+            t = shadowRayIntersectGenericTorus((GenericTorus*)obj_ptr, shadow_ray);
             break;
         case INSTANCED:
             t = shadowRayIntersectInstanced((InstancedShape*)obj_ptr, shadow_ray);

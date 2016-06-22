@@ -9,7 +9,7 @@ enum ObjectType
     TRIANGLE,
     GENERICOPENCYLINDER,
     DISK,
-    TORUS,
+    GENERICTORUS,
     INSTANCED,
     COMPOUND,
     MESH_TRIANGLE
@@ -43,7 +43,7 @@ void printObjType(const ObjectType obj_type)
     case DISK:
         printf("DISK\n");
         break;
-    case TORUS:
+    case GENERICTORUS:
         printf("TORUS\n");
         break;
     case MESH_TRIANGLE:

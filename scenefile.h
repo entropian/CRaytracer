@@ -23,6 +23,7 @@ void printSphere(const Sphere* sphere)
     printf("center = %f, %f, %f\n", sphere->center[0], sphere->center[1], sphere->center[2]);    
 }
 
+/*
 void printTorus(const Torus* torus)
 {
     printf("shadow %s\n", torus->shadow ? "true" : "false");
@@ -33,6 +34,7 @@ void printTorus(const Torus* torus)
     printf("aabb.min = %f, %f, %f\n", aabb.min[0], aabb.min[1], aabb.min[2]);
     printf("aabb.max = %f, %f, %f\n", aabb.max[0], aabb.max[1], aabb.max[2]);
 }
+*/
 
 bool getPresetColor(vec3 r, const char buffer[])
 {
@@ -407,7 +409,7 @@ bool parseOpenCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     float phi;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word PHI
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    phi = (float)atof(buffer);    
+    phi = (float)atof(buffer);
     vec3 location;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
     if(!parseVec3(location, fp)){return false;}    
@@ -416,7 +418,7 @@ bool parseOpenCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     if(!parseVec3(scale, fp)){return false;}        
     vec3 orientation;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word ORIENTATION
-    if(!parseVec3(orientation, fp)){return false;}        
+    if(!parseVec3(orientation, fp)){return false;}            
     NormalType normal_type;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word NORMAL_TYPE
     if(!getNextTokenInFile(buffer, fp)){return false;}
@@ -492,38 +494,56 @@ bool parseDiskEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 bool parseTorusEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 {
     char buffer[128];
-    Torus* torus_ptr = (Torus*)malloc(sizeof(Torus));
+    bool shadow = true;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
     if(!getNextTokenInFile(buffer, fp)){return false;}
     if(strcmp(buffer, "yes") == 0)
     {
-        torus_ptr->shadow = true;
+        shadow = true;
     }else
     {
-        torus_ptr->shadow = false;
+        shadow = false;
     }
-    
+
+    float swept_radius;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SWEPT_RADIUS
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    torus_ptr->swept_radius = (float)atof(buffer);
-
+    swept_radius = (float)atof(buffer);
+    float tube_radius;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word TUBE_RADIUS
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    torus_ptr->tube_radius = (float)atof(buffer);    
-    
+    tube_radius = (float)atof(buffer);    
+    float phi;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word PHI
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    torus_ptr->phi = (float)atof(buffer);
+    phi = (float)atof(buffer);
 
-    calcAABBTorus(torus_ptr);
-
+    vec3 location;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
+    if(!parseVec3(location, fp)){return false;}    
+    vec3 scale;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SCALE
+    if(!parseVec3(scale, fp)){return false;}        
+    vec3 orientation;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word ORIENTATION
+    if(!parseVec3(orientation, fp)){return false;}        
+    
+    Material* mat;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    torus_ptr->mat = findMaterial(buffer, sm);                            
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name
+    printf("buffer name %s\n", buffer);
+    mat = findMaterial(buffer, sm);
 
-    //printTorus(torus_ptr);
-    obj->ptr = torus_ptr;
-    obj->type = TORUS;
+    mat4 inv_scale, rotation, inv_rotation, inv_translation, tmp, inv_transform;
+    mat4_scale_inverse(inv_scale, scale);
+    mat4_translate(inv_translation, -location[0], -location[1], -location[2]);
+    eulerAngToMat4(rotation, orientation);
+    mat4_invert_rotation(inv_rotation, rotation);
+    mat4_mult(tmp, inv_scale, inv_rotation);
+    mat4_mult(inv_transform, tmp, inv_translation);
+
+    obj->ptr = initTorus(inv_transform, swept_radius, tube_radius, phi, mat, shadow);
+    obj->type = INSTANCED;
     return true;
 }
 

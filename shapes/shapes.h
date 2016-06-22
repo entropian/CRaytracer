@@ -6,10 +6,11 @@
 #include "rect.h"
 #include "sphere.h"
 #include "triangle.h"
-#include "cylinder.h"
 #include "disk.h"
-#include "torus.h"
 #include "instanced.h"
+#include "generic.h"
+#include "cylinder.h"
+#include "torus.h"
 #include "../aabb.h"
 
 
@@ -39,8 +40,8 @@ float rayIntersectObject(ShadeRec* sr, const Object_t obj, const Ray ray)
     case DISK:
         t = rayIntersectDisk(sr, (Disk*)obj.ptr, ray);
         break;
-    case TORUS:
-        t = rayIntersectTorus(sr, (Torus*)obj.ptr, ray);
+    case GENERICTORUS:
+        t = rayIntersectGenericTorus(sr, (GenericTorus*)obj.ptr, ray);
         break;
     case INSTANCED:
         t = rayIntersectInstanced(sr, (InstancedShape*)obj.ptr, ray);
@@ -81,8 +82,8 @@ float shadowRayIntersectObject(const Object_t obj, const Ray ray)
     case DISK:
         t = shadowRayIntersectDisk((Disk*)obj.ptr, ray);
         break;
-    case TORUS:
-        t = shadowRayIntersectTorus((Torus*)obj.ptr, ray);
+    case GENERICTORUS:
+        t = shadowRayIntersectGenericTorus((GenericTorus*)obj.ptr, ray);
         break;
     case INSTANCED:
         t = shadowRayIntersectInstanced((InstancedShape*)obj.ptr, ray);
@@ -107,7 +108,7 @@ bool isGridObjType(const Object_t obj)
     case TRIANGLE:
     case GENERICOPENCYLINDER:
     case DISK:
-    case TORUS:
+    case GENERICTORUS:
     case MESH_TRIANGLE:
         return true;
         break;
@@ -228,10 +229,11 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
         aabb->max[1] = disk->center[1] + disk->radius;
         aabb->max[2] = disk->center[2] + disk->radius;        
     } break;
-    case TORUS:
+    case GENERICTORUS:
     {
-        Torus* torus = (Torus*)obj.ptr;
-        *aabb = torus->aabb;
+        GenericTorus* torus = (GenericTorus*)obj.ptr;
+        //*aabb = torus->aabb;
+        calcAABBGenericTorus(aabb, torus);
     } break;
     case INSTANCED:
     {

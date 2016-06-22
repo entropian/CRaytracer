@@ -1,4 +1,7 @@
-add accel struct and trace function to config file
+implement movable torus
+add normal type to torus
+make solid cylinder movable
+set default background color in scene file
 put mesh triangles in an array
 Combine light pointer and light type into a struct?
 Improve objloader so that it can load the dragon
@@ -8,5 +11,3 @@ the eventual image plane struct could have a samples pointer of its own.
 Update the clean up section.
 
 
-current: open cylinder
-open cylinder isn't a boundable object yet
