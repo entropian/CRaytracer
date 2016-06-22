@@ -10,6 +10,7 @@
   gamma correction
   consider how variables should be grouped into objects?
 */
+
 #include <GL/glew.h>
 
 #if __GNUG__
