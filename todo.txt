@@ -1,3 +1,4 @@
+what's the relationship between kd, ks and kr?
 ambient shading has problems
 add normal type to torus
 make solid cylinder movable
@@ -10,4 +11,6 @@ Change it so that the image plane isn't totally reliant on fov as input.
 the eventual image plane struct could have a samples pointer of its own.
 Update the clean up section.
 
+
+path trace is dependent on background color
 
