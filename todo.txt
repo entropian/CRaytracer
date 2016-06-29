@@ -1,4 +1,4 @@
-implement movable torus
+ambient shading has problems
 add normal type to torus
 make solid cylinder movable
 set default background color in scene file

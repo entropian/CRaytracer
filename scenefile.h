@@ -108,87 +108,90 @@ bool parseColor(vec3 r, FILE* fp)
 bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
 {
     char buffer[128];
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "REFLECTIVE") == 0)
+    char type_name[128];
+    if(!getNextTokenInFile(type_name, fp)){return false;}
+    printf("type name %s\n", type_name);
+    
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
+    strcpy_s(*name, NAME_LENGTH, buffer);
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
+    if(!getNextTokenInFile(buffer, fp)){return false;}            
+    if(strcmp(buffer, "yes") == 0)
     {
-        mat->mat_type = PHONG;
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-        strcpy_s(*name, NAME_LENGTH, buffer);
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
-        if(!getNextTokenInFile(buffer, fp)){return false;}            
-        if(strcmp(buffer, "yes") == 0)
-        {
-            mat->shadow = true;
-        }else
-        {
-            mat->shadow = false;
-        }
-        
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_COLOR
-        if(!parseColor(mat->cd, fp)){return false;};
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_COLOR
-        if(!parseColor(mat->cs, fp)){return false;}
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
-        if(!parseColor(mat->ca, fp)){return false;}
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_CONSTANT
-        if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->kd = (float)atof(buffer);
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_CONSTANT
-        if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->ks = (float)atof(buffer);
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_CONSTANT
-        if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->ka = (float)atof(buffer);
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_EXPONENT
-        if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->exp = (float)atof(buffer);
-
-        mat->h_samples = genHemisphereSamples(MULTIJITTERED, mat->exp);
-        return true;
-    }else if(strcmp(buffer, "MATTE") == 0)
-    {
-        mat->mat_type = MATTE;
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-        strcpy_s(*name, NAME_LENGTH, buffer);        
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
-        if(!getNextTokenInFile(buffer, fp)){return false;}            
-        if(strcmp(buffer, "yes") == 0)
-        {
-            mat->shadow = true;
-        }else
-        {
-            mat->shadow = false;
-        }
-        
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_COLOR
-        if(!parseColor(mat->cd, fp)){return false;}
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
-        if(!parseColor(mat->ca, fp)){return false;}  
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_CONSTANT
-        if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->kd = (float)atof(buffer);
-
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_CONSTANT
-        if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->ka = (float)atof(buffer);
-
-        mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);        
-        return true;
+        mat->shadow = true;
     }else
     {
-        fprintf(stderr, "Invalid material type %s.\n", buffer);
-        return false;
-    }    
+        mat->shadow = false;
+    }
+        
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
+    if(!parseColor(mat->ca, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_CONSTANT
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    mat->ka = (float)atof(buffer);        
+        
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_COLOR
+    if(!parseColor(mat->cd, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_CONSTANT
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    mat->kd = (float)atof(buffer);
+
+    if(strcmp(type_name, "MATTE") == 0)
+    {
+        mat->mat_type = MATTE;
+        mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+        printf("matte\n");
+        return true;
+    }
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_COLOR
+    if(!parseColor(mat->cs, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_CONSTANT
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    mat->ks = (float)atof(buffer);        
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_EXPONENT
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    mat->exp = (float)atof(buffer);
+
+    if(strcmp(type_name, "PHONG") == 0)
+    {
+        mat->mat_type = PHONG;
+        mat->h_samples = NULL;
+        return true;
+    }       
+        
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word REF_CONSTANT
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    mat->kr = (float)atof(buffer);
+    mat->h_samples = genHemisphereSamples(MULTIJITTERED, mat->exp);
+    
+    if(strcmp(type_name, "REFLECTIVE") == 0)
+    {
+        mat->mat_type = REFLECTIVE;
+        return true;
+    }
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word TRANS_CONSTANT
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    mat->kt = (float)atof(buffer);                
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    mat->ior = (float)atof(buffer);        
+
+    if(strcmp(type_name, "TRANSPARENT") == 0)
+    {
+        mat->mat_type = TRANSPARENT;
+        return true;
+    }
+
+    fprintf(stderr, "Invalid material type %s.\n", type_name);
+    return false;
 }
 
 int parseMaterials(SceneMaterials* sm, FILE* fp)

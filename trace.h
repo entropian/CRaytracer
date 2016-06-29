@@ -84,14 +84,72 @@ void raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray, const S
     }
 }
 
+// Calculate specular incident radiance and brdf
+void calcSpecRefRadiance(vec3 spec_ref_radiance, const int depth,  const vec3 h_sample,
+                         const Ray ray, const ShadeRec* sr, const SceneObjects* so, const SceneLights*  sl)
+{
+    vec3 reflect_dir;
+    calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
+    vec3 new_sample;
+    getNextSample3D(new_sample, sr->mat->h_samples);
+    Ray sample_ray;
+    vec3_copy(sample_ray.origin, sr->hit_point);
+    getVec3InLocalBasis(sample_ray.direction, new_sample, reflect_dir);
+    if(vec3_dot(sample_ray.direction, sr->normal) < 0)
+    {
+        vec3 reflected_sample = {-new_sample[0], -new_sample[1], new_sample[2]};
+        getVec3InLocalBasis(sample_ray.direction, reflected_sample, reflect_dir);
+    }
+    double phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
+    float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
+    vec3 brdf;
+    vec3_scale(brdf, sr->mat->cs, phong_lobe);   // Deferring reflection constant scaling
+    whittedTrace(spec_ref_radiance, depth-1, h_sample, sample_ray, so, sl);
+    vec3_mult(spec_ref_radiance, spec_ref_radiance, brdf);
+    vec3_scale(spec_ref_radiance, spec_ref_radiance, vec3_dot(sr->normal, sample_ray.direction) / pdf);
+}
+
+bool totalInternalReflection(const ShadeRec* sr)
+{
+    float cos_theta_i = vec3_dot(sr->normal, sr->wo);
+    float eta = sr->mat->ior;
+
+    if(cos_theta_i < 0.0f)
+    {
+        eta = 1.0f / eta;
+    }
+    return (1.0f - (1.0f - cos_theta_i * cos_theta_i) / (eta * eta) < 0.0f);
+}
+
+float calcTransmitDir(vec3 transmit_dir, const vec3 normal, const vec3 wo, const float ior)
+{
+    vec3 n;
+    vec3_copy(n, normal);
+    float cos_theta_i = vec3_dot(n, wo);
+    float eta = ior;
+    if(cos_theta_i < 0.0f)
+    {
+        cos_theta_i = -cos_theta_i;
+        vec3_negate(n, n);
+        eta = 1.0f / eta;                    
+    }
+
+    float tmp = 1.0f - (1.0f - cos_theta_i * cos_theta_i) / (eta * eta);
+    float cos_theta2 = (float)sqrt(tmp);
+    vec3 tmp_vec3_1, tmp_vec3_2;
+    vec3_scale(tmp_vec3_1, wo, -1.0f / eta);
+    vec3_scale(tmp_vec3_2, n, cos_theta2 - cos_theta_i / eta);
+    vec3_sub(transmit_dir, tmp_vec3_1, tmp_vec3_2);
+    return eta;
+}
+
 void whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                      const Ray ray, const SceneObjects* so, const SceneLights* sl)
 {
     vec3_copy(radiance, ORIGIN);
     float min_t = TMAX;
     ShadeRec min_sr;
-    min_t = intersectTest(&min_sr, so, ray);
-            
+    min_t = intersectTest(&min_sr, so, ray);            
     // Shading
     if(min_t < TMAX)
     {
@@ -102,7 +160,6 @@ void whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
         }else
         {
             ambientShading(radiance, sl->amb_light, h_sample, so, &min_sr);
-
             // Direct illumination
             for(int i = 0; i < sl->num_lights; i++)
             {
@@ -120,36 +177,38 @@ void whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                 }
             }
             // Indirect illumination
-            if(depth > 0 && min_sr.mat->mat_type == PHONG)
+            if(depth > 0 && (min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == TRANSPARENT))
             {
-                vec3 reflect_dir;
-                calcReflectRayDir(reflect_dir, min_sr.normal, ray.direction);
+                vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+                calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl);
 
-                vec3 new_sample;
-                getNextSample3D(new_sample, min_sr.mat->h_samples);
-                Ray sample_ray;
-                vec3_copy(sample_ray.origin, min_sr.hit_point);
-                getVec3InLocalBasis(sample_ray.direction, new_sample, reflect_dir);
-                if(vec3_dot(sample_ray.direction, min_sr.normal) < 0)
+                if(min_sr.mat->mat_type == REFLECTIVE)
                 {
-                    vec3 reflected_sample = {-new_sample[0], -new_sample[1], new_sample[2]};
-                    getVec3InLocalBasis(sample_ray.direction, reflected_sample, reflect_dir);
+                    vec3_add(radiance, radiance, reflected_illum);
+                    return;
                 }
-                double phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), min_sr.mat->exp);
 
-                float pdf = phong_lobe * (vec3_dot(min_sr.normal, sample_ray.direction));
+                // Transmitted radiance
+                vec3 transmit_dir = {0, 0, 0};
+                float eta = calcTransmitDir(transmit_dir, min_sr.normal, min_sr.wo, min_sr.mat->ior);
+                float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
+                if(!totalInternalReflection(&min_sr))
+                {
+                    vec3 btdf;
+                    vec3_scale(btdf, WHITE, min_sr.mat->kt / (eta*eta) / ndotwt);
+                    Ray transmitted_ray;
+                    vec3_copy(transmitted_ray.origin, min_sr.hit_point);
+                    vec3_copy(transmitted_ray.direction, transmit_dir);
 
-                vec3 reflectance;
-                vec3_scale(reflectance, min_sr.mat->cs, min_sr.mat->ks);                
-                vec3 fr;
-                vec3_scale(fr, reflectance, phong_lobe);
-
-                vec3 indirect_illum = {0.0f, 0.0f, 0.0f};
-                whittedTrace(indirect_illum, depth-1, h_sample, sample_ray, so, sl);
-                
-                vec3_scale(indirect_illum, indirect_illum, vec3_dot(min_sr.normal, sample_ray.direction) / pdf);
-                vec3_mult(indirect_illum, indirect_illum, fr);                
-                vec3_add(radiance, radiance, indirect_illum);
+                    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
+                    whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl);
+                    vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
+                    vec3_mult(transmitted_illum, transmitted_illum, btdf);
+                    vec3_add(radiance, radiance, transmitted_illum);
+                    // Scaling reflection since there's no total internal reflection
+                    vec3_scale(reflected_illum, reflected_illum, min_sr.mat->kr);
+                }
+                vec3_add(radiance, radiance, reflected_illum);                    
             }
         }        
     }else

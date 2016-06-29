@@ -7,6 +7,8 @@ enum MatType
 {
     MATTE,
     PHONG,
+    REFLECTIVE,
+    TRANSPARENT,
     EMISSIVE
 };
 
@@ -15,7 +17,8 @@ typedef struct
 {
     bool shadow;
     MatType mat_type;
-    float ka, kd, ks, ke, kr, exp;
+    float ior;                // Index of refraction
+    float ka, kd, ks, ke, kr, kt, exp;
     vec3 ca, cd, cs, ce, cr;
     Samples3D* h_samples;
 }Material;
