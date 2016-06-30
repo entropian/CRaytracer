@@ -18,54 +18,6 @@
 #include "shading.h"
 #include "objloader/objloader.h"
 
-void initSolidCylinder(SceneObjects* so)
-{
-    if(so->num_obj == MAX_OBJECTS){return;}
-    Material mat;
-    initDefaultPhongMat(&mat, YELLOW);
-    float radius = 1.0f, half_height = 0.5f, phi = (float)PI;
-    SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
-    Object_t obj = {COMPOUND, sc};
-    SceneObjects_push_obj(so, obj);
-}
-
-void initInstanced(SceneObjects* so, SceneMaterials* sm)
-{
-    if(so->num_obj == MAX_OBJECTS){return;}
-    Material mat;
-    InstancedShape* is = (InstancedShape*)malloc(sizeof(InstancedShape));
-
-    /*
-    initDefaultPhongMat(&mat, YELLOW);
-    float radius = 1.0f, half_height = 0.5f, phi = (float)PI;
-    SolidCylinder* sc = initSolidCylinder(radius, half_height, phi, &mat, true);
-    is->obj_ptr = sc;
-    is->obj_type = SOLIDCYLINDER;
-    */
-    /*
-    Torus* torus = (Torus*)malloc(sizeof(Torus));
-    torus->shadow = true;
-    torus->swept_radius = 2.0f;
-    torus->tube_radius = 0.5f;
-    torus->phi = (float)PI;
-    initDefaultPhongMat(&mat, YELLOW);
-    torus->mat = SceneMaterials_push(sm, mat, "torus_mat1");
-    calcAABBTorus(torus);    
-    is->obj.ptr = torus;
-    is->obj.type = TORUS;    
-
-    vec3 translation = {2.0f, 0.0f, 0.0f};
-    vec3 rotate_axis = {1.0f, 1.0f, -1.0f};
-    vec3_normalize(rotate_axis, rotate_axis);
-    float theta = (float)PI / 4.0f;    
-    vec3 scaling = {2.0f, 2.0f, 2.0f};    
-    defaultInvTransform(is->inv_transform, scaling, rotate_axis, theta, translation);
-
-    Object_t obj = {INSTANCED, is};
-    SceneObjects_push_obj(so, obj);
-    */
-}
-
 void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const SceneMaterials *sm,
                            const SceneMeshes* s_meshes)
 {

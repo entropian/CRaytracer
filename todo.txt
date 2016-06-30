@@ -1,3 +1,4 @@
+add solid cylinder parsing
 what's the relationship between kd, ks and kr?
 ambient shading has problems
 add normal type to torus

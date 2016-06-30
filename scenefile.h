@@ -458,6 +458,65 @@ bool parseOpenCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     return true;
 }
 
+bool parseSolidCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
+{
+    char buffer[128];
+    bool shadow;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    if(strcmp(buffer, "yes") == 0)
+    {
+        shadow = true;
+    }else
+    {
+        shadow = false;
+    }
+    vec3 location;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
+    if(!parseVec3(location, fp)){return false;}    
+    vec3 scale;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SCALE
+    if(!parseVec3(scale, fp)){return false;}        
+    vec3 orientation;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word ORIENTATION
+    if(!parseVec3(orientation, fp)){return false;}            
+    NormalType normal_type;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word NORMAL_TYPE
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    if(strcmp(buffer, "OPEN") == 0)
+    {
+        normal_type = OPEN;
+    }else if(strcmp(buffer, "CONVEX") == 0)
+    {
+        normal_type = CONVEX;
+    }else if(strcmp(buffer, "CONCAVE") == 0)
+    {
+        normal_type = CONCAVE;
+    }else
+    {
+        fprintf(stderr, "Invalid normal type %s\n", buffer);
+        return false;
+    }
+
+    Material* mat;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name
+    mat = findMaterial(buffer, sm);
+
+    mat4 inv_scale, rotation, inv_rotation, inv_translation, tmp, inv_transform;
+    mat4_scale_inverse(inv_scale, scale);
+    mat4_translate(inv_translation, -location[0], -location[1], -location[2]);
+    eulerAngToMat4(rotation, orientation);
+    mat4_invert_rotation(inv_rotation, rotation);
+    mat4_mult(tmp, inv_scale, inv_rotation);
+    mat4_mult(inv_transform, tmp, inv_translation);
+
+    //obj->ptr = initOpenCylinder(inv_transform, phi, mat, normal_type, shadow);
+    obj->ptr = initSolidCylinder(inv_transform, 1.0f, 1.0f, (float)PI, mat, shadow);
+    obj->type = INSTANCED;
+    return true;
+}
+
 bool parseDiskEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 {
     char buffer[128];
@@ -549,6 +608,8 @@ bool parseTorusEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     obj->type = INSTANCED;
     return true;
 }
+
+
 
 typedef struct
 {
@@ -646,6 +707,9 @@ bool parsePrimitive(Object_t* obj, FILE* fp, SceneMaterials* sm, const char* pri
     }else if(strcmp(prim_name, "TORUS") == 0)
     {
         parse_status = parseTorusEntry(obj, fp, sm);
+    }else if(strcmp(prim_name, "SOLIDCYLINDER") == 0)
+    {
+        parse_status = parseSolidCylEntry(obj, fp, sm);
     }
     return parse_status;
 }

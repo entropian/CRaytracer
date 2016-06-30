@@ -42,7 +42,8 @@ traceFunc getTraceFunc(const TraceType trace_type)
     return func;
 }
 
-void raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray, const SceneObjects* so, const SceneLights* sl)
+void raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray,
+             const SceneObjects* so, const SceneLights* sl)
 {
     vec3_copy(radiance, ORIGIN);
     float min_t = TMAX;
@@ -248,7 +249,6 @@ void pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, con
     float min_t = TMAX;
     ShadeRec min_sr;
     min_t = intersectTest(&min_sr, so, ray);
-
     // Shading
     if(min_t < TMAX)
     {    
@@ -281,7 +281,7 @@ void pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, con
                     vec3_add(radiance, radiance, tmp);
                 }
 
-                if(min_sr.mat->mat_type == REFLECTIVE && min_sr.mat->mat_type == PHONG)
+                if(min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == PHONG)
                 {
                     vec3 reflected_illum;
                     calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl);
@@ -310,6 +310,7 @@ void pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, con
                         vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                         vec3_mult(transmitted_illum, transmitted_illum, btdf);
                         vec3_add(radiance, radiance, transmitted_illum);
+                        // Scaling reflection since there's no total internal reflection
                         vec3_scale(reflected_illum, reflected_illum, min_sr.mat->kr);
                     }                    
                     vec3_add(radiance, radiance, reflected_illum);                    
