@@ -176,13 +176,19 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
         return true;
     }
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word TRANS_CONSTANT
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR_IN
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->kt = (float)atof(buffer);                
+    mat->ior_in = (float)atof(buffer);
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR_OUT
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->ior = (float)atof(buffer);        
+    mat->ior_out = (float)atof(buffer);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_IN
+    if(!parseColor(mat->cf_in, fp)){return false;}    
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_OUT
+    if(!parseColor(mat->cf_out, fp)){return false;}
 
     if(strcmp(type_name, "TRANSPARENT") == 0)
     {

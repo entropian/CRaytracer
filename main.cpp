@@ -111,7 +111,7 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    vec3 position = {0.0f, 1.5f, 3.0f};
+    vec3 position = {0.0f, 1.5f, 2.0f};
     vec3 look_point = {0.0f, 1.5f, -3.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
