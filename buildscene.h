@@ -279,7 +279,7 @@ void initBackgroundColor(SceneLights* sl)
         getIncRadiance(sl->bg_color, ENVLIGHT, sl->env_light);
     }else
     {
-        vec3_copy(sl->bg_color, CYAN);
+        vec3_copy(sl->bg_color, WHITE);
     }
 }
 
@@ -292,7 +292,7 @@ void initSceneLights(SceneLights* sl)
     }
     sl->num_lights = 0;
     // Directional light
-    
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 2.0f;
@@ -303,7 +303,7 @@ void initSceneLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = dir_light_ptr;
     sl->light_types[sl->num_lights] = DIRECTIONAL;
     (sl->num_lights)++;
-
+    */
     
     // Point light
     /*

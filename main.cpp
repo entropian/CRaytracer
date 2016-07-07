@@ -123,7 +123,7 @@ int main()
     float pixel_length = frame_length/(float)(frame_res_width);
 
     // Set trace function
-    void (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+    float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
     trace = getTraceFunc(params.trace_type);
 
     time_t startTime, endTime;

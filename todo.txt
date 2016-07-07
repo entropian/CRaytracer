@@ -1,4 +1,4 @@
-add solid cylinder parsing
+
 what's the relationship between kd, ks and kr (and kt)?
 ambient shading has problems
 add normal type to torus
@@ -15,3 +15,13 @@ Update the clean up section.
 
 path trace is dependent on background color
 
+bugs:
+Blocks appear when drawing a transparent sphere against a white background.
+       increasing number of samples has no effect
+       it looks like kr/kt is the same within each block
+       after zooming in, it seems that there is a gradient within each block
+       since kt is derived from kr, it only makes sense that both transmission and reflection are affected
+       Cause: scaling up image by non-integer factors?
+
+
+Many image sizes cause problems

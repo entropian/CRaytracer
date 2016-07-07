@@ -288,6 +288,27 @@ inline void vec4_negate(vec4 r, const vec4 a)
     r[3] = -a[3];    
 }
 
+inline void vec2_pow(vec2 r, const vec2 a, const float b)
+{
+    r[0] = powf(a[0], b);
+    r[1] = powf(a[1], b);
+}
+
+inline void vec3_pow(vec3 r, const vec3 a, const float b)
+{
+    r[0] = powf(a[0], b);
+    r[1] = powf(a[1], b);
+    r[2] = powf(a[2], b);
+}
+
+inline void vec4_pow(vec4 r, const vec4 a, const float b)
+{
+    r[0] = powf(a[0], b);
+    r[1] = powf(a[1], b);
+    r[2] = powf(a[2], b);
+    r[3] = powf(a[3], b);    
+}
+
 inline bool vec3_less(const vec3 a, const vec3 b)
 {
     if(a[0] < b[0] && a[1] < b[1] && a[2] < b[2])

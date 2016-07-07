@@ -19,11 +19,11 @@ enum TraceType
     PATHTRACE
 };
 
-void raycast(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
-void whittedTrace(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
-void pathTrace(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+float raycast(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+float whittedTrace(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+float pathTrace(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
 
-typedef void (*traceFunc)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+typedef float (*traceFunc)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
 
 traceFunc getTraceFunc(const TraceType trace_type)
 {
@@ -45,7 +45,7 @@ traceFunc getTraceFunc(const TraceType trace_type)
     return func;
 }
 
-void raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray,
+float raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray,
              const SceneObjects* so, const SceneLights* sl)
 {
     vec3_copy(radiance, ORIGIN);
@@ -86,10 +86,11 @@ void raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray,
     {
         vec3_copy(radiance, sl->bg_color);
     }
+    return min_t;
 }
 
 // Calculate specular incident radiance and brdf
-void calcSpecRefRadiance(vec3 spec_ref_radiance, const int depth,  const vec3 h_sample,
+float calcSpecRefRadiance(vec3 spec_ref_radiance, const int depth,  const vec3 h_sample,
                          const Ray ray, const ShadeRec* sr, const SceneObjects* so, const SceneLights*  sl)
 {
     vec3 reflect_dir;
@@ -108,9 +109,10 @@ void calcSpecRefRadiance(vec3 spec_ref_radiance, const int depth,  const vec3 h_
     float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
     vec3 brdf;
     vec3_scale(brdf, sr->mat->cs, phong_lobe);   // Deferring reflectance scaling
-    whittedTrace(spec_ref_radiance, depth-1, h_sample, sample_ray, so, sl);
+    float t = whittedTrace(spec_ref_radiance, depth-1, h_sample, sample_ray, so, sl);
     vec3_mult(spec_ref_radiance, spec_ref_radiance, brdf);
     vec3_scale(spec_ref_radiance, spec_ref_radiance, vec3_dot(sr->normal, sample_ray.direction) / pdf);
+    return t;
 }
 
 bool totalInternalReflection(const ShadeRec* sr)
@@ -168,7 +170,7 @@ float calcFresnelReflectance(const ShadeRec* sr)
     return fresnel_reflectance;
 }
 
-void whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
+float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                      const Ray ray, const SceneObjects* so, const SceneLights* sl)
 {
     vec3_copy(radiance, ORIGIN);
@@ -204,16 +206,17 @@ void whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
             // Indirect illumination
             if(depth > 0 && (min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == TRANSPARENT))
             {
+                float reflect_t;
                 vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl);
+                reflect_t = calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl);
 
                 if(min_sr.mat->mat_type == REFLECTIVE)
                 {
                     vec3_scale(reflected_illum, reflected_illum, min_sr.mat->ks);
                     vec3_add(radiance, radiance, reflected_illum);
-                    return;
+                    return min_t;
                 }
-
+                float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
                 if(!totalInternalReflection(&min_sr))
                 {
                     // Transmitted radiance
@@ -224,20 +227,43 @@ void whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     float kt = 1.0f - kr;
 
                     vec3 btdf;
-                    //vec3_scale(btdf, WHITE, min_sr.mat->kt / (eta*eta) / ndotwt);
                     vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
                     Ray transmitted_ray;
                     vec3_copy(transmitted_ray.origin, min_sr.hit_point);
                     vec3_copy(transmitted_ray.direction, transmit_dir);
 
+                    float transmit_t;
                     vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-                    whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl);
+                    transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl);
                     vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                     vec3_mult(transmitted_illum, transmitted_illum, btdf);
-                    vec3_add(radiance, radiance, transmitted_illum);
                     // Scaling reflection since there's no total internal reflection
-                    //vec3_scale(reflected_illum, reflected_illum, min_sr.mat->kr);
                     vec3_scale(reflected_illum, reflected_illum, kr);
+                    
+                    vec3 color_filter_ref, color_filter_trans;
+                    if(ndotwo > 0.0f)
+                    {
+                        vec3_pow(color_filter_ref, min_sr.mat->cf_out, reflect_t);
+                        vec3_pow(color_filter_trans, min_sr.mat->cf_in, transmit_t);
+                    }else
+                    {
+                        vec3_pow(color_filter_ref, min_sr.mat->cf_in, reflect_t);
+                        vec3_pow(color_filter_trans, min_sr.mat->cf_out, transmit_t);
+                    }
+                    vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
+                    vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
+                    vec3_add(radiance, radiance, transmitted_illum);
+                }else
+                {
+                    vec3 color_filter;                    
+                    if(ndotwo > 0.0f)
+                    {
+                        vec3_pow(color_filter, min_sr.mat->cf_out, reflect_t);
+                    }else
+                    {
+                        vec3_pow(color_filter, min_sr.mat->cf_in, reflect_t);
+                    }
+                    vec3_mult(reflected_illum, reflected_illum, color_filter);                    
                 }
                 vec3_add(radiance, radiance, reflected_illum);                    
             }
@@ -246,9 +272,10 @@ void whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
     {
         vec3_copy(radiance, sl->bg_color);
     }
+    return min_t;
 }
 
-void calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr, const vec3 h_sample,
+float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr, const vec3 h_sample,
                            const int depth, const SceneObjects* so, const SceneLights* sl)
 {
     vec3 reflect_dir;
@@ -267,12 +294,14 @@ void calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr, co
     float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
     vec3 brdf;
     vec3_scale(brdf, sr->mat->cs, phong_lobe); // Defer reflectance scaling
-    pathTrace(ref_radiance, depth-1, h_sample, sample_ray, so, sl);                
+    float t;
+    t = pathTrace(ref_radiance, depth-1, h_sample, sample_ray, so, sl);                
     vec3_scale(ref_radiance, ref_radiance, vec3_dot(sr->normal, sample_ray.direction) / pdf);
     vec3_mult(ref_radiance, ref_radiance, brdf);
+    return t;
 }
 
-void pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, const SceneObjects* so,
+float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, const SceneObjects* so,
     const SceneLights* sl)
 {
     vec3_copy(radiance, ORIGIN);
@@ -321,9 +350,10 @@ void pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, con
 
                 if(min_sr.mat->mat_type == TRANSPARENT)
                 {
+                    float reflect_t;
                     vec3 reflected_illum;
-                    calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl);
-
+                    reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl);
+                    float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
                     if(!totalInternalReflection(&min_sr))
                     {
                         vec3 transmit_dir = {0, 0, 0};
@@ -337,15 +367,40 @@ void pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, con
                         Ray transmitted_ray;
                         vec3_copy(transmitted_ray.origin, min_sr.hit_point);
                         vec3_copy(transmitted_ray.direction, transmit_dir);
-                        
+
+                        float transmit_t;
                         vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-                        pathTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl);
+                        transmit_t = pathTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl);
                         vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                         vec3_mult(transmitted_illum, transmitted_illum, btdf);
-                        vec3_add(radiance, radiance, transmitted_illum);
                         // Scaling reflection since there's no total internal reflection
                         vec3_scale(reflected_illum, reflected_illum, kr);
-                    }                    
+
+                        vec3 color_filter_ref, color_filter_trans;
+                        if(ndotwo > 0.0f)
+                        {
+                            vec3_pow(color_filter_ref, min_sr.mat->cf_out, reflect_t);
+                            vec3_pow(color_filter_trans, min_sr.mat->cf_in, transmit_t);
+                        }else
+                        {
+                            vec3_pow(color_filter_ref, min_sr.mat->cf_in, reflect_t);
+                            vec3_pow(color_filter_trans, min_sr.mat->cf_out, transmit_t);
+                        }
+                        vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
+                        vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
+                        vec3_add(radiance, radiance, transmitted_illum);                        
+                    }else
+                    {
+                        vec3 color_filter;                    
+                        if(ndotwo > 0.0f)
+                        {
+                            vec3_pow(color_filter, min_sr.mat->cf_out, reflect_t);
+                        }else
+                        {
+                            vec3_pow(color_filter, min_sr.mat->cf_in, reflect_t);
+                        }
+                        vec3_mult(reflected_illum, reflected_illum, color_filter);                    
+                    }
                     vec3_add(radiance, radiance, reflected_illum);                    
                 }
             }
@@ -354,4 +409,5 @@ void pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, con
     {
         vec3_copy(radiance, sl->bg_color);
     }
+    return min_t;
 }
