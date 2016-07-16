@@ -166,8 +166,9 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
     case AABOX:
     {
         AABox* aabox = (AABox*)obj.ptr;
-        vec3_copy(aabb->min, aabox->min);
-        vec3_copy(aabb->max, aabox->max);            
+        float gap = 0.00001f;
+        vec3_assign(aabb->min, aabox->min[0] - gap, aabox->min[1] - gap, aabox->min[2] - gap);
+        vec3_assign(aabb->max, aabox->max[0] + gap, aabox->max[1] + gap, aabox->max[2] + gap);        
     } break;
     case TRIANGLE:
     {
