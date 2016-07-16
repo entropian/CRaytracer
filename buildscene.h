@@ -268,7 +268,7 @@ void initAmbLight(SceneLights *sl)
 {
     sl->amb_light = (AmbientLight*)malloc(sizeof(AmbientLight));
     vec3_copy(sl->amb_light->color, WHITE);
-    sl->amb_light->intensity = 0.1f;
+    sl->amb_light->intensity = 0.0f;
     sl->amb_light->amb_occlusion = false;
 }
 

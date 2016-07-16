@@ -163,7 +163,7 @@ float calcFresnelReflectance(const ShadeRec* sr)
         eta = 1.0f / eta;
     }
     float tmp = 1.0f - (1.0f - cos_theta_i * cos_theta_i) / (eta * eta); // Negative at times
-    float cos_theta_t = (float)sqrt(tmp);
+     float cos_theta_t = (float)sqrt(tmp);
     float r_parallel = (eta * cos_theta_i - cos_theta_t) / (eta * cos_theta_i + cos_theta_t);
     float r_perpendicular = (cos_theta_i - eta * cos_theta_t) / (cos_theta_i + eta * cos_theta_t);
     float fresnel_reflectance = 0.5f * (r_parallel * r_parallel + r_perpendicular * r_perpendicular);
@@ -173,13 +173,20 @@ float calcFresnelReflectance(const ShadeRec* sr)
 float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                      const Ray ray, const SceneObjects* so, const SceneLights* sl)
 {
+    // debug variables
+    bool intersected = false, indirect = false, not_tir = false, tir = false;
+    vec3 imrad = {0.0f, 0.0f, 0.0f};
+    
     vec3_copy(radiance, ORIGIN);
     float min_t = TMAX;
     ShadeRec min_sr;
-    min_t = intersectTest(&min_sr, so, ray);            
+    min_t = intersectTest(&min_sr, so, ray);
+
+    float reflect_t = 0, transmit_t = 0;
     // Shading
     if(min_t < TMAX)
     {
+        intersected = true;
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
@@ -206,7 +213,8 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
             // Indirect illumination
             if(depth > 0 && (min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == TRANSPARENT))
             {
-                float reflect_t;
+                indirect = true;
+                //float reflect_t;
                 vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
                 reflect_t = calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl);
 
@@ -219,10 +227,11 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                 float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
                 if(!totalInternalReflection(&min_sr))
                 {
+                    not_tir = true;
                     // Transmitted radiance
                     vec3 transmit_dir = {0, 0, 0};
                     float eta = calcTransmitDir(transmit_dir, &min_sr);
-                    float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));                    
+                    float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
                     float kr = calcFresnelReflectance(&min_sr);
                     float kt = 1.0f - kr;
 
@@ -232,9 +241,9 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     vec3_copy(transmitted_ray.origin, min_sr.hit_point);
                     vec3_copy(transmitted_ray.direction, transmit_dir);
 
-                    float transmit_t;
+                    //float transmit_t;
                     vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-                    transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl);
+                    transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl);                    
                     vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                     vec3_mult(transmitted_illum, transmitted_illum, btdf);
                     // Scaling reflection since there's no total internal reflection
@@ -255,6 +264,8 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     vec3_add(radiance, radiance, transmitted_illum);
                 }else
                 {
+
+                    tir = true;
                     vec3 color_filter;                    
                     if(ndotwo > 0.0f)
                     {
@@ -263,7 +274,7 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     {
                         vec3_pow(color_filter, min_sr.mat->cf_in, reflect_t);
                     }
-                    vec3_mult(reflected_illum, reflected_illum, color_filter);                    
+                    vec3_mult(reflected_illum, reflected_illum, color_filter);
                 }
                 vec3_add(radiance, radiance, reflected_illum);                    
             }

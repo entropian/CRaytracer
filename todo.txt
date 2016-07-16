@@ -16,6 +16,19 @@ Update the clean up section.
 path trace is dependent on background color
 
 bugs:
+Noise when drawing transparent boxes
+      stopping reflected_illum doesn't help
+      not caused by the kr nan issue
+      cannot be caused by tir,because ior is 1.0
+      kt is never zero it seems
+      by changing ior from 1 to not 1, it addes noise to the image
+      not caused by kt, as when I changed kt to a constant value, there's still noise.
+      might be caused by reflect_t and transmit_t.
+      no reason for the dark dots to appear when there's no attenuation
+      the greater the ior, the darker the spots
+try displaying transmit vectors
+try coloring the white ones pink
+
 Blocks appear when drawing a transparent sphere against a white background.
        increasing number of samples has no effect
        it looks like kr/kt is the same within each block
@@ -25,3 +38,4 @@ Blocks appear when drawing a transparent sphere against a white background.
 
 
 Many image sizes cause problems
+

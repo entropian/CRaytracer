@@ -97,4 +97,5 @@ void parseConfigFile(ConfigParams* cp)
             }
         }
     }
+    fclose(fp);
 }

@@ -309,6 +309,30 @@ inline void vec4_pow(vec4 r, const vec4 a, const float b)
     r[3] = powf(a[3], b);    
 }
 
+inline bool vec2_equal(const vec2 a, const vec2 b)
+{
+    if(a[0] != b[0]){return false;}
+    if(a[1] != b[1]){return false;}
+    return true;
+}
+
+inline bool vec3_equal(const vec3 a, const vec3 b)
+{
+    if(a[0] != b[0]){return false;}
+    if(a[1] != b[1]){return false;}
+    if(a[2] != b[2]){return false;}
+    return true;
+}
+
+inline bool vec4_equal(const vec4 a, const vec4 b)
+{
+    if(a[0] != b[0]){return false;}
+    if(a[1] != b[1]){return false;}
+    if(a[2] != b[2]){return false;}
+    if(a[3] != b[3]){return false;}    
+    return true;
+}
+
 inline bool vec3_less(const vec3 a, const vec3 b)
 {
     if(a[0] < b[0] && a[1] < b[1] && a[2] < b[2])

@@ -111,7 +111,7 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    vec3 position = {0.0f, 1.5f, 2.0f};
+    vec3 position = {0.0f, 1.5f, 1.0f};
     vec3 look_point = {0.0f, 1.5f, -3.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
@@ -150,7 +150,7 @@ int main()
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
             getNextSample3D(h_sample, &h_samples);
-            
+
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &scene_objects, &scene_lights);
             vec3_add(color, color, radiance);
@@ -170,6 +170,7 @@ int main()
                 printf("%d%%\n", cur_percent);                
             }
         }
+        //displayImage(window, viewport, image, frame_res_width, frame_res_height);        
     }
 //#endif 
     time(&endTime);
