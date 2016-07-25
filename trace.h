@@ -105,13 +105,17 @@ float calcSpecRefRadiance(vec3 spec_ref_radiance, const int depth,  const vec3 h
         vec3 reflected_sample = {-new_sample[0], -new_sample[1], new_sample[2]};
         getVec3InLocalBasis(sample_ray.direction, reflected_sample, reflect_dir);
     }
+    float raydotr = vec3_dot(sample_ray.direction, reflect_dir);
     double phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
     float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
     vec3 brdf;
     vec3_scale(brdf, sr->mat->cs, phong_lobe);   // Deferring reflectance scaling
     float t = whittedTrace(spec_ref_radiance, depth-1, h_sample, sample_ray, so, sl);
     vec3_mult(spec_ref_radiance, spec_ref_radiance, brdf);
-    vec3_scale(spec_ref_radiance, spec_ref_radiance, vec3_dot(sr->normal, sample_ray.direction) / pdf);
+    if(pdf - 0.0f > 0.00000001)
+    {
+        vec3_scale(spec_ref_radiance, spec_ref_radiance, vec3_dot(sr->normal, sample_ray.direction) / pdf);
+    }
     return t;
 }
 
@@ -283,6 +287,11 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
     {
         vec3_copy(radiance, sl->bg_color);
     }
+    /*      
+    float tmpf = min_t / 15.0f;
+    vec3 depth_f = {tmpf, tmpf, tmpf};
+    vec3_copy(radiance, depth_f);
+    */
     return min_t;
 }
 

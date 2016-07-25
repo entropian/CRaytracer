@@ -620,6 +620,7 @@ bool parseTorusEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 typedef struct
 {
     bool shadow;
+    bool smooth;        
     vec3 scaling;
     vec3 location;
     vec3 orientation; // Euler angle
@@ -632,8 +633,8 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
               int* num_file_names, FILE* fp)
 {
     char buffer[128];
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word FILE_NAME
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
+    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word FILE_NAME
+    if(!getNextTokenInFile(buffer, fp)){return -1;}    // get file name
     bool file_not_read = true;
     for(int i = 0; i < *num_file_names; i++)
     {
@@ -660,8 +661,8 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
         mesh_entry->mesh_name[len] = '\0';
     }    
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
+    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word CAST_SHADOW
+    if(!getNextTokenInFile(buffer, fp)){return -1;}
     if(strcmp(buffer, "yes") == 0)
     {
         mesh_entry->shadow = true;
@@ -670,17 +671,27 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
         mesh_entry->shadow = false;
     }
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SCALING
-    if(!parseVec3(mesh_entry->scaling, fp)){return false;}
+    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word SMOOTH
+    if(!getNextTokenInFile(buffer, fp)){return -1;}
+    if(strcmp(buffer, "yes") == 0)
+    {
+        mesh_entry->smooth = true;
+    }else
+    {
+        mesh_entry->smooth = false;
+    }    
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
-    if(!parseVec3(mesh_entry->location, fp)){return false;}
+    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word SCALING
+    if(!parseVec3(mesh_entry->scaling, fp)){return -1;}
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word ORIENTATION
-    if(!parseVec3(mesh_entry->orientation, fp)){return false;}      
+    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word LOCATION
+    if(!parseVec3(mesh_entry->location, fp)){return -1;}
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
-    if(!getNextTokenInFile(buffer, fp)){return false;}
+    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word ORIENTATION
+    if(!parseVec3(mesh_entry->orientation, fp)){return -1;}      
+
+    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word MATERIAL
+    if(!getNextTokenInFile(buffer, fp)){return -1;}
     strcpy_s(mesh_entry->mat_name, NAME_LENGTH, buffer);
     
     return num_mesh;

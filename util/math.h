@@ -47,6 +47,7 @@ void defaultInvTransform(mat4 r, const vec3 scaling, const vec3 axis, const floa
     mat4_mult(r, tmp, inv_translation);
 }
 
+
 void printMat3(mat3 a)
 {
     for(int i = 0; i < 3; i++)

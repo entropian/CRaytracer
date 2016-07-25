@@ -76,9 +76,12 @@ float rayIntersectInstanced(ShadeRec* sr, InstancedShape* is, const Ray src_ray)
     case TRIANGLE:
         t = rayIntersectTriangle(sr, (Triangle*)is->obj.ptr, ray);
         break;
-    case MESH_TRIANGLE:
-      t = rayIntersectMeshTriangle(sr, (MeshTriangle*)is->obj.ptr, ray);
+    case FLAT_TRIANGLE:
+      t = rayIntersectFlatTriangle(sr, (FlatTriangle*)is->obj.ptr, ray);
       break;
+    case SMOOTH_TRIANGLE:
+      t = rayIntersectSmoothTriangle(sr, (SmoothTriangle*)is->obj.ptr, ray);
+      break;      
     case GENERICOPENCYLINDER:
         t = rayIntersectGenericOpenCylinder(sr, (GenericOpenCylinder*)is->obj.ptr, ray);            
         break;
@@ -132,9 +135,12 @@ float shadowRayIntersectInstanced(InstancedShape* is, const Ray src_ray)
         case TRIANGLE:
             t = shadowRayIntersectTriangle((Triangle*)is->obj.ptr, shadow_ray);
             break;
-        case MESH_TRIANGLE:
-            t = shadowRayIntersectMeshTriangle((MeshTriangle*)is->obj.ptr, shadow_ray);
+        case FLAT_TRIANGLE:
+            t = shadowRayIntersectFlatTriangle((FlatTriangle*)is->obj.ptr, shadow_ray);
             break;
+        case SMOOTH_TRIANGLE:
+            t = shadowRayIntersectSmoothTriangle((SmoothTriangle*)is->obj.ptr, shadow_ray);
+            break;            
         case GENERICOPENCYLINDER:
             t = shadowRayIntersectGenericOpenCylinder((GenericOpenCylinder*)is->obj.ptr, shadow_ray);            
             break;
@@ -183,9 +189,12 @@ float rayIntersectCompound(ShadeRec* sr, CompoundObject* co, const Ray ray)
         case TRIANGLE:
             tmp_t = rayIntersectTriangle(&tmp_sr, (Triangle*)obj_ptr, ray);
             break;
-        case MESH_TRIANGLE:
-            tmp_t = rayIntersectMeshTriangle(&tmp_sr, (MeshTriangle*)obj_ptr, ray);
+        case FLAT_TRIANGLE:
+            tmp_t = rayIntersectFlatTriangle(&tmp_sr, (FlatTriangle*)obj_ptr, ray);
             break;
+        case SMOOTH_TRIANGLE:
+            tmp_t = rayIntersectSmoothTriangle(&tmp_sr, (SmoothTriangle*)obj_ptr, ray);
+            break;            
         case GENERICOPENCYLINDER:
             tmp_t = rayIntersectGenericOpenCylinder(&tmp_sr, (GenericOpenCylinder*)obj_ptr, ray);            
             break;
@@ -242,9 +251,12 @@ float shadowRayIntersectCompound(CompoundObject* co, const Ray shadow_ray)
         case TRIANGLE:
             t = shadowRayIntersectTriangle((Triangle*)obj_ptr, shadow_ray);
             break;
-        case MESH_TRIANGLE:
-            t = shadowRayIntersectMeshTriangle((MeshTriangle*)obj_ptr, shadow_ray);
+        case FLAT_TRIANGLE:
+            t = shadowRayIntersectFlatTriangle((FlatTriangle*)obj_ptr, shadow_ray);
             break;
+        case SMOOTH_TRIANGLE:
+            t = shadowRayIntersectSmoothTriangle((SmoothTriangle*)obj_ptr, shadow_ray);
+            break;            
         case GENERICOPENCYLINDER:
             t = shadowRayIntersectGenericOpenCylinder((GenericOpenCylinder*)obj_ptr, shadow_ray);            
             break;

@@ -19,22 +19,25 @@ typedef struct
     float* normals;
     float* texcoords;
     int* indices;
-    int num_positions, num_normals, num_texcoords, num_indices;
+    float* face_normals;
+    int num_positions, num_normals, num_texcoords, num_indices, num_face_normals;
     char mat_name[NAME_LENGTH];
     char mesh_name[NAME_LENGTH];
 }OBJShape;
 
 void OBJShape_destroy(OBJShape* obj_shape)
 {
-    if(obj_shape->positions){free(obj_shape->positions);}
-    if(obj_shape->normals){free(obj_shape->normals);}
-    if(obj_shape->texcoords){free(obj_shape->texcoords);}
-    if(obj_shape->indices){free(obj_shape->indices);}
+    if(obj_shape->num_positions > 0){free(obj_shape->positions);}
+    if(obj_shape->num_normals > 0){free(obj_shape->normals);}
+    if(obj_shape->num_texcoords > 0){free(obj_shape->texcoords);}
+    if(obj_shape->num_indices > 0){free(obj_shape->indices);}
+    if(obj_shape->num_face_normals > 0){free(obj_shape->face_normals);}
 
     obj_shape->num_positions = 0;
     obj_shape->num_normals = 0;
     obj_shape->num_texcoords = 0;
-    obj_shape->num_indices = 0;    
+    obj_shape->num_indices = 0;
+    obj_shape->num_face_normals = 0;
 }
 
 typedef struct

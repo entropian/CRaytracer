@@ -18,11 +18,87 @@
 #include "shading.h"
 #include "objloader/objloader.h"
 
+// Assuming mesh->normals and mesh->face_normals are uninitialized
+void computeMeshNormals(OBJShape* mesh)
+{
+    mesh->face_normals = (float*)malloc(sizeof(float) * mesh->num_indices);
+    int num_face_normals = 0;
+    mesh->normals = (float*)malloc(sizeof(float) * mesh->num_positions);
+    mesh->num_normals = mesh->num_positions;
+    for(int i = 0; i < mesh->num_normals; i++)
+    {
+        mesh->normals[i] = 0.0f;
+    }
+
+    for(int i = 0; i < mesh->num_indices; i += 3)
+    {
+        int i0, i1, i2;
+        i0 = mesh->indices[i];
+        i1 = mesh->indices[i+1];
+        i2 = mesh->indices[i+2];        
+        vec3 v0, v1, v2;
+        int index;
+        index = i0 * 3;
+        vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
+                    mesh->positions[index+2]);
+        index = i1 * 3;
+        vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
+                    mesh->positions[index+2]);
+        index = i2 * 3;
+        vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
+                    mesh->positions[index+2]);
+        vec3 face_normal;
+        calcTriangleNormal(face_normal, v0, v1, v2);
+        mesh->face_normals[num_face_normals++] = face_normal[0];
+        mesh->face_normals[num_face_normals++] = face_normal[1];
+        mesh->face_normals[num_face_normals++] = face_normal[2];
+
+    }
+    mesh->num_face_normals = num_face_normals;
+
+
+    for(int i = 0; i < mesh->num_indices; i += 3)
+    {
+        int normal_index, face_normal_index;
+        face_normal_index = i;
+        normal_index = mesh->indices[i] * 3;
+        mesh->normals[normal_index] += mesh->face_normals[face_normal_index];
+        mesh->normals[normal_index+1] += mesh->face_normals[face_normal_index+1];
+        mesh->normals[normal_index+2] += mesh->face_normals[face_normal_index+2];
+
+        normal_index = mesh->indices[i+1] * 3;
+        mesh->normals[normal_index] += mesh->face_normals[face_normal_index];
+        mesh->normals[normal_index+1] += mesh->face_normals[face_normal_index+1];
+        mesh->normals[normal_index+2] += mesh->face_normals[face_normal_index+2];
+
+        normal_index = mesh->indices[i+2] * 3;
+        mesh->normals[normal_index] += mesh->face_normals[face_normal_index];
+        mesh->normals[normal_index+1] += mesh->face_normals[face_normal_index+1];
+        mesh->normals[normal_index+2] += mesh->face_normals[face_normal_index+2];                        
+    }
+    for(int i = 0; i < mesh->num_normals; i += 3)
+    {
+        vec3 normal = {mesh->normals[i], mesh->normals[i+1], mesh->normals[i+2]};
+        vec3_normalize(normal, normal);
+        mesh->normals[i] = normal[0];
+        mesh->normals[i+1] = normal[1];
+        mesh->normals[i+2] = normal[2];        
+    }
+}
+
 void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const SceneMaterials *sm,
                            const SceneMeshes* s_meshes)
 {
     mat3 rotation;
     eulerAngToMat3(rotation, mesh_entry.orientation);
+    for(int i = 0; i < 3; i++)
+    {
+        for(int j = 0; j < 3; j++)
+        {
+            printf("%f ", rotation[i][j]);
+        }
+        printf("\n");
+    }
     
     for(int i = 0; i < s_meshes->size; i++)
     {
@@ -32,22 +108,20 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
             Material* mat = findMaterial(mesh_entry.mat_name, sm);
             for(int j = 0; j < mesh->num_indices; j += 3)
             {
-                MeshTriangle* mesh_tri = (MeshTriangle*)malloc(sizeof(MeshTriangle));
-                mesh_tri->i0 = mesh->indices[j];
-                mesh_tri->i1 = mesh->indices[j + 1];
-                mesh_tri->i2 = mesh->indices[j + 2];
-                mesh_tri->shadow = mesh_entry.shadow;
-                mesh_tri->mesh_ptr = mesh;
+                int i0, i1, i2;
+                i0 = mesh->indices[j];
+                i1 = mesh->indices[j + 1];
+                i2 = mesh->indices[j + 2];
 
                 vec3 v0, v1, v2;
                 int index;
-                index = mesh_tri->i0 * 3;
+                index = i0 * 3;
                 vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
                             mesh->positions[index+2]);
-                index = mesh_tri->i1 * 3;    
+                index = i1 * 3;    
                 vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
                             mesh->positions[index+2]);
-                index = mesh_tri->i2 * 3;
+                index = i2 * 3;
                 vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
                             mesh->positions[index+2]);
 
@@ -63,26 +137,67 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
                 vec3_add(new_v0, mesh_entry.location, new_v0);
                 vec3_add(new_v1, mesh_entry.location, new_v1);
                 vec3_add(new_v2, mesh_entry.location, new_v2);
-                
-                vec3_copy(mesh_tri->v0, new_v0);
-                vec3_copy(mesh_tri->v1, new_v1);
-                vec3_copy(mesh_tri->v2, new_v2);
 
-                if(mesh->num_normals == 0)
+                vec3 inv_scale = {1.0f/mesh_entry.scaling[0], 1.0f/mesh_entry.scaling[1], 1.0f/mesh_entry.scaling[2]};                
+                if(!mesh_entry.smooth)
                 {
-                    calcTriangleNormal(mesh_tri->normal, new_v0, new_v1, new_v2);
+                    FlatTriangle* mesh_tri = (FlatTriangle*)malloc(sizeof(FlatTriangle));
+                    mesh_tri->i0 = i0;
+                    mesh_tri->i1 = i1;
+                    mesh_tri->i2 = i2;
+                    vec3_copy(mesh_tri->v0, new_v0);
+                    vec3_copy(mesh_tri->v1, new_v1);
+                    vec3_copy(mesh_tri->v2, new_v2);                    
+                    // Instead of computing an inverse transpose for transforming normals, I just inverted the scaling
+                    // and ignored translation
+                    vec3 face_normal = {mesh->face_normals[j], mesh->face_normals[j+1], mesh->face_normals[j+2]};
+                    vec3 new_face_normal;
+                    vec3_mult(face_normal, inv_scale, face_normal);
+                    mat3_mult_vec3(new_face_normal, rotation, face_normal);
+                    vec3_normalize(new_face_normal, new_face_normal);
+                    vec3_copy(mesh_tri->normal, new_face_normal);
+                    mesh_tri->shadow = mesh_entry.shadow;
+                    mesh_tri->mesh_ptr = mesh;
+                    mesh_tri->mat = mat;                                    
+                    Object_t obj = {FLAT_TRIANGLE, mesh_tri};
+                    SceneObjects_push_obj(so, obj);                    
                 }else
                 {
-                    // TODO: fix this for rotated mesh
-                    int index = mesh->indices[j] * 3;
-                    vec3_assign(mesh_tri->normal, mesh->normals[index],
+                    SmoothTriangle* mesh_tri = (SmoothTriangle*)malloc(sizeof(SmoothTriangle));
+                    mesh_tri->i0 = i0;
+                    mesh_tri->i1 = i1;
+                    mesh_tri->i2 = i2;
+                    vec3_copy(mesh_tri->v0, new_v0);
+                    vec3_copy(mesh_tri->v1, new_v1);
+                    vec3_copy(mesh_tri->v2, new_v2);                                        
+                    vec3 normal, transformed_normal;
+                    int index = i0 * 3;
+                    vec3_assign(normal, mesh->normals[index],
                                 mesh->normals[index+1], mesh->normals[index+2]);
-                }
-                
-
-                mesh_tri->mat = mat;                                    
-                Object_t obj = {MESH_TRIANGLE, mesh_tri};
-                SceneObjects_push_obj(so, obj);
+                    vec3_mult(normal, inv_scale, normal);
+                    mat3_mult_vec3(transformed_normal, rotation, normal);
+                    vec3_normalize(transformed_normal, transformed_normal);
+                    vec3_copy(mesh_tri->n0, transformed_normal);
+                    index = i1 * 3;
+                    vec3_assign(normal, mesh->normals[index],
+                                mesh->normals[index+1], mesh->normals[index+2]);
+                    vec3_mult(normal, inv_scale, normal);
+                    mat3_mult_vec3(transformed_normal, rotation, normal);
+                    vec3_normalize(transformed_normal, transformed_normal);                    
+                    vec3_copy(mesh_tri->n1, transformed_normal);
+                    index = i2 * 3;
+                    vec3_assign(normal, mesh->normals[index],
+                                mesh->normals[index+1], mesh->normals[index+2]);
+                    vec3_mult(normal, inv_scale, normal);
+                    mat3_mult_vec3(transformed_normal, rotation, normal);
+                    vec3_normalize(transformed_normal, transformed_normal);                    
+                    vec3_copy(mesh_tri->n2, transformed_normal);
+                    mesh_tri->shadow = mesh_entry.shadow;
+                    mesh_tri->mesh_ptr = mesh;
+                    mesh_tri->mat = mat;                                    
+                    Object_t obj = {SMOOTH_TRIANGLE, mesh_tri};
+                    SceneObjects_push_obj(so, obj);                    
+                }                
             }
         }
     }
@@ -122,6 +237,10 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                     {
                         for(int i = 0; i < num_mesh; i++)
                         {
+                            if(shapes[i].num_normals == 0)
+                            {
+                                computeMeshNormals(&(shapes[i]));
+                            }
                             SceneMeshes_push(s_meshes, shapes[i]);
                         }
                     }
@@ -292,7 +411,7 @@ void initSceneLights(SceneLights* sl)
     }
     sl->num_lights = 0;
     // Directional light
-    /*
+
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 2.0f;
@@ -303,7 +422,7 @@ void initSceneLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = dir_light_ptr;
     sl->light_types[sl->num_lights] = DIRECTIONAL;
     (sl->num_lights)++;
-    */
+
     
     // Point light
     /*

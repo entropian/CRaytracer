@@ -15,7 +15,7 @@ typedef struct Triangle
     Material* mat;
 }Triangle;
 
-typedef struct 
+typedef struct FlatTriangle_s
 {
     bool shadow;
     int i0, i1, i2;
@@ -23,9 +23,19 @@ typedef struct
     vec3 normal;
     OBJShape* mesh_ptr;
     Material* mat;
-}MeshTriangle;
+}FlatTriangle;
 
-void getMeshTriangleVertPos(vec3 v0, vec3 v1, vec3 v2, const MeshTriangle* tri)
+typedef struct SmoothTriangle_s
+{
+    bool shadow;
+    int i0, i1, i2;
+    vec3 v0, v1, v2;
+    vec3 n0, n1, n2;
+    OBJShape* mesh_ptr;
+    Material* mat;
+}SmoothTriangle;
+/*
+void getFlatTriangleVertPos(vec3 v0, vec3 v1, vec3 v2, const FlatTriangle* tri)
 {
     OBJShape* mesh = tri->mesh_ptr;
     int index = tri->i0 * 3;
@@ -35,8 +45,8 @@ void getMeshTriangleVertPos(vec3 v0, vec3 v1, vec3 v2, const MeshTriangle* tri)
     index = tri->i2 * 3;
     vec3_assign(v2, mesh->positions[index], mesh->positions[index+1], mesh->positions[index+2]);
 }
+*/
 
-//void calcTriangleNormal(Triangle* triangle)
 void calcTriangleNormal(vec3 r, const vec3 v0, const vec3 v1, const vec3 v2)
 {
     // Assume the vertices are ordered counterclock wise
@@ -48,7 +58,8 @@ void calcTriangleNormal(vec3 r, const vec3 v0, const vec3 v1, const vec3 v2)
 }
 
 //float calcTriangleIntersect(const Triangle* tri, const Ray ray)
-float calcTriangleIntersect(const vec3 v0, const vec3 v1, const vec3 v2, const Ray ray)
+float calcTriangleIntersect(float* beta_out, float* gamma_out,
+                            const vec3 v0, const vec3 v1, const vec3 v2, const Ray ray)
 {
     // o + td = v0 + v(v1-v0) + w(v2-v0)
     // v(v0-v1) + w(v0-v2) + td = v0 - o
@@ -69,14 +80,16 @@ float calcTriangleIntersect(const vec3 v0, const vec3 v1, const vec3 v2, const R
     float e1 = d*m - b*n - c*p;
     float beta = e1 * inv_denom;
 
-    if(beta < 0.0f)
-    {
-        return TMAX;
-    }
-
     float r = e*l - h*i;
     float e2 = a*n + d*q + c*r;
     float gamma = e2 * inv_denom;
+    *beta_out = beta;
+    *gamma_out = gamma;
+
+    if(beta < 0.0f)
+    {
+        return TMAX;
+    }    
 
     if(gamma < 0.0f)
     {
@@ -101,7 +114,8 @@ float calcTriangleIntersect(const vec3 v0, const vec3 v1, const vec3 v2, const R
 // NOTE: perhaps rewrite this so that it makes more sense to me
 float rayIntersectTriangle(ShadeRec* sr, Triangle* tri, const Ray ray)
 {
-    float t = calcTriangleIntersect(tri->v0, tri->v1, tri->v2, ray);
+    float gamma, beta; // For smooth triangles. Unused here.
+    float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
 
     vec3_copy(sr->normal, tri->normal);
     getPointOnRay(sr->hit_point, ray, t);
@@ -110,9 +124,10 @@ float rayIntersectTriangle(ShadeRec* sr, Triangle* tri, const Ray ray)
     return t;
 }
 
-float rayIntersectMeshTriangle(ShadeRec* sr, MeshTriangle* tri, const Ray ray)
+float rayIntersectFlatTriangle(ShadeRec* sr, FlatTriangle* tri, const Ray ray)
 {
-    float t = calcTriangleIntersect(tri->v0, tri->v1, tri->v2, ray);
+    float gamma, beta; // For smooth triangles. Unused here.    
+    float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
 
     vec3_copy(sr->normal, tri->normal);
     getPointOnRay(sr->hit_point, ray, t);
@@ -121,37 +136,48 @@ float rayIntersectMeshTriangle(ShadeRec* sr, MeshTriangle* tri, const Ray ray)
     return t;
 }
 
-
-/*
-float rayIntersectMeshTriangle(ShadeRec* sr, MeshTriangle* tri, const Ray ray)
+void interpolateNormal(vec3 normal, const float beta, const float gamma,
+                       const SmoothTriangle* tri)
 {
-    vec3 v0, v1, v2;
-    getMeshTriangleVertPos(v0, v1, v2, tri);    
-    float t = calcTriangleIntersect(v0, v1, v2, ray);
+    vec3 tmp;
+    vec3_scale(normal, tri->n0, 1.0f - beta - gamma);
+    vec3_scale(tmp, tri->n1, beta);
+    vec3_add(normal, normal, tmp);
+    vec3_scale(tmp, tri->n2, gamma);    
+    vec3_add(normal, normal, tmp);
+}
 
-    vec3_copy(sr->normal, tri->normal);
+float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ray)
+{
+    float gamma, beta;  
+    float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);    
+
+    vec3 interp_normal;
+    interpolateNormal(interp_normal, beta, gamma, tri);
+    vec3_copy(sr->normal, interp_normal);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);    
     sr->mat = tri->mat;
     return t;
 }
-*/
+
 
 float shadowRayIntersectTriangle(const Triangle* tri, const Ray ray)
 {
-    return calcTriangleIntersect(tri->v0, tri->v1, tri->v2, ray);
+    float beta, gamma; // Unused
+    return calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
 }
 
-float shadowRayIntersectMeshTriangle(const MeshTriangle* tri, const Ray ray)
+float shadowRayIntersectFlatTriangle(const FlatTriangle* tri, const Ray ray)
 {
-    return calcTriangleIntersect(tri->v0, tri->v1, tri->v2, ray);
+    float beta, gamma;    // Unused
+    return calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
 }
 
-/*
-float shadowRayIntersectMeshTriangle(const MeshTriangle* tri, const Ray ray)
+float shadowRayIntersectSmoothTriangle(const SmoothTriangle* tri, const Ray ray)
 {
-    vec3 v0, v1, v2;
-    getMeshTriangleVertPos(v0, v1, v2, tri);
-    return calcTriangleIntersect(v0, v1, v2, ray);
+    float beta, gamma;  // Unused
+    return calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
 }
-*/
+
+

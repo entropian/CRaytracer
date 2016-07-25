@@ -49,9 +49,12 @@ float rayIntersectObject(ShadeRec* sr, const Object_t obj, const Ray ray)
     case COMPOUND:
         t = rayIntersectCompound(sr, (CompoundObject*)obj.ptr, ray);
         break;
-    case MESH_TRIANGLE:
-        t = rayIntersectMeshTriangle(sr, (MeshTriangle*)obj.ptr, ray);
-        break;        
+    case FLAT_TRIANGLE:
+        t = rayIntersectFlatTriangle(sr, (FlatTriangle*)obj.ptr, ray);
+        break;
+    case SMOOTH_TRIANGLE:
+        t = rayIntersectSmoothTriangle(sr, (SmoothTriangle*)obj.ptr, ray);
+        break;                
     }
     return t;
 }
@@ -91,9 +94,12 @@ float shadowRayIntersectObject(const Object_t obj, const Ray ray)
     case COMPOUND:
         t = shadowRayIntersectCompound((CompoundObject*)obj.ptr, ray);
         break;
-    case MESH_TRIANGLE:
-        t = shadowRayIntersectMeshTriangle((MeshTriangle*)obj.ptr, ray);
-        break;                
+    case FLAT_TRIANGLE:
+        t = shadowRayIntersectFlatTriangle((FlatTriangle*)obj.ptr, ray);
+        break;
+    case SMOOTH_TRIANGLE:
+        t = shadowRayIntersectSmoothTriangle((SmoothTriangle*)obj.ptr, ray);
+        break;                        
     }
     return t;
 }   
@@ -109,7 +115,8 @@ bool isGridObjType(const Object_t obj)
     case GENERICOPENCYLINDER:
     case DISK:
     case GENERICTORUS:
-    case MESH_TRIANGLE:
+    case FLAT_TRIANGLE:
+    case SMOOTH_TRIANGLE:        
         return true;
         break;
     case INSTANCED:
@@ -189,9 +196,9 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
             aabb->max[i] += K_FLAT_AABB;
         }
     } break;
-    case MESH_TRIANGLE:
+    case FLAT_TRIANGLE:
     {
-        MeshTriangle* mesh_tri = (MeshTriangle*)obj.ptr;
+        FlatTriangle* mesh_tri = (FlatTriangle*)obj.ptr;
         vec3_copy(aabb->min, mesh_tri->v0);
         vec3_copy(aabb->max, mesh_tri->v0);
 
@@ -207,7 +214,26 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
             aabb->min[i] -= K_FLAT_AABB;
             aabb->max[i] += K_FLAT_AABB;
         }
-    } break;    
+    } break;
+    case SMOOTH_TRIANGLE:
+    {
+        SmoothTriangle* mesh_tri = (SmoothTriangle*)obj.ptr;
+        vec3_copy(aabb->min, mesh_tri->v0);
+        vec3_copy(aabb->max, mesh_tri->v0);
+
+        for(int i = 0; i < 3; i++)
+        {
+            if(mesh_tri->v1[i] < aabb->min[i]){aabb->min[i] = mesh_tri->v1[i];}
+            if(mesh_tri->v1[i] > aabb->max[i]){aabb->max[i] = mesh_tri->v1[i];}
+            if(mesh_tri->v2[i] < aabb->min[i]){aabb->min[i] = mesh_tri->v2[i];}
+            if(mesh_tri->v2[i] > aabb->max[i]){aabb->max[i] = mesh_tri->v2[i];}
+        }
+        for(int i = 0; i < 3; i++)
+        {
+            aabb->min[i] -= K_FLAT_AABB;
+            aabb->max[i] += K_FLAT_AABB;
+        }
+    } break;        
     case GENERICOPENCYLINDER:
     {
         GenericOpenCylinder* oc = (GenericOpenCylinder*)obj.ptr;

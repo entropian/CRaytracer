@@ -12,7 +12,8 @@ enum ObjectType
     GENERICTORUS,
     INSTANCED,
     COMPOUND,
-    MESH_TRIANGLE
+    FLAT_TRIANGLE,
+    SMOOTH_TRIANGLE
 };
 
 typedef struct
@@ -46,8 +47,11 @@ void printObjType(const ObjectType obj_type)
     case GENERICTORUS:
         printf("TORUS\n");
         break;
-    case MESH_TRIANGLE:
-        printf("MESH_TRIANGLE\n");
+    case FLAT_TRIANGLE:
+        printf("FLAT_TRIANGLE\n");
         break;
+    case SMOOTH_TRIANGLE:
+        printf("SMOOTH_TRIANGLE\n");
+        break;        
     }
 }

@@ -1,10 +1,7 @@
 
 what's the relationship between kd, ks and kr (and kt)?
-ambient shading has problems
 add normal type to torus
-make solid cylinder movable
 set default background color in scene file
-put mesh triangles in an array
 Combine light pointer and light type into a struct?
 Improve objloader so that it can load the dragon
 change some push function arguments to pointers?
@@ -26,6 +23,11 @@ Blocks appear when drawing a transparent sphere against a white background.
        since kt is derived from kr, it only makes sense that both transmission and reflection are affected
        Cause: scaling up image by non-integer factors?
 
+Smooth triangles causes pdf to be zero in glossy reflection shading, but flat triangles don't.
+       see calcSpecRefRadiance in trace.h
+
+Smooth transparent teapot has stripes
+       see teapot_stripe.png
 
 Many image sizes cause problems
 
