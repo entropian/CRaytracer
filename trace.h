@@ -187,6 +187,9 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
     min_t = intersectTest(&min_sr, so, ray);
 
     float reflect_t = 0, transmit_t = 0;
+    float kr = 0.0f, kt = 0.0f;
+    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};    
     // Shading
     if(min_t < TMAX)
     {
@@ -219,7 +222,7 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
             {
                 indirect = true;
                 //float reflect_t;
-                vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+                //vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
                 reflect_t = calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl);
 
                 if(min_sr.mat->mat_type == REFLECTIVE)
@@ -236,8 +239,10 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     vec3 transmit_dir = {0, 0, 0};
                     float eta = calcTransmitDir(transmit_dir, &min_sr);
                     float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
-                    float kr = calcFresnelReflectance(&min_sr);
-                    float kt = 1.0f - kr;
+                    //float kr = calcFresnelReflectance(&min_sr);
+                    //float kt = 1.0f - kr;
+                    kr = calcFresnelReflectance(&min_sr);
+                    kt = 1.0f - kr;
 
                     vec3 btdf;
                     vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
@@ -246,7 +251,7 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     vec3_copy(transmitted_ray.direction, transmit_dir);
 
                     //float transmit_t;
-                    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
+                    //vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
                     transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl);                    
                     vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                     vec3_mult(transmitted_illum, transmitted_illum, btdf);
@@ -280,18 +285,20 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     }
                     vec3_mult(reflected_illum, reflected_illum, color_filter);
                 }
-                vec3_add(radiance, radiance, reflected_illum);                    
+                vec3_add(radiance, radiance, reflected_illum);
+                //vec3_copy(radiance, reflected_illum);
             }
         }        
     }else
     {
         vec3_copy(radiance, sl->bg_color);
     }
-    /*      
-    float tmpf = min_t / 15.0f;
+    
+    /*
+    float tmpf = kr;
     vec3 depth_f = {tmpf, tmpf, tmpf};
     vec3_copy(radiance, depth_f);
-    */
+    */    
     return min_t;
 }
 

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <cstdint>
 #include <cmath>
 #include "dbuffer.h"
@@ -56,13 +55,17 @@ int getTableIndex(HashTable* index_table, const uint64_t key)
 {
     int hash_index = hashFunc(key, index_table->size);
     HashNode* table_ptr = HashTable_array(*index_table);
+    int count = 0;
     for(int i = hash_index; table_ptr[i].index != -1 && i < index_table->size; i++)
     {
+        count++;
         if(table_ptr[i].key == key)
         {
+            //printf("%d\n", count);
             return table_ptr[i].index;
         }
     }
+    //printf("%d\n", count);    
     return -1;
 }
 

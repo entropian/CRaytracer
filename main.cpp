@@ -10,7 +10,6 @@
   gamma correction
   consider how variables should be grouped into objects?
 */
-
 #include <GL/glew.h>
 
 #if __GNUG__
@@ -112,7 +111,7 @@ int main()
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
     vec3 position = {0.0f, 0.0f, 1.0f};
-    vec3 look_point = {0.0f, 0.0f, -3.0f};
+    vec3 look_point = {0.0f, 3.0f, -5.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 

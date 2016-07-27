@@ -106,6 +106,19 @@ static inline void OBJParseFloat3(float *x, float *y, float *z, const char** str
     *z = OBJParseFloat(str);    
 }
 
+static inline int fixIndex(const int index, const int size)
+{
+    if(index > 0)
+    {
+        return index - 1;
+    }
+    if(index < 0)
+    {
+        return index + size;
+    }
+    return -1;
+}
+
 VertexIndex OBJParseFaceTriple(const char** str)
 {
     VertexIndex vi = {0, 0, 0};
@@ -213,6 +226,8 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
     HashTable index_table = HashTable_create(1000);
 
     DBuffer* face_group_ptr = (DBuffer*)(in_face_group->data);
+    float prev = 0.0f, current;
+    
     for(int i = 0; i < DBuffer_size(*in_face_group); i++)
     {
         VertexIndex* vi_ptr = (VertexIndex*)(face_group_ptr[i].data);
@@ -236,6 +251,14 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
             DBuffer_push(indices, i1);
             DBuffer_push(indices, i2);                    
         }
+        current = (float)i / (DBuffer_size(*in_face_group));
+        /*
+        if(current > prev)
+        {
+            prev = current;
+            printf("%f%%\n", current * 100.0f);
+        }
+        */
     }
 
     new_shape.positions = (float*)(positions.data);
@@ -345,9 +368,15 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
             {
                 count++;
                 VertexIndex vi = OBJParseFaceTriple(&line_ptr);
+                /*
                 vi.v_idx -= 1;
                 vi.vt_idx -= 1;
                 vi.vn_idx -= 1;
+                */
+
+                vi.v_idx = fixIndex(vi.v_idx, DBuffer_size(in_positions));
+                vi.vt_idx = fixIndex(vi.vt_idx, DBuffer_size(in_texcoords));
+                vi.vn_idx = fixIndex(vi.vn_idx, DBuffer_size(in_normals));                
                 // TODO: fix this
                 if(vi.v_idx != -1)
                 {
