@@ -5,7 +5,7 @@
 #include <string.h>
 #include <assert.h>
 #include "dbuffer.h"
-#include "hashtable.h"
+#include "hashindex.h"
 
 #define NAME_LENGTH 30
 #ifndef _MSC_VER
@@ -137,6 +137,7 @@ VertexIndex OBJParseFaceTriple(const char** str)
     {
         (*str)++;
         vi.vn_idx = atoi(*str);
+        *str += strcspn(*str, "/ \t");        
         return vi;
     }
     
@@ -163,26 +164,38 @@ void OBJParseString(char buffer[], const char** str)
     *str += length;
 }
 
-uint64_t getKey(const VertexIndex* vi)
+inline void getVertexIndexString(char* string, const VertexIndex* vi)
 {
-    uint64_t key;
-    key = vi->v_idx;
-    key *= 1000000;
-    key += vi->vt_idx;
-    key *= 1000000;
-    key += vi->vn_idx;
-    return key;
+    sprintf_s(string, 256, "p%dn%dt%d", vi->v_idx, vi->vn_idx, vi->vt_idx);
 }
 
-int UpdateVertexCache(DBuffer* positions, DBuffer* normals, DBuffer* texcoords, HashTable* index_table,
-                           const VertexIndex* vi, const DBuffer* in_positions, const DBuffer* in_normals,
-                           const DBuffer* in_texcoords)
+inline bool vertexIndexComp(const VertexIndex* a, const VertexIndex* b)
 {
-    int index;
-    if((index = getTableIndex(index_table, getKey(vi))) != -1)
+    if(a->v_idx != b->v_idx){return false;}
+    if(a->vn_idx != b->vn_idx){return false;}
+    if(a->vt_idx != b->vt_idx){return false;}
+    return true;
+}
+
+int UpdateVertexCache(DBuffer* positions, DBuffer* normals, DBuffer* texcoords, HashIndex* hash_index,
+                      DBuffer* vi_cache,
+                      const VertexIndex* vi, const DBuffer* in_positions, const DBuffer* in_normals,
+                      const DBuffer* in_texcoords)
+{
+
+    char vertex_string[256];
+    getVertexIndexString(vertex_string, vi);
+    
+    VertexIndex* vi_cache_ptr = (VertexIndex*)(vi_cache->data);
+    int key = HashIndex_gen_key(hash_index, vertex_string);
+    int i;
+    for(i = HashIndex_First(hash_index, key); i != -1; i = HashIndex_Next(hash_index, i))
     {
-        return index;
-    }
+        if(vertexIndexComp(vi, &(vi_cache_ptr[i])))
+        {
+            return i;
+        }
+    }       
 
     assert(vi->v_idx * 3 < DBuffer_size(*in_positions));
     float* in_pos_ptr = (float*)(in_positions->data);
@@ -205,8 +218,9 @@ int UpdateVertexCache(DBuffer* positions, DBuffer* normals, DBuffer* texcoords, 
         DBuffer_push(*normals, in_normal_ptr[vi->vn_idx * 3 + 2]);
     }
 
-    index = DBuffer_size(*positions) / 3 - 1;
-    insertTable(index_table, getKey(vi), index);
+    int index = DBuffer_size(*positions) / 3 - 1;
+    HashIndex_add(hash_index, key, index);
+    DBuffer_push(*vi_cache, *vi);
     return index;
 }
 
@@ -223,11 +237,13 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
     DBuffer texcoords = DBuffer_create(float);
     DBuffer indices = DBuffer_create(int);
 
-    HashTable index_table = HashTable_create(1000);
-
+    DBuffer vi_cache = DBuffer_create(VertexIndex);
+    HashIndex hash_index;
+    HashIndex_init(&hash_index, DEFAULT_HASH_SIZE, DEFAULT_INDEX_SIZE);
+    
+    
     DBuffer* face_group_ptr = (DBuffer*)(in_face_group->data);
     float prev = 0.0f, current;
-    
     for(int i = 0; i < DBuffer_size(*in_face_group); i++)
     {
         VertexIndex* vi_ptr = (VertexIndex*)(face_group_ptr[i].data);
@@ -238,27 +254,18 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
         {
             v1 = v2;
             v2++;
-
-            int i0 = UpdateVertexCache(&positions, &normals, &texcoords, &index_table,
+            int i0 = UpdateVertexCache(&positions, &normals, &texcoords, &hash_index, &vi_cache,
                                        v0, in_positions, in_normals, in_texcoords);
-            int i1 = UpdateVertexCache(&positions, &normals, &texcoords, &index_table,
+            int i1 = UpdateVertexCache(&positions, &normals, &texcoords, &hash_index, &vi_cache,
                                        v1, in_positions, in_normals, in_texcoords);
-            int i2 = UpdateVertexCache(&positions, &normals, &texcoords, &index_table,
-                                       v2, in_positions, in_normals, in_texcoords);
-
+            int i2 = UpdateVertexCache(&positions, &normals, &texcoords, &hash_index, &vi_cache,
+                                       v2, in_positions, in_normals, in_texcoords);            
 
             DBuffer_push(indices, i0);
             DBuffer_push(indices, i1);
             DBuffer_push(indices, i2);                    
         }
         current = (float)i / (DBuffer_size(*in_face_group));
-        /*
-        if(current > prev)
-        {
-            prev = current;
-            printf("%f%%\n", current * 100.0f);
-        }
-        */
     }
 
     new_shape.positions = (float*)(positions.data);
@@ -271,7 +278,8 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
     new_shape.num_indices = DBuffer_size(indices);
 
     DBuffer_erase(in_face_group);
-    HashTable_destroy(&index_table);
+    DBuffer_erase(&vi_cache);
+    HashIndex_free(&hash_index);
 
     *shape = new_shape;
     return true;
@@ -368,15 +376,13 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
             {
                 count++;
                 VertexIndex vi = OBJParseFaceTriple(&line_ptr);
-                /*
-                vi.v_idx -= 1;
-                vi.vt_idx -= 1;
-                vi.vn_idx -= 1;
-                */
-
-                vi.v_idx = fixIndex(vi.v_idx, DBuffer_size(in_positions));
-                vi.vt_idx = fixIndex(vi.vt_idx, DBuffer_size(in_texcoords));
-                vi.vn_idx = fixIndex(vi.vn_idx, DBuffer_size(in_normals));                
+                vi.v_idx = fixIndex(vi.v_idx, DBuffer_size(in_positions) / 3);
+                vi.vt_idx = fixIndex(vi.vt_idx, DBuffer_size(in_texcoords) / 2);
+                vi.vn_idx = fixIndex(vi.vn_idx, DBuffer_size(in_normals) / 3);
+                if(vi.v_idx < 0)
+                {
+                    printf("here\n");
+                }
                 // TODO: fix this
                 if(vi.v_idx != -1)
                 {

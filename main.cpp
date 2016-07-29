@@ -10,14 +10,9 @@
   gamma correction
   consider how variables should be grouped into objects?
 */
-#include <GL/glew.h>
 
-#if __GNUG__
-#    include <GLFW/glfw3.h>
-#else
-#    include <GL/glfw3.h>
-#    include <SOIL.h>
-#endif
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
 #include <cstdio>
 #include <cstdlib>

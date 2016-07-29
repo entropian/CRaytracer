@@ -1,12 +1,6 @@
 #pragma once
 #include <GL/glew.h>
-
-#if __GNUG__
-#    include <GLFW/glfw3.h>
-#else
-#    include <GL/glfw3.h>
-#    include <SOIL.h>
-#endif
+#include <GLFW/glfw3.h>
 
 #include <cstdio>
 #include "glshaders.h"
