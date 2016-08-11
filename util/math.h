@@ -4,7 +4,7 @@
 #include "constants.h"
 #include "mat.h"
 
-void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
+inline void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
 {
     vec3 u_comp, v_comp, w_comp;
     vec3_scale(u_comp, u, a[0]);

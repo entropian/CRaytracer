@@ -19,6 +19,11 @@ typedef struct HashIndex_s
     int lookup_mask;    
 }HashIndex;
 
+bool isPowerOfTwo(int x)
+{
+    return (x & (x - 1)) == 0 && x > 0;
+}
+
 inline void HashIndex_init(HashIndex* hash_index, const int initial_hash_size, const int initial_index_size)
 {
     assert(isPowerOfTwo(initial_hash_size));    
@@ -44,11 +49,6 @@ inline void HashIndex_free(HashIndex* hash_index)
         hash_index->index_chain = INVALID_INDEX;
     }
     hash_index->lookup_mask = 0;
-}
-
-bool isPowerOfTwo(int x)
-{
-    return (x & (x - 1)) == 0 && x > 0;
 }
 
 void HashIndex_alloc(HashIndex* hash_index, const int new_hash_size, const int new_index_size)

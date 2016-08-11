@@ -33,6 +33,7 @@ Smooth teapot seems darker than flat teapot
        caused by reflected radiance not working properly on smooth triangles.
        see smooth_reflected_only.png
        reflected radiance only appears near quad edges for some reason, which cause those stripes.
+       Cause: forgot to normalize the interpolated normal AKA I'm a moron.
 
 Many image sizes cause problems
 

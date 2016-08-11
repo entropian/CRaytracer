@@ -63,11 +63,6 @@ float calcTriangleIntersect(float* beta_out, float* gamma_out,
 {
     // o + td = v0 + v(v1-v0) + w(v2-v0)
     // v(v0-v1) + w(v0-v2) + td = v0 - o
-    /*
-    float a = tri->v0[0] - tri->v1[0], b = tri->v0[0] - tri->v2[0], c = ray.direction[0], d = tri->v0[0] - ray.origin[0];
-    float e = tri->v0[1] - tri->v1[1], f = tri->v0[1] - tri->v2[1], g = ray.direction[1], h = tri->v0[1] - ray.origin[1];
-    float i = tri->v0[2] - tri->v1[2], j = tri->v0[2] - tri->v2[2], k = ray.direction[2], l = tri->v0[2] - ray.origin[2];
-    */
     float a = v0[0] - v1[0], b = v0[0] - v2[0], c = ray.direction[0], d = v0[0] - ray.origin[0];
     float e = v0[1] - v1[1], f = v0[1] - v2[1], g = ray.direction[1], h = v0[1] - ray.origin[1];
     float i = v0[2] - v1[2], j = v0[2] - v2[2], k = ray.direction[2], l = v0[2] - ray.origin[2];
@@ -145,6 +140,7 @@ void interpolateNormal(vec3 normal, const float beta, const float gamma,
     vec3_add(normal, normal, tmp);
     vec3_scale(tmp, tri->n2, gamma);    
     vec3_add(normal, normal, tmp);
+    vec3_normalize(normal, normal);
 }
 
 float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ray)

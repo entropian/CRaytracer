@@ -93,29 +93,31 @@ float raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray,
 float calcSpecRefRadiance(vec3 spec_ref_radiance, const int depth,  const vec3 h_sample,
                          const Ray ray, const ShadeRec* sr, const SceneObjects* so, const SceneLights*  sl)
 {
-    vec3 reflect_dir;
-    calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
+    vec3 reflect_dir, normal;
+    vec3_copy(normal, sr->normal);
+    calcReflectRayDir(reflect_dir, normal, ray.direction);
+    if(vec3_dot(normal, reflect_dir) < 0.0f && sr->mat->mat_type == TRANSPARENT)
+    {
+        vec3_negate(normal, normal);
+    }
     vec3 new_sample;
     getNextSample3D(new_sample, sr->mat->h_samples);
     Ray sample_ray;
     vec3_copy(sample_ray.origin, sr->hit_point);
     getVec3InLocalBasis(sample_ray.direction, new_sample, reflect_dir);
-    if(vec3_dot(sample_ray.direction, sr->normal) < 0)
+    if(vec3_dot(sample_ray.direction, normal) < 0.0f)
     {
         vec3 reflected_sample = {-new_sample[0], -new_sample[1], new_sample[2]};
         getVec3InLocalBasis(sample_ray.direction, reflected_sample, reflect_dir);
     }
     float raydotr = vec3_dot(sample_ray.direction, reflect_dir);
     double phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
-    float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
+    float pdf = phong_lobe * (vec3_dot(normal, sample_ray.direction));
     vec3 brdf;
     vec3_scale(brdf, sr->mat->cs, phong_lobe);   // Deferring reflectance scaling
     float t = whittedTrace(spec_ref_radiance, depth-1, h_sample, sample_ray, so, sl);
     vec3_mult(spec_ref_radiance, spec_ref_radiance, brdf);
-    if(pdf - 0.0f > 0.00000001)
-    {
-        vec3_scale(spec_ref_radiance, spec_ref_radiance, vec3_dot(sr->normal, sample_ray.direction) / pdf);
-    }
+    vec3_scale(spec_ref_radiance, spec_ref_radiance, vec3_dot(normal, sample_ray.direction) / pdf);
     return t;
 }
 
@@ -179,7 +181,6 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
 {
     // debug variables
     bool intersected = false, indirect = false, not_tir = false, tir = false;
-    vec3 imrad = {0.0f, 0.0f, 0.0f};
     
     vec3_copy(radiance, ORIGIN);
     float min_t = TMAX;
@@ -197,7 +198,7 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
-            maxToOne(radiance, radiance);
+            //maxToOne(radiance, radiance);
         }else
         {
             ambientShading(radiance, sl->amb_light, h_sample, so, &min_sr);
@@ -286,14 +287,12 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     vec3_mult(reflected_illum, reflected_illum, color_filter);
                 }
                 vec3_add(radiance, radiance, reflected_illum);
-                //vec3_copy(radiance, reflected_illum);
             }
         }        
     }else
     {
         vec3_copy(radiance, sl->bg_color);
     }
-    
     /*
     float tmpf = kr;
     vec3 depth_f = {tmpf, tmpf, tmpf};
@@ -341,7 +340,7 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke);
-            maxToOne(radiance, radiance);                
+            //maxToOne(radiance, radiance);                
         }else
         {
             if(depth > 0)

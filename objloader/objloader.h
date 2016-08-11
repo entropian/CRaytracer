@@ -379,10 +379,12 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
                 vi.v_idx = fixIndex(vi.v_idx, DBuffer_size(in_positions) / 3);
                 vi.vt_idx = fixIndex(vi.vt_idx, DBuffer_size(in_texcoords) / 2);
                 vi.vn_idx = fixIndex(vi.vn_idx, DBuffer_size(in_normals) / 3);
+                /*
                 if(vi.v_idx < 0)
                 {
                     printf("here\n");
                 }
+                */
                 // TODO: fix this
                 if(vi.v_idx != -1)
                 {

@@ -105,8 +105,8 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    vec3 position = {0.0f, 0.0f, 1.0f};
-    vec3 look_point = {0.0f, 3.0f, -5.0f};
+    vec3 position = {0.4f, 1.0f, 3.0f};
+    vec3 look_point = {0.0f, 0.0f, -5.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -161,10 +161,10 @@ int main()
             if(cur_percent > prev_percent)
             {
                 prev_percent = cur_percent;
-                printf("%d%%\n", cur_percent);                
+                printf("%d%%\n", cur_percent);
+                displayImage(window, viewport, image, frame_res_width, frame_res_height);                
             }
         }
-        //displayImage(window, viewport, image, frame_res_width, frame_res_height);        
     }
 //#endif 
     time(&endTime);
@@ -183,8 +183,17 @@ int main()
     SceneMaterials_destroy(&scene_materials);
     SceneMeshes_destroy(&scene_meshes);
 
+    double frames_per_sec = 10.0;
+    double time_between_frames = 1.0 / frames_per_sec;
+    double current_time, last_draw_time = 0.0;
     while(!EXIT)
     {
+        current_time = glfwGetTime();
+        if((current_time - last_draw_time) >= time_between_frames)
+        {
+            displayImage(window, viewport, image, frame_res_width, frame_res_height);
+            last_draw_time = current_time;
+        }
         glfwPollEvents();
     }
     free(image);    

@@ -237,10 +237,7 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                     {
                         for(int i = 0; i < num_mesh; i++)
                         {
-                            if(shapes[i].num_normals == 0)
-                            {
-                                computeMeshNormals(&(shapes[i]));
-                            }
+                            computeMeshNormals(&(shapes[i]));
                             SceneMeshes_push(s_meshes, shapes[i]);
                         }
                     }
@@ -304,7 +301,7 @@ void initAreaLights(SceneLights* sl)
     // Area light
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-    area_light_ptr->intensity = 5.0f;
+    area_light_ptr->intensity = 20.0f;
     vec3_copy(area_light_ptr->color, WHITE);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
@@ -342,7 +339,7 @@ void initAreaLights(SceneLights* sl)
     // Sphere
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
-    vec3_assign(sphere->center, -4.0f, 5.0f, 1.0f);
+    vec3_assign(sphere->center, 0.0f, 4.0f, -1.5f);
     sphere->radius = 1.0f;
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;
@@ -398,7 +395,7 @@ void initBackgroundColor(SceneLights* sl)
         getIncRadiance(sl->bg_color, ENVLIGHT, sl->env_light);
     }else
     {
-        vec3_copy(sl->bg_color, WHITE);
+        vec3_copy(sl->bg_color, BLACK);
     }
 }
 
@@ -438,7 +435,7 @@ void initSceneLights(SceneLights* sl)
     */
 
 
-    //initAreaLights(sl);
+    initAreaLights(sl);
     //initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
