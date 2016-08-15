@@ -7,4 +7,4 @@ num_samples  16
 num_sample_sets 83
 max_depth  3
 trace_type WHITTED
-accel_struct GRID
+accel_struct BVH

@@ -55,7 +55,7 @@ bool bvhExchangeElements(float centroid[], Object_t objects[], const int a, cons
 int bvhQuicksortPartition(float centroid[], Object_t objects[], const int num_obj)
 {
     int rand_index = rand() % num_obj;
-    exchangeElements(centroid, objects, rand_index, num_obj-1, num_obj);
+    bvhExchangeElements(centroid, objects, rand_index, num_obj-1, num_obj);
     
     int i = -1;
     float pivot = centroid[num_obj-1];
@@ -64,10 +64,10 @@ int bvhQuicksortPartition(float centroid[], Object_t objects[], const int num_ob
         if(centroid[j] <= pivot)
         {
             i++;
-            exchangeElements(centroid, objects, j, i, num_obj);
+            bvhExchangeElements(centroid, objects, j, i, num_obj);
         }
     }
-    exchangeElements(centroid, objects, i+1, num_obj-1, num_obj);
+    bvhExchangeElements(centroid, objects, i+1, num_obj-1, num_obj);
     return i+1;
 }
 
@@ -83,7 +83,7 @@ void bvhQuicksort(float centroid[], Object_t objects[], const int num_obj)
 
 int partitionObjects(Object_t objects[], int num_obj, const int axis_index)
 {
-    float* centroid = (float*)malloc(sizeof(float) * num_obj);
+    float* centroid = (float*)malloc(sizeof(float) * num_obj);    
     for(int i = 0; i < num_obj; ++i)
     {
         AABB tmp_aabb;
@@ -96,7 +96,7 @@ int partitionObjects(Object_t objects[], int num_obj, const int axis_index)
     return num_obj / 2;
 }
 
-void BVH_build(BVHNode **tree, Object_t objects[], int num_obj, const int axis_index)
+void BVH_build(BVHNode **tree, Object_t objects[], int num_obj)
 {
     assert(num_obj > 0);
 
@@ -104,6 +104,20 @@ void BVH_build(BVHNode **tree, Object_t objects[], int num_obj, const int axis_i
     BVHNode* pNode = (BVHNode*)malloc(sizeof(BVHNode));
     *tree = pNode;
     pNode->aabb = calcBoundingVolume(objects, num_obj);
+    float x_extent = pNode->aabb.max[0] - pNode->aabb.min[0];
+    float y_extent = pNode->aabb.max[1] - pNode->aabb.min[1];
+    float z_extent = pNode->aabb.max[2] - pNode->aabb.min[2];
+    int axis_index;
+    if(x_extent > y_extent && x_extent > z_extent)
+    {
+        axis_index = 0;
+    }else if(y_extent > z_extent)
+    {
+        axis_index = 1;
+    }else
+    {
+        axis_index = 2;
+    }          
 
     if(num_obj <= MIN_OBJECTS_PER_LEAF)
     {
@@ -116,8 +130,8 @@ void BVH_build(BVHNode **tree, Object_t objects[], int num_obj, const int axis_i
     {
         pNode->type = NODE;
         int k = partitionObjects(objects, num_obj, axis_index);
-        BVH_build(&(pNode->left), objects, k, (axis_index + 1) % 3);
-        BVH_build(&(pNode->right), &(objects[k]), num_obj - k, (axis_index + 1) % 3);        
+        BVH_build(&(pNode->left), objects, k);
+        BVH_build(&(pNode->right), &(objects[k]), num_obj - k);        
     }
 }
 
