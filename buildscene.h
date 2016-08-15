@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GLFW/glfw3.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -452,14 +453,22 @@ void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshe
     printf("non grid obj %d\n", so->num_non_grid_obj);
 
     so->accel = accel_type;
+    double start, end;    
     if(so->accel == GRID)
     {
+        start = glfwGetTime();
         UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, 2);
+        end = glfwGetTime();
+        printf("Uniform grid build time: %f sec\n", end - start);        
         so->accel_ptr = rg;
     }else if(so->accel == BVH)
     {
         BVHNode* tree;
-        BVH_build(&tree, &(so->objects[so->num_non_grid_obj]), so->num_obj - so->num_non_grid_obj, 0);
+        double start, end;
+        start = glfwGetTime();
+        BVH_build(&tree, &(so->objects[so->num_non_grid_obj]), so->num_obj - so->num_non_grid_obj);
+        end = glfwGetTime();
+        printf("BVH build time: %f sec\n", end - start);
         //int leaf_count = 0;
         //printBVH(tree, &leaf_count, 0);        
         so->accel_ptr = tree;

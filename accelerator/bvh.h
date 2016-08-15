@@ -9,6 +9,8 @@
 #include "../shapes/shapes.h"
 #include "../shapes/instanced.h"
 
+static const int QUICKSORT_THRESHOLD = 30;
+
 enum BVHNodeType
 {
     NODE,
@@ -90,8 +92,25 @@ int partitionObjects(Object_t objects[], int num_obj, const int axis_index)
         getObjectAABB(&tmp_aabb, objects[i]);
         centroid[i] = (tmp_aabb.min[axis_index] + tmp_aabb.max[axis_index]) * 0.5f;
     }
+    if(num_obj > QUICKSORT_THRESHOLD)
+    {
+        bvhQuicksort(centroid, objects, num_obj);
+    }else
+    {
+        for(int i = 1; i < num_obj; ++i)
+        {
+            for(int j = i; j > 0 && centroid[j-1] > centroid[j]; --j)
+            {
+                float tmp = centroid[j];
+                centroid[j] = centroid[j-1];
+                centroid[j-1] = tmp;
 
-    bvhQuicksort(centroid, objects, num_obj);
+                Object_t tmp_obj = objects[j];
+                objects[j] = objects[j-1];
+                objects[j-1] = tmp_obj;
+            }
+        }
+    }
     free(centroid);
     return num_obj / 2;
 }
