@@ -37,6 +37,50 @@ AABB calcBoundingVolume(const Object_t objects[], const int num_obj)
     return r;
 }
 
+bool bvhExchangeElements(float centroid[], Object_t objects[], const int a, const int b, const int num_obj)
+{
+    if(a >= num_obj || b >= num_obj){
+        fprintf(stderr, "Invalid index.\n");
+        return false;
+    }
+    float tmp_centroid = centroid[a];
+    Object_t tmp_obj = objects[a];
+    centroid[a] = centroid[b];
+    objects[a] = objects[b];
+    centroid[b] = tmp_centroid;
+    objects[b] = tmp_obj;
+    return true;
+}
+
+int bvhQuicksortPartition(float centroid[], Object_t objects[], const int num_obj)
+{
+    int rand_index = rand() % num_obj;
+    exchangeElements(centroid, objects, rand_index, num_obj-1, num_obj);
+    
+    int i = -1;
+    float pivot = centroid[num_obj-1];
+    for(int j = 0; j < num_obj - 1; j++)
+    {
+        if(centroid[j] <= pivot)
+        {
+            i++;
+            exchangeElements(centroid, objects, j, i, num_obj);
+        }
+    }
+    exchangeElements(centroid, objects, i+1, num_obj-1, num_obj);
+    return i+1;
+}
+
+void bvhQuicksort(float centroid[], Object_t objects[], const int num_obj)
+{
+    if(num_obj > 1)
+    {
+        int pivot_index = bvhQuicksortPartition(centroid, objects, num_obj);
+        bvhQuicksort(centroid, objects, pivot_index);
+        bvhQuicksort(&(centroid[pivot_index]), &(objects[pivot_index]), num_obj - pivot_index);
+    }
+}
+
 int partitionObjects(Object_t objects[], int num_obj, const int axis_index)
 {
     float* centroid = (float*)malloc(sizeof(float) * num_obj);
@@ -47,20 +91,7 @@ int partitionObjects(Object_t objects[], int num_obj, const int axis_index)
         centroid[i] = (tmp_aabb.min[axis_index] + tmp_aabb.max[axis_index]) * 0.5f;
     }
 
-    int sorted = 0;
-    for(int i = 1; i < num_obj; ++i)
-    {
-        for(int j = i; j > 0 && centroid[j-1] > centroid[j]; --j)
-        {
-            float tmp = centroid[j];
-            centroid[j] = centroid[j-1];
-            centroid[j-1] = tmp;
-
-            Object_t tmp_obj = objects[j];
-            objects[j] = objects[j-1];
-            objects[j-1] = tmp_obj;
-        }
-    }
+    bvhQuicksort(centroid, objects, num_obj);
     free(centroid);
     return num_obj / 2;
 }

@@ -105,8 +105,10 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    vec3 position = {0.4f, 1.0f, 3.0f};
-    vec3 look_point = {0.0f, 0.0f, -5.0f};
+    //vec3 position = {0.4f, 2.0f, 2.0f};
+    //vec3 look_point = {2.0f, 0.0f, -2.0f};
+    vec3 position = {0.4f, 2.0f, 1.5f};
+    vec3 look_point = {0.0f, 2.0f, -2.0f};    
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -120,8 +122,8 @@ int main()
     float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
     trace = getTraceFunc(params.trace_type);
 
-    time_t startTime, endTime;
-    time(&startTime);        
+    double start_time, end_time;
+    start_time = glfwGetTime();        
 
     int prev_percent = 0;
     //drawSamples(image, &disk_samples, frame_res_width, frame_res_height, num_pixels);
@@ -167,8 +169,8 @@ int main()
         }
     }
 //#endif 
-    time(&endTime);
-    double sec = difftime(endTime, startTime);
+    end_time = glfwGetTime();
+    double sec = end_time - start_time;
     printf("%f seconds.\n", sec);
 
     displayImage(window, viewport, image, frame_res_width, frame_res_height);

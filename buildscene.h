@@ -339,7 +339,8 @@ void initAreaLights(SceneLights* sl)
     // Sphere
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
-    vec3_assign(sphere->center, 0.0f, 4.0f, -1.5f);
+    //vec3_assign(sphere->center, 2.0f, 4.0f, 1.5f);
+    vec3_assign(sphere->center, -0.9f, 5.0f, -3.1f);
     sphere->radius = 1.0f;
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;
@@ -408,7 +409,6 @@ void initSceneLights(SceneLights* sl)
     }
     sl->num_lights = 0;
     // Directional light
-
     if(sl->num_lights == MAX_LIGHTS){return;}
     DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
     float intensity = 2.0f;

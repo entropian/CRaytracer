@@ -283,7 +283,10 @@ float BVHIntersectTest(ShadeRec* sr, const SceneObjects* so, const BVHNode* tree
             return t1;
         }else
         {
-            *sr = sr2;
+			if (t2 < TMAX)
+			{
+				*sr = sr2;
+			}
             return t2;
         }
         // TODO

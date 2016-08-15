@@ -1,4 +1,6 @@
-
+Try different number of primitives in each BVH node
+How about we don't use insertion sort for BVH building?
+Try splitting BVH along the axis with maximal extent.
 what's the relationship between kd, ks and kr (and kt)?
 add normal type to torus
 set default background color in scene file
@@ -10,7 +12,6 @@ the eventual image plane struct could have a samples pointer of its own.
 Update the clean up section.
 
 
-path trace is dependent on background color
 
 bugs:
 Noise when drawing transparent boxes

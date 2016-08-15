@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emmintrin.h>
 #include "../util/vec.h"
 #include "../util/ray.h"
 #include "../util/shaderec.h"
@@ -34,18 +35,6 @@ typedef struct SmoothTriangle_s
     OBJShape* mesh_ptr;
     Material* mat;
 }SmoothTriangle;
-/*
-void getFlatTriangleVertPos(vec3 v0, vec3 v1, vec3 v2, const FlatTriangle* tri)
-{
-    OBJShape* mesh = tri->mesh_ptr;
-    int index = tri->i0 * 3;
-    vec3_assign(v0, mesh->positions[index], mesh->positions[index+1], mesh->positions[index+2]);
-    index = tri->i1 * 3;    
-    vec3_assign(v1, mesh->positions[index], mesh->positions[index+1], mesh->positions[index+2]);
-    index = tri->i2 * 3;
-    vec3_assign(v2, mesh->positions[index], mesh->positions[index+1], mesh->positions[index+2]);
-}
-*/
 
 void calcTriangleNormal(vec3 r, const vec3 v0, const vec3 v1, const vec3 v2)
 {
@@ -57,16 +46,16 @@ void calcTriangleNormal(vec3 r, const vec3 v0, const vec3 v1, const vec3 v2)
     vec3_normalize(r, tmp3);    
 }
 
-//float calcTriangleIntersect(const Triangle* tri, const Ray ray)
 float calcTriangleIntersect(float* beta_out, float* gamma_out,
                             const vec3 v0, const vec3 v1, const vec3 v2, const Ray ray)
 {
     // o + td = v0 + v(v1-v0) + w(v2-v0)
     // v(v0-v1) + w(v0-v2) + td = v0 - o
-    float a = v0[0] - v1[0], b = v0[0] - v2[0], c = ray.direction[0], d = v0[0] - ray.origin[0];
+
+    float a = v0[0] - v1[0], b = v0[0] - v2[0], c = ray.direction[0], d = v0[0] - ray.origin[0];      
     float e = v0[1] - v1[1], f = v0[1] - v2[1], g = ray.direction[1], h = v0[1] - ray.origin[1];
     float i = v0[2] - v1[2], j = v0[2] - v2[2], k = ray.direction[2], l = v0[2] - ray.origin[2];
-
+    
     float m = f*k - g*j, n = h*k - g*l, p = f*l - h*j;
     float q = g*i - e*k, s = e*j - f*i;
 
@@ -147,7 +136,8 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
 {
     float gamma, beta;  
     float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);    
-
+    if(t == TMAX){return t;}
+    
     vec3 interp_normal;
     interpolateNormal(interp_normal, beta, gamma, tri);
     vec3_copy(sr->normal, interp_normal);
