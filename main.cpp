@@ -32,6 +32,7 @@
 #include "intersect.h"
 #include "trace.h"
 #include "config.h"
+#include "texture.h"
 
 #define SHOW_PROGRESS 1
 
@@ -123,7 +124,7 @@ int main()
     trace = getTraceFunc(params.trace_type);
 
     double start_time, end_time;
-    start_time = glfwGetTime();        
+    start_time = glfwGetTime(); 
 
     int prev_percent = 0;
     //drawSamples(image, &disk_samples, frame_res_width, frame_res_height, num_pixels);

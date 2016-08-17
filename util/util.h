@@ -22,7 +22,7 @@ inline float clamp(const float x, const float min, const float max)
     return (x < min ? min : (x > max ? max : x));
 }
 
-bool getNextTokenInFile(char buffer[], FILE* fp)
+inline bool getNextTokenInFile(char buffer[], FILE* fp)
 {
     char c = fgetc(fp);
     while((c ==  ' ' || c == '\n') && c != EOF)
@@ -45,7 +45,7 @@ bool getNextTokenInFile(char buffer[], FILE* fp)
     }
 }
 
-void printVec3WithText(const char* text, const vec3 v)
+inline void printVec3WithText(const char* text, const vec3 v)
 {
     printf("%s %f, %f, %f\n", text, v[0], v[1], v[2]);
 }

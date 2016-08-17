@@ -10,6 +10,8 @@ const int MAX_MESH = 20;
 const int DEFAULT_MATERIAL = 20;
 const int MAX_NAME_LENGTH = 128;
 
+const int DEFAULT_NUM_TEXTURES = 20;
+
 const float DEFAULT_GLOSSINESS = 100.0f;
 
 // Directions

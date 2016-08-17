@@ -6,6 +6,7 @@
 #include "accelerator/uniformgrid.h"
 #include "accelerator/bvh.h"
 #include "objloader/objloader.h"
+#include "texture.h"
 
 enum AccelType
 {
@@ -44,7 +45,68 @@ void SceneObjects_push_obj(SceneObjects* so, Object_t obj)
     so->max = DBuffer_max_elements(obj_buffer);
 }
 
-typedef struct
+typedef struct SceneTextures
+{
+    int size;
+    int max;
+    Texture* textures;
+    char** names;
+}SceneTextures;
+
+SceneTextures SceneTextures_create()
+{
+    SceneTextures st;
+    st.textures = (Texture*)malloc(sizeof(Texture) * DEFAULT_NUM_TEXTURES);
+    st.names = (char**)malloc(sizeof(char*) * DEFAULT_NUM_TEXTURES);
+    st.size = 0;
+    st.max = DEFAULT_NUM_TEXTURES;
+}
+
+void SceneTextures_destroy(SceneTextures* st)
+{
+    for(int i = 0; i < st->size; i++)
+    {
+        freeTexture(&(st->textures[i]));
+        free(st->names[i]);
+    }
+    free(st->textures);
+    free(st->names);
+    st->size = st->max = 0;    
+}
+
+Texture* SceneTextures_push(SceneTextures* st, const Texture tex, const char* name)
+{
+    DBuffer tex_buffer;
+    DBuffer_assume(&tex_buffer, (char*)st->textures, st->size, st->max, sizeof(Texture));
+    DBuffer_push(tex_buffer, tex);
+
+    DBuffer name_buffer;
+    DBuffer_assume(&name_buffer, (char*)st->names, st->size, st->max, sizeof(char*));
+    char* tex_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
+    DBuffer_push(name_buffer, tex_name);
+
+    st->textures = (Texture*)(tex_buffer.data);
+    st->names = (char**)(name_buffer.data);
+    st->size = DBuffer_size(tex_buffer);
+    st->max = DBuffer_max_elements(tex_buffer);
+    return &(st->textures[st->size - 1]);
+}
+
+Texture* findTexture(const char* tex_name, const SceneTextures* st)
+{
+    for(int i = 0; i < st->size; i++)
+    {
+        if(strcmp(tex_name, st->names[i]) == 0)
+        {
+            return &(st->textures[i]);
+        }
+    }    
+    fprintf(stderr, "Texture not found.\n");
+    return NULL;
+    //return &(sm->materials[0]);
+}
+
+typedef struct SceneMaterials_s
 {
     int size;
     int max;
@@ -78,8 +140,7 @@ void SceneMaterials_destroy(SceneMaterials* sm)
     }    
     free(sm->materials);
     free(sm->names);
-    sm->size = 0;
-    sm->max = 0;
+    sm->size = sm->max = 0;
 }
 
 Material* SceneMaterials_push(SceneMaterials* sm, const Material mat, const char* name)
@@ -115,7 +176,7 @@ Material* findMaterial(const char* mat_name, const SceneMaterials* sm)
     return &(sm->materials[0]);
 }
 
-typedef struct
+typedef struct SceneMeshes_s
 {
     int size;
     int max;    

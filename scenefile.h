@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GLFW/glfw3.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -12,6 +13,7 @@
 #include "materials.h"
 #include "objloader/dbuffer.h"
 #include "sampling.h"
+#include "texture.h"
 
 void printSphere(const Sphere* sphere)
 {
@@ -105,6 +107,16 @@ bool parseColor(vec3 r, FILE* fp)
     return true;
 }
 
+// Need to pass SceneTextures
+int parseMatTex(Material* mat, FILE* fp)
+{
+    char buffer[128];
+    if(mat->tex_type == NONE){return 0;}
+    
+    if(!getNextTokenInFile(buffer, fp)){return false;}    
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
+}
+
 bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
 {
     char buffer[128];
@@ -115,6 +127,7 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
     strcpy_s(*name, NAME_LENGTH, buffer);
+
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
     if(!getNextTokenInFile(buffer, fp)){return false;}            
     if(strcmp(buffer, "yes") == 0)
@@ -648,7 +661,11 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
     int num_mesh = 0;
     if(file_not_read)
     {
+        double start, end;
+        start = glfwGetTime();
         num_mesh = loadOBJ(shapes, buffer);
+        end = glfwGetTime();
+        printf("Loading %s took %f sec.\n", buffer, end - start);
     }else
     {
         strcpy_s(mesh_file_names[(*num_file_names)++], NAME_LENGTH, buffer);

@@ -1,3 +1,6 @@
+Add texture mapping
+for scene data structures, pass by pointers in push functions instead
+Optimize mesh loading
 Try different number of primitives in each BVH node
 what's the relationship between kd, ks and kr (and kt)?
 add normal type to torus

@@ -10,4 +10,5 @@ typedef struct ShadeRec
     vec3 hit_point;
     vec3 normal;
     vec3 wo;
+    vec2 uv;
 } ShadeRec;

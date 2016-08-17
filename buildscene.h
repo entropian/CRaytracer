@@ -92,14 +92,6 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
 {
     mat3 rotation;
     eulerAngToMat3(rotation, mesh_entry.orientation);
-    for(int i = 0; i < 3; i++)
-    {
-        for(int j = 0; j < 3; j++)
-        {
-            printf("%f ", rotation[i][j]);
-        }
-        printf("\n");
-    }
     
     for(int i = 0; i < s_meshes->size; i++)
     {
@@ -156,7 +148,7 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
                     vec3_mult(face_normal, inv_scale, face_normal);
                     mat3_mult_vec3(new_face_normal, rotation, face_normal);
                     vec3_normalize(new_face_normal, new_face_normal);
-                    vec3_copy(mesh_tri->normal, new_face_normal);
+                    vec3_copy(mesh_tri->normal, new_face_normal);                     
                     mesh_tri->shadow = mesh_entry.shadow;
                     mesh_tri->mesh_ptr = mesh;
                     mesh_tri->mat = mat;                                    
@@ -259,33 +251,6 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
         }
     }
     
-    //initSolidCylinder(so);
-    //initInstanced(so);
-    /*
-    for(int i = 0; i < 50; ++i)
-    {
-        Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
-        sphere->shadow = true;
-        sphere->min_theta = 0;
-        sphere->max_theta = PI;
-        sphere->phi = PI;
-        sphere->radius = 0.5;
-        float r = (float)rand() / (float)RAND_MAX;
-        float g = (float)rand() / (float)RAND_MAX;
-        float b = (float)rand() / (float)RAND_MAX;
-        vec3 color = {r, g, b};
-        initDefaultMatteMat(&(sphere->mat), color);
-        float x = (float)rand() / (float)RAND_MAX * 18.0f - 9.0f;
-        float y = (float)rand() / (float)RAND_MAX * 18.0f - 10.0f;
-        float z = (float)rand() / (float)RAND_MAX * -10.0f - 2.0f;
-        vec3_assign(sphere->center, x, y, z);
-        //so->obj_ptrs[so->num_obj] = sphere;
-        //so->obj_types[so->num_obj] = SPHERE;
-        //(so->num_obj)++;
-        Object_t obj = {SPHERE, sphere};
-        SceneObjects_push_obj(so, obj);
-    }
-    */
     for(int i = 0; i < sl->num_lights; i++)
     {
         if(sl->light_types[i] == AREALIGHT)
