@@ -208,7 +208,7 @@ void initSceneObjects(Scene* scene, const char* scenefile)
 #endif
     if(fp)
     {
-        int num_mat = parseMaterials(&(scene->materials), fp);
+        int num_mat = parseMaterials(scene, fp);
         char buffer[128];
         while(getNextTokenInFile(buffer, fp))
         {

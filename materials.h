@@ -6,6 +6,7 @@
 
 enum MatType
 {
+    INVALID_MAT_TYPE,
     MATTE,
     PHONG,
     REFLECTIVE,
@@ -20,6 +21,29 @@ enum TextureType
     NORMAL,
     DIFFUSE_NORMAL
 };
+
+MatType getMatTypeFromString(const char* str)
+{
+    if(strcmp(str, "MATTE") == 0)
+    {
+        return MATTE;
+    }else if(strcmp(str, "PHONG") == 0)
+    {
+        return PHONG;        
+    }else if(strcmp(str, "REFLECTIVE") == 0)
+    {
+        return REFLECTIVE;
+    }else if(strcmp(str, "TRANSPARENT") == 0)
+    {
+        return TRANSPARENT;
+    }else if(strcmp(str, "EMISSIVE") == 0)
+    {
+        return EMISSIVE;
+    }else
+    {
+        return INVALID_MAT_TYPE;
+    }            
+}
 
 TextureType getTexTypeFromString(const char* str)
 {

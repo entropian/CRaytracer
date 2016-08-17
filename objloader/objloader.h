@@ -278,7 +278,7 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
     new_shape.num_indices = DBuffer_size(indices);
 
     DBuffer_erase(in_face_group);
-    DBuffer_erase(&vi_cache);
+    DBuffer_destroy(&vi_cache);
     HashIndex_free(&hash_index);
 
     *shape = new_shape;

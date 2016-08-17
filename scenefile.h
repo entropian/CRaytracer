@@ -108,25 +108,39 @@ bool parseColor(vec3 r, FILE* fp)
 }
 
 // Need to pass SceneTextures
-int parseMatTex(Material* mat, FILE* fp)
+Texture* parseTexture(Scene* scene, FILE* fp)
 {
     char buffer[128];
-    if(mat->tex_type == NONE){return 0;}
     
-    if(!getNextTokenInFile(buffer, fp)){return false;}    
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // skip TEXTURE
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
+    Texture tex;
+    if(!loadTexture(&tex, buffer))
+    {
+        return NULL;
+    }
+    return Scene_addTexture(scene, &tex, buffer);
 }
 
-bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
+bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
 {
     char buffer[128];
     char type_name[128];
     if(!getNextTokenInFile(type_name, fp)){return false;}
-    printf("type name %s\n", type_name);
+    mat->mat_type = getMatTypeFromString(type_name);
+    if(mat->mat_type == INVALID_MAT_TYPE)
+    {
+        fprintf(stderr, "Invalid material type %s.\n", type_name);
+        return false;
+    }
     
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
     strcpy_s(*name, NAME_LENGTH, buffer);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip TEX_TYPE
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get texture type
+    mat->tex_type = getTexTypeFromString(buffer);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
     if(!getNextTokenInFile(buffer, fp)){return false;}            
@@ -152,12 +166,10 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
     if(!getNextTokenInFile(buffer, fp)){return false;}
     mat->kd = (float)atof(buffer);
 
-    if(strcmp(type_name, "MATTE") == 0)
+    if(mat->mat_type == MATTE)
     {
-        mat->mat_type = MATTE;
         mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-        printf("matte\n");
-        return true;
+        goto Texture;
     }
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_COLOR
@@ -171,11 +183,10 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
     if(!getNextTokenInFile(buffer, fp)){return false;}
     mat->exp = (float)atof(buffer);
 
-    if(strcmp(type_name, "PHONG") == 0)
+    if(mat->mat_type == PHONG)
     {
-        mat->mat_type = PHONG;
         mat->h_samples = NULL;
-        return true;
+        goto Texture;
     }       
         
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word REF_CONSTANT
@@ -183,10 +194,9 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
     mat->kr = (float)atof(buffer);
     mat->h_samples = genHemisphereSamples(MULTIJITTERED, mat->exp);
     
-    if(strcmp(type_name, "REFLECTIVE") == 0)
+    if(mat->mat_type == REFLECTIVE)
     {
-        mat->mat_type = REFLECTIVE;
-        return true;
+        goto Texture;
     }
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR_IN
@@ -203,17 +213,25 @@ bool parseMatEntry(Material* mat, char** name  ,FILE* fp)
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_OUT
     if(!parseColor(mat->cf_out, fp)){return false;}
 
-    if(strcmp(type_name, "TRANSPARENT") == 0)
+    if(mat->mat_type == TRANSPARENT)
     {
-        mat->mat_type = TRANSPARENT;
-        return true;
+        goto Texture;
     }
-
-    fprintf(stderr, "Invalid material type %s.\n", type_name);
     return false;
+
+Texture:
+    if(mat->tex_type != NO_TEXTURE)
+    {
+        mat->tex = parseTexture(scene, fp);
+    }else
+    {
+        mat->tex = NULL;
+    }
+    return true;
 }
 
-int parseMaterials(SceneMaterials* sm, FILE* fp)
+//int parseMaterials(SceneMaterials* sm, FILE* fp)
+int parseMaterials(Scene* scene, FILE* fp)
 {
     char buffer[128];
     while(getNextTokenInFile(buffer, fp) && strcmp(buffer, "END_MATERIALS") != 0)
@@ -222,11 +240,13 @@ int parseMaterials(SceneMaterials* sm, FILE* fp)
         {
             Material mat;
             char* name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
-            parseMatEntry(&mat, &name, fp);
-            SceneMaterials_push(sm, &mat, name);
+            //parseMatEntry(&mat, &name, fp);
+            parseMatEntry(&mat, &name, scene, fp);
+            //SceneMaterials_push(sm, &mat, name);            
+            Scene_addMaterial(scene, &mat, name);
         }
     }
-    return sm->size;
+    return Scene_getNumMaterials(scene);
 }
 
 #if 0
