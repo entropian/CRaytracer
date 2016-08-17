@@ -1,5 +1,3 @@
-Consolidate all scene data into a scene struct
-Hide scene data implementation in generateMeshTriangles()
 Add texture mapping
 for scene data structures, pass by pointers in push functions instead
 Optimize mesh loading

@@ -1,4 +1,4 @@
-3# Materials
+# Materials
 
 MATERIAL TRANSPARENT
 NAME trans1
@@ -62,7 +62,7 @@ LOCATION 0.5 1.0 -1
 Orientation 130 0 0
 MATERIAL ref1
 
-OBJECT MESH
+#OBJECT MESH
 FILE models/teapot.obj
 CAST_SHADOW yes
 SMOOTH yes
@@ -70,6 +70,15 @@ SCALING 0.03 0.03 0.03
 LOCATION 0.5 1.0 -1
 Orientation 0 0 0
 MATERIAL ref1
+
+OBJECT MESH
+FILE models/crysponza.obj
+CAST_SHADOW yes
+SMOOTH yes
+SCALING 0.03 0.03 0.03
+LOCATION 0.5 1.0 -1
+Orientation 0 0 0
+MATERIAL matte1
 
 #OBJECT AABOX
 CAST_SHADOW yes

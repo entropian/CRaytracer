@@ -216,6 +216,21 @@ void SceneMeshes_destroy(SceneMeshes* s_meshes)
     s_meshes->max = 0;    
 }
 
+OBJShape** findMeshes(int* num_meshes, const SceneMeshes* s_meshes, const char* name)
+{
+    DBuffer mesh_buffer = DBuffer_create(OBJShape*);
+    for(int i = 0; i < s_meshes->size; i++)
+    {
+        OBJShape* mesh_ptr = &(s_meshes->meshes[i]);
+        if(strcmp(name, mesh_ptr->mesh_name) == 0)
+        {
+            DBuffer_push(mesh_buffer, mesh_ptr);
+        }
+    }
+    *num_meshes = DBuffer_size(mesh_buffer);
+    return (OBJShape**)(mesh_buffer.data);
+}
+
 typedef struct SceneLights
 {
     int num_lights;

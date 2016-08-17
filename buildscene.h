@@ -21,7 +21,7 @@
 #include "objloader/objloader.h"
 
 // Assuming mesh->normals and mesh->face_normals are uninitialized
-void computeMeshNormals(OBJShape* mesh)
+void computeTriangleNormals(OBJShape* mesh)
 {
     mesh->face_normals = (float*)malloc(sizeof(float) * mesh->num_indices);
     int num_face_normals = 0;
@@ -88,114 +88,114 @@ void computeMeshNormals(OBJShape* mesh)
     }
 }
 
-void generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
+int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
 {
     mat3 rotation;
     eulerAngToMat3(rotation, mesh_entry.orientation);
 
-    SceneMeshes* s_meshes = &(scene->meshes);
-    SceneMaterials* sm = &(scene->materials);
-    for(int i = 0; i < s_meshes->size; i++)
+    int num_mesh_found = 0;
+    OBJShape** meshes = Scene_findMeshes(&num_mesh_found, scene, mesh_entry.mesh_name);
+    Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
+    int triangle_count = 0;
+    for(int i = 0; i < num_mesh_found; i++)
     {
-        if(strcmp(mesh_entry.mesh_name, s_meshes->meshes[i].mesh_name) == 0)
+        OBJShape* mesh = meshes[i];
+        triangle_count += mesh->num_indices / 3;
+        for(int j = 0; j < mesh->num_indices; j += 3)
         {
-            OBJShape* mesh = &(s_meshes->meshes[i]);
-            Material* mat = findMaterial(mesh_entry.mat_name, sm);
-            for(int j = 0; j < mesh->num_indices; j += 3)
-            {
-                int i0, i1, i2;
-                i0 = mesh->indices[j];
-                i1 = mesh->indices[j + 1];
-                i2 = mesh->indices[j + 2];
+            int i0, i1, i2;
+            i0 = mesh->indices[j];
+            i1 = mesh->indices[j + 1];
+            i2 = mesh->indices[j + 2];
 
-                vec3 v0, v1, v2;
-                int index;
-                index = i0 * 3;
-                vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
-                            mesh->positions[index+2]);
-                index = i1 * 3;    
-                vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
-                            mesh->positions[index+2]);
-                index = i2 * 3;
-                vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
-                            mesh->positions[index+2]);
+            vec3 v0, v1, v2;
+            int index;
+            index = i0 * 3;
+            vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
+                        mesh->positions[index+2]);
+            index = i1 * 3;    
+            vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
+                        mesh->positions[index+2]);
+            index = i2 * 3;
+            vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
+                        mesh->positions[index+2]);
 
-                vec3_mult(v0, mesh_entry.scaling, v0);
-                vec3_mult(v1, mesh_entry.scaling, v1);
-                vec3_mult(v2, mesh_entry.scaling, v2);
+            vec3_mult(v0, mesh_entry.scaling, v0);
+            vec3_mult(v1, mesh_entry.scaling, v1);
+            vec3_mult(v2, mesh_entry.scaling, v2);
 
-                vec3 new_v0, new_v1, new_v2;
-                mat3_mult_vec3(new_v0, rotation, v0);
-                mat3_mult_vec3(new_v1, rotation, v1);
-                mat3_mult_vec3(new_v2, rotation, v2);                
+            vec3 new_v0, new_v1, new_v2;
+            mat3_mult_vec3(new_v0, rotation, v0);
+            mat3_mult_vec3(new_v1, rotation, v1);
+            mat3_mult_vec3(new_v2, rotation, v2);                
                 
-                vec3_add(new_v0, mesh_entry.location, new_v0);
-                vec3_add(new_v1, mesh_entry.location, new_v1);
-                vec3_add(new_v2, mesh_entry.location, new_v2);
+            vec3_add(new_v0, mesh_entry.location, new_v0);
+            vec3_add(new_v1, mesh_entry.location, new_v1);
+            vec3_add(new_v2, mesh_entry.location, new_v2);
 
-                vec3 inv_scale = {1.0f/mesh_entry.scaling[0], 1.0f/mesh_entry.scaling[1], 1.0f/mesh_entry.scaling[2]};                
-                if(!mesh_entry.smooth)
-                {
-                    FlatTriangle* mesh_tri = (FlatTriangle*)malloc(sizeof(FlatTriangle));
-                    mesh_tri->i0 = i0;
-                    mesh_tri->i1 = i1;
-                    mesh_tri->i2 = i2;
-                    vec3_copy(mesh_tri->v0, new_v0);
-                    vec3_copy(mesh_tri->v1, new_v1);
-                    vec3_copy(mesh_tri->v2, new_v2);                    
-                    // Instead of computing an inverse transpose for transforming normals, I just inverted the scaling
-                    // and ignored translation
-                    vec3 face_normal = {mesh->face_normals[j], mesh->face_normals[j+1], mesh->face_normals[j+2]};
-                    vec3 new_face_normal;
-                    vec3_mult(face_normal, inv_scale, face_normal);
-                    mat3_mult_vec3(new_face_normal, rotation, face_normal);
-                    vec3_normalize(new_face_normal, new_face_normal);
-                    vec3_copy(mesh_tri->normal, new_face_normal);                     
-                    mesh_tri->shadow = mesh_entry.shadow;
-                    mesh_tri->mesh_ptr = mesh;
-                    mesh_tri->mat = mat;                                    
-                    Object_t obj = {FLAT_TRIANGLE, mesh_tri};
-                    Scene_addObject(scene, &obj);
-                }else
-                {
-                    SmoothTriangle* mesh_tri = (SmoothTriangle*)malloc(sizeof(SmoothTriangle));
-                    mesh_tri->i0 = i0;
-                    mesh_tri->i1 = i1;
-                    mesh_tri->i2 = i2;
-                    vec3_copy(mesh_tri->v0, new_v0);
-                    vec3_copy(mesh_tri->v1, new_v1);
-                    vec3_copy(mesh_tri->v2, new_v2);                                        
-                    vec3 normal, transformed_normal;
-                    int index = i0 * 3;
-                    vec3_assign(normal, mesh->normals[index],
-                                mesh->normals[index+1], mesh->normals[index+2]);
-                    vec3_mult(normal, inv_scale, normal);
-                    mat3_mult_vec3(transformed_normal, rotation, normal);
-                    vec3_normalize(transformed_normal, transformed_normal);
-                    vec3_copy(mesh_tri->n0, transformed_normal);
-                    index = i1 * 3;
-                    vec3_assign(normal, mesh->normals[index],
-                                mesh->normals[index+1], mesh->normals[index+2]);
-                    vec3_mult(normal, inv_scale, normal);
-                    mat3_mult_vec3(transformed_normal, rotation, normal);
-                    vec3_normalize(transformed_normal, transformed_normal);                    
-                    vec3_copy(mesh_tri->n1, transformed_normal);
-                    index = i2 * 3;
-                    vec3_assign(normal, mesh->normals[index],
-                                mesh->normals[index+1], mesh->normals[index+2]);
-                    vec3_mult(normal, inv_scale, normal);
-                    mat3_mult_vec3(transformed_normal, rotation, normal);
-                    vec3_normalize(transformed_normal, transformed_normal);                    
-                    vec3_copy(mesh_tri->n2, transformed_normal);
-                    mesh_tri->shadow = mesh_entry.shadow;
-                    mesh_tri->mesh_ptr = mesh;
-                    mesh_tri->mat = mat;                                    
-                    Object_t obj = {SMOOTH_TRIANGLE, mesh_tri};
-                    Scene_addObject(scene, &obj);                    
-                }                
-            }
-        }
+            vec3 inv_scale = {1.0f/mesh_entry.scaling[0], 1.0f/mesh_entry.scaling[1], 1.0f/mesh_entry.scaling[2]};                
+            if(!mesh_entry.smooth)
+            {
+                FlatTriangle* mesh_tri = (FlatTriangle*)malloc(sizeof(FlatTriangle));
+                mesh_tri->i0 = i0;
+                mesh_tri->i1 = i1;
+                mesh_tri->i2 = i2;
+                vec3_copy(mesh_tri->v0, new_v0);
+                vec3_copy(mesh_tri->v1, new_v1);
+                vec3_copy(mesh_tri->v2, new_v2);                    
+                // Instead of computing an inverse transpose for transforming normals, I just inverted the scaling
+                // and ignored translation
+                vec3 face_normal = {mesh->face_normals[j], mesh->face_normals[j+1], mesh->face_normals[j+2]};
+                vec3 new_face_normal;
+                vec3_mult(face_normal, inv_scale, face_normal);
+                mat3_mult_vec3(new_face_normal, rotation, face_normal);
+                vec3_normalize(new_face_normal, new_face_normal);
+                vec3_copy(mesh_tri->normal, new_face_normal);                     
+                mesh_tri->shadow = mesh_entry.shadow;
+                mesh_tri->mesh_ptr = mesh;
+                mesh_tri->mat = mat;                                    
+                Object_t obj = {FLAT_TRIANGLE, mesh_tri};
+                Scene_addObject(scene, &obj);
+            }else
+            {
+                SmoothTriangle* mesh_tri = (SmoothTriangle*)malloc(sizeof(SmoothTriangle));
+                mesh_tri->i0 = i0;
+                mesh_tri->i1 = i1;
+                mesh_tri->i2 = i2;
+                vec3_copy(mesh_tri->v0, new_v0);
+                vec3_copy(mesh_tri->v1, new_v1);
+                vec3_copy(mesh_tri->v2, new_v2);                                        
+                vec3 normal, transformed_normal;
+                int index = i0 * 3;
+                vec3_assign(normal, mesh->normals[index],
+                            mesh->normals[index+1], mesh->normals[index+2]);
+                vec3_mult(normal, inv_scale, normal);
+                mat3_mult_vec3(transformed_normal, rotation, normal);
+                vec3_normalize(transformed_normal, transformed_normal);
+                vec3_copy(mesh_tri->n0, transformed_normal);
+                index = i1 * 3;
+                vec3_assign(normal, mesh->normals[index],
+                            mesh->normals[index+1], mesh->normals[index+2]);
+                vec3_mult(normal, inv_scale, normal);
+                mat3_mult_vec3(transformed_normal, rotation, normal);
+                vec3_normalize(transformed_normal, transformed_normal);                    
+                vec3_copy(mesh_tri->n1, transformed_normal);
+                index = i2 * 3;
+                vec3_assign(normal, mesh->normals[index],
+                            mesh->normals[index+1], mesh->normals[index+2]);
+                vec3_mult(normal, inv_scale, normal);
+                mat3_mult_vec3(transformed_normal, rotation, normal);
+                vec3_normalize(transformed_normal, transformed_normal);                    
+                vec3_copy(mesh_tri->n2, transformed_normal);
+                mesh_tri->shadow = mesh_entry.shadow;
+                mesh_tri->mesh_ptr = mesh;
+                mesh_tri->mat = mat;                                    
+                Object_t obj = {SMOOTH_TRIANGLE, mesh_tri};
+                Scene_addObject(scene, &obj);                    
+            }                
+        }        
     }
+    return triangle_count;
 }
 
 void initSceneObjects(Scene* scene, const char* scenefile)
@@ -231,7 +231,7 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     {
                         for(int i = 0; i < num_mesh; i++)
                         {
-                            computeMeshNormals(&(shapes[i]));
+                            computeTriangleNormals(&(shapes[i]));
                             Scene_addMesh(scene, &(shapes[i]));
                         }
                     }

@@ -19,6 +19,15 @@ Scene Scene_create()
     return scene;
 }
 
+void Scene_destroy(Scene* scene)
+{
+    freeSceneObjects(&(scene->objects));
+    SceneMaterials_destroy(&(scene->materials));
+    SceneMeshes_destroy(&(scene->meshes));
+    freeSceneLights(&(scene->lights));    
+}
+
+
 void Scene_addObject(Scene* scene, const Object_t* obj)
 {
     SceneObjects_push_obj(&(scene->objects), obj);
@@ -39,10 +48,7 @@ Material* Scene_findMaterial(Scene* scene, const char* name)
     return findMaterial(name, &(scene->materials));
 }
 
-void Scene_destroy(Scene* scene)
+OBJShape** Scene_findMeshes(int* num_meshes, const Scene* scene, const char* name)
 {
-    freeSceneObjects(&(scene->objects));
-    SceneMaterials_destroy(&(scene->materials));
-    SceneMeshes_destroy(&(scene->meshes));
-    freeSceneLights(&(scene->lights));    
+    return findMeshes(num_meshes, &(scene->meshes), name);
 }
