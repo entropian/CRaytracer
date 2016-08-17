@@ -5,12 +5,9 @@
 #include "util/ray.h"
 #include "util/shaderec.h"
 #include "util/constants.h"
-#include "sceneobj.h"
+#include "scenedata.h"
 #include "shading.h"
 #include "intersect.h"
-
-float kr_max = -2.0f;
-float kr_min = 2.0f;
 
 enum TraceType
 {

@@ -35,11 +35,11 @@ SceneObjects SceneObjects_create()
     return so;
 }
 
-void SceneObjects_push_obj(SceneObjects* so, Object_t obj)
+void SceneObjects_push_obj(SceneObjects* so, const Object_t* obj)
 {
     DBuffer obj_buffer;
     DBuffer_assume(&obj_buffer, (char*)so->objects, so->num_obj, so->max, sizeof(Object_t));    
-    DBuffer_push(obj_buffer, obj);
+    DBuffer_push(obj_buffer, *obj);
     so->objects = (Object_t*)(obj_buffer.data);
     so->num_obj = DBuffer_size(obj_buffer);
     so->max = DBuffer_max_elements(obj_buffer);
@@ -60,6 +60,7 @@ SceneTextures SceneTextures_create()
     st.names = (char**)malloc(sizeof(char*) * DEFAULT_NUM_TEXTURES);
     st.size = 0;
     st.max = DEFAULT_NUM_TEXTURES;
+    return st;
 }
 
 void SceneTextures_destroy(SceneTextures* st)
@@ -74,11 +75,11 @@ void SceneTextures_destroy(SceneTextures* st)
     st->size = st->max = 0;    
 }
 
-Texture* SceneTextures_push(SceneTextures* st, const Texture tex, const char* name)
+Texture* SceneTextures_push(SceneTextures* st, const Texture* tex, const char* name)
 {
     DBuffer tex_buffer;
     DBuffer_assume(&tex_buffer, (char*)st->textures, st->size, st->max, sizeof(Texture));
-    DBuffer_push(tex_buffer, tex);
+    DBuffer_push(tex_buffer, *tex);
 
     DBuffer name_buffer;
     DBuffer_assume(&name_buffer, (char*)st->names, st->size, st->max, sizeof(char*));
@@ -143,11 +144,11 @@ void SceneMaterials_destroy(SceneMaterials* sm)
     sm->size = sm->max = 0;
 }
 
-Material* SceneMaterials_push(SceneMaterials* sm, const Material mat, const char* name)
+Material* SceneMaterials_push(SceneMaterials* sm, const Material* mat, const char* name)
 {
     DBuffer mat_buffer;
     DBuffer_assume(&mat_buffer, (char*)sm->materials, sm->size, sm->max, sizeof(Material));
-    DBuffer_push(mat_buffer, mat);    
+    DBuffer_push(mat_buffer, *mat);    
 
     DBuffer name_buffer;
     DBuffer_assume(&name_buffer, (char*)sm->names, sm->size, sm->max, sizeof(char*));
@@ -192,11 +193,11 @@ SceneMeshes SceneMeshes_create()
     return s_meshes;
 }
 
-OBJShape* SceneMeshes_push(SceneMeshes* s_meshes, const OBJShape obj_shape)
+OBJShape* SceneMeshes_push(SceneMeshes* s_meshes, const OBJShape* obj_shape)
 {
     DBuffer mesh_buffer;
     DBuffer_assume(&mesh_buffer, (char*)s_meshes->meshes, s_meshes->size, s_meshes->max, sizeof(OBJShape));
-    DBuffer_push(mesh_buffer, obj_shape);
+    DBuffer_push(mesh_buffer, *obj_shape);
 
     s_meshes->meshes = (OBJShape*)(mesh_buffer.data);
     s_meshes->size = DBuffer_size(mesh_buffer);
@@ -206,6 +207,10 @@ OBJShape* SceneMeshes_push(SceneMeshes* s_meshes, const OBJShape obj_shape)
 
 void SceneMeshes_destroy(SceneMeshes* s_meshes)
 {
+    for(int i = 0; i < s_meshes->size; i++)
+    {
+        OBJShape_destroy(&(s_meshes->meshes[i]));
+    }
     free(s_meshes->meshes);
     s_meshes->size = 0;
     s_meshes->max = 0;    

@@ -223,7 +223,7 @@ int parseMaterials(SceneMaterials* sm, FILE* fp)
             Material mat;
             char* name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
             parseMatEntry(&mat, &name, fp);
-            SceneMaterials_push(sm, mat, name);
+            SceneMaterials_push(sm, &mat, name);
         }
     }
     return sm->size;
@@ -246,7 +246,7 @@ Material* findMaterial(const char* mat_name, Material* mat_array, char** name_ar
 #endif
 
 
-bool parseSphereEntry(Object_t* obj, FILE* fp, SceneMaterials* sm)
+bool parseSphereEntry(Object_t* obj, FILE* fp, Scene* scene)
 {
     char buffer[128];
     Sphere* sphere_ptr = (Sphere*)malloc(sizeof(Sphere));
@@ -281,14 +281,14 @@ bool parseSphereEntry(Object_t* obj, FILE* fp, SceneMaterials* sm)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name
-    sphere_ptr->mat = findMaterial(buffer, sm);
+    sphere_ptr->mat = Scene_findMaterial(scene, buffer);
 
     obj->ptr = sphere_ptr;
     obj->type = SPHERE;
     return true;    
 }
 
-bool parsePlaneEntry(Object_t* obj, FILE* fp, SceneMaterials* sm)
+bool parsePlaneEntry(Object_t* obj, FILE* fp, Scene* scene)
 {
     char buffer[128];
     Plane* plane_ptr = (Plane*)malloc(sizeof(Plane));
@@ -310,14 +310,14 @@ bool parsePlaneEntry(Object_t* obj, FILE* fp, SceneMaterials* sm)
     
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    plane_ptr->mat = findMaterial(buffer, sm);    
+    plane_ptr->mat = Scene_findMaterial(scene, buffer);    
 
     obj->ptr = plane_ptr;
     obj->type = PLANE;
     return true;
 }
 
-bool parseRectEntry(Object_t* obj, FILE* fp, SceneMaterials* sm)
+bool parseRectEntry(Object_t* obj, FILE* fp, Scene* scene)
 {
     char buffer[128];
     Rectangle* rect_ptr = (Rectangle*)malloc(sizeof(Rectangle));
@@ -345,14 +345,14 @@ bool parseRectEntry(Object_t* obj, FILE* fp, SceneMaterials* sm)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    rect_ptr->mat = findMaterial(buffer, sm);        
+    rect_ptr->mat = Scene_findMaterial(scene, buffer);        
 
     obj->ptr = rect_ptr;
     obj->type = RECTANGLE;
     return true;
 }
 
-bool parseTriangleEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
+bool parseTriangleEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     Triangle* tri_ptr = (Triangle*)malloc(sizeof(Triangle));
@@ -379,14 +379,14 @@ bool parseTriangleEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    tri_ptr->mat = findMaterial(buffer, sm);            
+    tri_ptr->mat = Scene_findMaterial(scene, buffer);        
 
     obj->ptr = tri_ptr;
     obj->type = TRIANGLE;
     return true;
 }
 
-bool parseAABoxEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
+bool parseAABoxEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     AABox* aabox_ptr = (AABox*)malloc(sizeof(AABox));
@@ -408,14 +408,14 @@ bool parseAABoxEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    aabox_ptr->mat = findMaterial(buffer, sm);                
+    aabox_ptr->mat = Scene_findMaterial(scene, buffer);        
 
     obj->ptr = aabox_ptr;
     obj->type = AABOX;
     return true;
 }
 
-bool parseOpenCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
+bool parseOpenCylEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     bool shadow;
@@ -462,7 +462,7 @@ bool parseOpenCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     Material* mat;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name
-    mat = findMaterial(buffer, sm);
+    mat = Scene_findMaterial(scene, buffer);
 
     mat4 inv_scale, rotation, inv_rotation, inv_translation, tmp, inv_transform;
     mat4_scale_inverse(inv_scale, scale);
@@ -477,7 +477,7 @@ bool parseOpenCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     return true;
 }
 
-bool parseSolidCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
+bool parseSolidCylEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     bool shadow;
@@ -520,7 +520,7 @@ bool parseSolidCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     Material* mat;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name
-    mat = findMaterial(buffer, sm);
+    mat = Scene_findMaterial(scene, buffer);
 
     mat4 inv_scale, rotation, inv_rotation, inv_translation, tmp, inv_transform;
     mat4_scale_inverse(inv_scale, scale);
@@ -530,13 +530,12 @@ bool parseSolidCylEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     mat4_mult(tmp, inv_scale, inv_rotation);
     mat4_mult(inv_transform, tmp, inv_translation);
 
-    //obj->ptr = initOpenCylinder(inv_transform, phi, mat, normal_type, shadow);
     obj->ptr = initSolidCylinder(inv_transform, 1.0f, 1.0f, (float)PI, mat, shadow);
     obj->type = INSTANCED;
     return true;
 }
 
-bool parseDiskEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
+bool parseDiskEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     Disk* disk_ptr = (Disk*)malloc(sizeof(Disk));
@@ -565,14 +564,14 @@ bool parseDiskEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    disk_ptr->mat = findMaterial(buffer, sm);                        
+    disk_ptr->mat = Scene_findMaterial(scene, buffer);                        
 
     obj->ptr = disk_ptr;
     obj->type = DISK;
     return true;
 }
 
-bool parseTorusEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
+bool parseTorusEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     bool shadow = true;
@@ -613,7 +612,7 @@ bool parseTorusEntry(Object_t* obj,  FILE* fp, SceneMaterials* sm)
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name
     printf("buffer name %s\n", buffer);
-    mat = findMaterial(buffer, sm);
+    mat = Scene_findMaterial(scene, buffer);
 
     mat4 inv_scale, rotation, inv_rotation, inv_translation, tmp, inv_transform;
     mat4_scale_inverse(inv_scale, scale);
@@ -714,36 +713,36 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
     return num_mesh;
 }
 
-bool parsePrimitive(Object_t* obj, FILE* fp, SceneMaterials* sm, const char* prim_name)
+bool parsePrimitive(Object_t* obj, FILE* fp, Scene* scene, const char* prim_name)
 {
     bool parse_status = false;
     if(strcmp(prim_name, "SPHERE") == 0)
     {
-        parse_status = parseSphereEntry(obj, fp, sm);
+        parse_status = parseSphereEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "PLANE") == 0)
     {
-        parse_status = parsePlaneEntry(obj, fp, sm);
+        parse_status = parsePlaneEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "RECTANGLE") == 0)
     {
-        parse_status = parseRectEntry(obj, fp, sm);
+        parse_status = parseRectEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "TRIANGLE") == 0)
     {
-        parse_status = parseTriangleEntry(obj, fp, sm);
+        parse_status = parseTriangleEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "AABOX") == 0)
     {
-        parse_status = parseAABoxEntry(obj, fp, sm);
+        parse_status = parseAABoxEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "OPENCYLINDER") == 0)
     {
-        parse_status = parseOpenCylEntry(obj, fp, sm);
+        parse_status = parseOpenCylEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "DISK") == 0)
     {
-        parse_status = parseDiskEntry(obj, fp, sm);
+        parse_status = parseDiskEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "TORUS") == 0)
     {
-        parse_status = parseTorusEntry(obj, fp, sm);
+        parse_status = parseTorusEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "SOLIDCYLINDER") == 0)
     {
-        parse_status = parseSolidCylEntry(obj, fp, sm);
+        parse_status = parseSolidCylEntry(obj, fp, scene);
     }
     return parse_status;
 }

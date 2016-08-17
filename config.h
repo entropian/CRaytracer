@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "util/util.h"
-#include "sceneobj.h"
+#include "scenedata.h"
 #include "trace.h"
 
-typedef struct
+typedef struct ConfigParams_s
 {    
     unsigned int window_width;
     unsigned int window_height;

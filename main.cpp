@@ -26,7 +26,8 @@
 #include "sampling.h"
 #include "camera.h"
 #include "lights.h"
-#include "sceneobj.h"
+//#include "sceneobj.h"
+#include "scene.h"
 #include "shading.h"
 #include "buildscene.h"
 #include "intersect.h"
@@ -95,11 +96,8 @@ int main()
     mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
 
     // Scene data structures
-    SceneLights scene_lights;
-    SceneObjects scene_objects = SceneObjects_create();
-    SceneMaterials scene_materials = SceneMaterials_create();
-    SceneMeshes scene_meshes = SceneMeshes_create();
-    initScene(&scene_objects, &scene_lights, &scene_materials, &scene_meshes, params.file_name, params.accel_type);
+    Scene scene = Scene_create();
+    initScene(&scene, params.file_name, params.accel_type);
 
     // Camera
     Camera camera;
@@ -149,7 +147,7 @@ int main()
             getNextSample3D(h_sample, &h_samples);
 
             vec3 radiance;
-            trace(radiance, params.max_depth, h_sample, ray, &scene_objects, &scene_lights);
+            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights));
             vec3_add(color, color, radiance);
         }        
         vec3_scale(color, color, 1.0f/NUM_SAMPLES);
@@ -180,11 +178,8 @@ int main()
     freeSamples2D(&unit_square_samples);
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
-    freeSceneObjects(&scene_objects);
-    freeSceneLights(&scene_lights);
+    Scene_destroy(&scene);
     Camera_destroy(&camera);
-    SceneMaterials_destroy(&scene_materials);
-    SceneMeshes_destroy(&scene_meshes);
 
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;

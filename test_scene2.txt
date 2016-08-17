@@ -53,7 +53,7 @@ POINT 0.0 -1.0 0.0
 NORMAL 0.0 1.0 0.0
 MATERIAL matte1
 
-OBJECT MESH
+#OBJECT MESH
 FILE models/dragon.obj
 CAST_SHADOW yes
 SMOOTH yes
@@ -62,8 +62,8 @@ LOCATION 0.5 1.0 -1
 Orientation 130 0 0
 MATERIAL ref1
 
-#OBJECT MESH
-FILE teapot.obj
+OBJECT MESH
+FILE models/teapot.obj
 CAST_SHADOW yes
 SMOOTH yes
 SCALING 0.03 0.03 0.03

@@ -14,7 +14,8 @@
 #include "sampling.h"
 #include "camera.h"
 #include "lights.h"
-#include "sceneobj.h"
+#include "scenedata.h"
+#include "scene.h"
 #include "scenefile.h"
 #include "shading.h"
 #include "objloader/objloader.h"
@@ -87,12 +88,13 @@ void computeMeshNormals(OBJShape* mesh)
     }
 }
 
-void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const SceneMaterials *sm,
-                           const SceneMeshes* s_meshes)
+void generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
 {
     mat3 rotation;
     eulerAngToMat3(rotation, mesh_entry.orientation);
-    
+
+    SceneMeshes* s_meshes = &(scene->meshes);
+    SceneMaterials* sm = &(scene->materials);
     for(int i = 0; i < s_meshes->size; i++)
     {
         if(strcmp(mesh_entry.mesh_name, s_meshes->meshes[i].mesh_name) == 0)
@@ -153,7 +155,7 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
                     mesh_tri->mesh_ptr = mesh;
                     mesh_tri->mat = mat;                                    
                     Object_t obj = {FLAT_TRIANGLE, mesh_tri};
-                    SceneObjects_push_obj(so, obj);                    
+                    Scene_addObject(scene, &obj);
                 }else
                 {
                     SmoothTriangle* mesh_tri = (SmoothTriangle*)malloc(sizeof(SmoothTriangle));
@@ -189,15 +191,14 @@ void generateMeshTriangles(SceneObjects*so, const MeshEntry mesh_entry, const Sc
                     mesh_tri->mesh_ptr = mesh;
                     mesh_tri->mat = mat;                                    
                     Object_t obj = {SMOOTH_TRIANGLE, mesh_tri};
-                    SceneObjects_push_obj(so, obj);                    
+                    Scene_addObject(scene, &obj);                    
                 }                
             }
         }
     }
 }
 
-void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshes,
-                      const SceneLights* sl, const char* scenefile)
+void initSceneObjects(Scene* scene, const char* scenefile)
 {
     FILE* fp;
 #ifdef _MSC_VER
@@ -207,7 +208,7 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
 #endif
     if(fp)
     {
-        int num_mat = parseMaterials(sm, fp);
+        int num_mat = parseMaterials(&(scene->materials), fp);
         char buffer[128];
         while(getNextTokenInFile(buffer, fp))
         {
@@ -220,7 +221,7 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                 getNextTokenInFile(buffer, fp);
                 if(strcmp(buffer, "MESH") == 0)
                 {
-                    OBJShape* shapes;
+                    OBJShape* shapes = NULL;
                     int num_mesh;
                     char mesh_file_names[MAX_MESH][NAME_LENGTH];
                     int num_file_names = 0;
@@ -231,33 +232,34 @@ void initSceneObjects(SceneObjects *so, SceneMaterials *sm, SceneMeshes* s_meshe
                         for(int i = 0; i < num_mesh; i++)
                         {
                             computeMeshNormals(&(shapes[i]));
-                            SceneMeshes_push(s_meshes, shapes[i]);
+                            Scene_addMesh(scene, &(shapes[i]));
                         }
                     }
-                    free(shapes);
+                    if(shapes){free(shapes);}
                     if(num_mesh != -1)
                     {
-                        generateMeshTriangles(so, mesh_entry, sm, s_meshes);
+                        generateMeshTriangles(scene, mesh_entry);
                     }
                 }else
                 {
                     Object_t obj;                    
-                    if(parsePrimitive(&obj, fp, sm, buffer))
+                    if(parsePrimitive(&obj, fp, scene, buffer))
                     {
-                        SceneObjects_push_obj(so, obj);
+                        Scene_addObject(scene, &obj);
                     }
                 }
             }   
         }
     }
-    
+
+    SceneLights* sl = &(scene->lights);
     for(int i = 0; i < sl->num_lights; i++)
     {
         if(sl->light_types[i] == AREALIGHT)
         {
             AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
             Object_t obj = {area_light_ptr->obj_type, area_light_ptr->obj_ptr};
-            SceneObjects_push_obj(so, obj);
+            Scene_addObject(scene, &obj);
         }
     }
 }
@@ -407,12 +409,12 @@ void initSceneLights(SceneLights* sl)
     initBackgroundColor(sl);
 }
 
-void initScene(SceneObjects* so, SceneLights* sl, SceneMaterials* sm, SceneMeshes* s_meshes,
-               const char* scenefile, const AccelType accel_type)
+void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
 {
     // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
-    initSceneLights(sl);    
-    initSceneObjects(so, sm, s_meshes, sl, scenefile);
+    initSceneLights(&(scene->lights));    
+    initSceneObjects(scene, scenefile);
+    SceneObjects* so = &(scene->objects);
     mvNonGridObjToStart(so);
     printf("num_obj %d\n", so->num_obj);
     printf("non grid obj %d\n", so->num_non_grid_obj);
