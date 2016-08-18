@@ -13,7 +13,7 @@
 #define strncpy_s(a, b, c, d) strncpy((a), (c), (d))
 #endif
 
-typedef struct
+typedef struct OBJShape_s
 {
     float* positions;
     float* normals;
@@ -40,7 +40,7 @@ void OBJShape_destroy(OBJShape* obj_shape)
     obj_shape->num_face_normals = 0;
 }
 
-typedef struct
+typedef struct VertexIndex_s
 {
     int v_idx, vn_idx, vt_idx;
 }VertexIndex;

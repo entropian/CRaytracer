@@ -108,11 +108,30 @@ float rayIntersectTriangle(ShadeRec* sr, Triangle* tri, const Ray ray)
     return t;
 }
 
+void interpTexcoord(vec2 uv_out,const float beta, const float gamma,
+                    const OBJShape* mesh_ptr, const int i0, const int i1, const int i2)
+{
+    vec2 uv0 = {mesh_ptr->texcoords[i0*2], mesh_ptr->texcoords[i0*2 + 1]};
+    vec2 uv1 = {mesh_ptr->texcoords[i1*2], mesh_ptr->texcoords[i1*2 + 1]};
+    vec2 uv2 = {mesh_ptr->texcoords[i2*2], mesh_ptr->texcoords[i2*2 + 1]};
+
+    vec2 tmp;
+    vec2_scale(uv_out, uv0, 1.0f - beta - gamma);
+    vec2_scale(tmp, uv1, beta);
+    vec2_add(uv_out, uv_out, tmp);
+    vec2_scale(tmp, uv2, gamma);
+    vec2_add(uv_out, uv_out, tmp);
+}
+
 float rayIntersectFlatTriangle(ShadeRec* sr, FlatTriangle* tri, const Ray ray)
 {
     float gamma, beta; // For smooth triangles. Unused here.    
     float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
 
+    if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_type != NO_TEXTURE)
+    {
+        interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
+    }    
     vec3_copy(sr->normal, tri->normal);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);    
@@ -120,7 +139,7 @@ float rayIntersectFlatTriangle(ShadeRec* sr, FlatTriangle* tri, const Ray ray)
     return t;
 }
 
-void interpolateNormal(vec3 normal, const float beta, const float gamma,
+void interpTriangleNormal(vec3 normal, const float beta, const float gamma,
                        const SmoothTriangle* tri)
 {
     vec3 tmp;
@@ -138,9 +157,17 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);    
     if(t == TMAX){return t;}
     
-    vec3 interp_normal;
-    interpolateNormal(interp_normal, beta, gamma, tri);
-    vec3_copy(sr->normal, interp_normal);
+    if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_type != NO_TEXTURE)
+    {
+        interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
+    }
+    /*
+    if(sr->uv[0] < 0.0f || sr->uv[0] > 1.0f || sr->uv[1] < 0.0f || sr->uv[1] > 1.0f)
+    {
+        interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
+    }
+    */
+    interpTriangleNormal(sr->normal, beta, gamma, tri);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);    
     sr->mat = tri->mat;

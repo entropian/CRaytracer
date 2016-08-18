@@ -52,7 +52,7 @@ TEXTURE textures/sample.png
 
 END_MATERIALS
 
-OBJECT PLANE
+#OBJECT PLANE
 CAST_SHADOW yes
 POINT 0.0 -1.0 0.0
 NORMAL 0.0 1.0 0.0
@@ -67,23 +67,23 @@ LOCATION 0.5 1.0 -1
 Orientation 130 0 0
 MATERIAL ref1
 
-OBJECT MESH
+#OBJECT MESH
 FILE models/teapot.obj
 CAST_SHADOW yes
 SMOOTH yes
 SCALING 0.03 0.03 0.03
 LOCATION 0.5 1.0 -1
 Orientation 0 0 0
-MATERIAL ref1
+MATERIAL matte2
 
-#OBJECT MESH
+OBJECT MESH
 FILE models/crysponza.obj
 CAST_SHADOW yes
 SMOOTH yes
 SCALING 0.03 0.03 0.03
 LOCATION 0.5 1.0 -1
 Orientation 0 0 0
-MATERIAL matte1
+MATERIAL matte2
 
 #OBJECT MESH
 FILE models/sanMiguel.obj

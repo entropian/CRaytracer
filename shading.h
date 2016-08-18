@@ -9,11 +9,20 @@
 #include "scenedata.h"
 #include "sampling.h"
 #include "intersect.h"
+#include "texture.h"
 
 void diffuseBRDF(vec3 f, const ShadeRec* sr)
 {
     vec3 reflectance;
-    vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
+    if(sr->mat->tex_type == NO_TEXTURE)
+    {
+        vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
+    }else
+    {
+        vec3 texel;
+        getTexColor(texel, sr->mat->tex, sr->uv);
+        vec3_scale(reflectance, texel, sr->mat->kd);
+    }
     vec3_scale(f, reflectance, 1.0f/(float)PI);
 }
 
