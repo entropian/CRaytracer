@@ -1,14 +1,17 @@
 #pragma once
 #include <stdio.h>
+#include <stdint.h>
 #include "objloader/objloader.h"
 
 typedef struct Mesh_s
 {
     float* positions;
     float* normals;
-    float* texcoords;
+    float* texcoords;    
     int* indices;
     float* face_normals;
+    vec3* tangents;
+    int8_t* det;
     int num_positions, num_normals, num_texcoords, num_indices, num_face_normals;
     char mat_name[30];
     char mesh_name[30];    

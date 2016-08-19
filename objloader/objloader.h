@@ -8,10 +8,24 @@
 #include "hashindex.h"
 
 #define OBJ_NAME_LENGTH 30
-#ifndef _MSC_VER
-#define strcpy_s(a, b, c) strcpy((a), (c))
-#define strncpy_s(a, b, c, d) strncpy((a), (c), (d))
+
+void stringCopy(char* dest, const int max_len, const char* src)
+{
+#ifdef _MSC_VER
+    strcpy_s(dest, max_len, src);
+#elif
+    strcpy(dest, src);
 #endif
+}
+
+void stringNCopy(char* dest, const int max_len, const char*src, const int len)
+{
+#ifdef _MSC_VER
+    strncpy_s(dest, max_len, src, len);
+#elif
+    strncpy(dest, src, len);
+#endif
+}
 
 typedef struct OBJShape_s
 {
@@ -303,7 +317,7 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     char mesh_name[128];
     int i;
     for(i = 0; file_name[i] != '.'; i++){}
-    strncpy_s(mesh_name, OBJ_NAME_LENGTH, file_name, i);
+    stringNCopy(mesh_name, OBJ_NAME_LENGTH, file_name, i);
     mesh_name[i] = '\0';
 
     DBuffer obj_shapes = DBuffer_create(OBJShape);
@@ -397,8 +411,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
             OBJShape shape;
             if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
             {
-                strcpy_s(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
-                strcpy_s(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
+                stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+                stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
                 DBuffer_push(obj_shapes, shape);
             }
         }
@@ -408,8 +422,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
             OBJShape shape;
             if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
             {
-                strcpy_s(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
-                strcpy_s(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
+                stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+                stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
                 DBuffer_push(obj_shapes, shape);
             }
             line_ptr += 6;    // Skip over "usemtl"
@@ -428,8 +442,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     OBJShape shape;
     if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
     {
-        strcpy_s(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
-        strcpy_s(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);        
+        stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+        stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);        
         DBuffer_push(obj_shapes, shape);
     }
     printf("num shapes %d\n", DBuffer_size(obj_shapes));

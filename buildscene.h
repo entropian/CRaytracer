@@ -22,16 +22,10 @@
 #include "mesh.h"
 
 // Assuming mesh->normals and mesh->face_normals are uninitialized
-void computeTriangleNormals(Mesh* mesh)
+void calcTriangleNormals(Mesh* mesh)
 {
     mesh->face_normals = (float*)malloc(sizeof(float) * mesh->num_indices);
     int num_face_normals = 0;
-    mesh->normals = (float*)malloc(sizeof(float) * mesh->num_positions);
-    mesh->num_normals = mesh->num_positions;
-    for(int i = 0; i < mesh->num_normals; i++)
-    {
-        mesh->normals[i] = 0.0f;
-    }
 
     for(int i = 0; i < mesh->num_indices; i += 3)
     {
@@ -59,7 +53,16 @@ void computeTriangleNormals(Mesh* mesh)
     }
     mesh->num_face_normals = num_face_normals;
 
-
+    if(mesh->num_normals > 0)
+    {
+        return;
+    }
+    mesh->normals = (float*)malloc(sizeof(float) * mesh->num_positions);
+    mesh->num_normals = mesh->num_positions;
+    for(int i = 0; i < mesh->num_normals; i++)
+    {
+        mesh->normals[i] = 0.0f;
+    }    
     for(int i = 0; i < mesh->num_indices; i += 3)
     {
         int normal_index, face_normal_index;
@@ -87,6 +90,85 @@ void computeTriangleNormals(Mesh* mesh)
         mesh->normals[i+1] = normal[1];
         mesh->normals[i+2] = normal[2];        
     }
+}
+
+void calcTangentVec(Mesh* mesh)
+{
+    int vert_count = mesh->num_positions / 3;    
+    vec3* tangents = (vec3*)malloc(sizeof(vec3) * vert_count);
+    vec3* binormals = (vec3*)malloc(sizeof(vec3) * vert_count);
+    int8_t* det = (int8_t*)malloc(sizeof(int8_t) * vert_count);
+    for(int i = 0; i < mesh->num_positions / 3; i++)
+    {
+        vec3_copy(tangents[i], BLACK);
+        vec3_copy(binormals[i], BLACK);
+    }
+    for(int i = 0; i < mesh->num_indices; i+=3)
+    {
+        int i0 = mesh->indices[i];
+        int i1 = mesh->indices[i+1];
+        int i2 = mesh->indices[i+2];
+        vec3 v0 = {mesh->positions[i0*3], mesh->positions[i0*3 + 1], mesh->positions[i0*3 + 2]};
+        vec3 v1 = {mesh->positions[i1*3], mesh->positions[i1*3 + 1], mesh->positions[i1*3 + 2]};
+        vec3 v2 = {mesh->positions[i2*3], mesh->positions[i2*3 + 1], mesh->positions[i2*3 + 2]};
+        vec2 uv0 = {mesh->texcoords[i0*2], mesh->texcoords[i0*2]};
+        vec2 uv1 = {mesh->texcoords[i1*2], mesh->texcoords[i1*2]};
+        vec2 uv2 = {mesh->texcoords[i2*2], mesh->texcoords[i2*2]};                
+        
+        vec3 q0, q1;
+        vec3_sub(q0, v1, v0);
+        vec3_sub(q1, v2, v0);
+        float s0 = uv1[0] - uv0[0];
+        float s1 = uv2[0] - uv0[0];
+        float t0 = uv1[1] - uv0[1];
+        float t1 = uv2[1] - uv0[1];
+
+        vec3 t1q0;
+        vec3_scale(t1q0, q0, t1);
+        vec3 t0q1;
+        vec3_scale(t0q1, q1, t0);
+        vec3 neg_s1q0;
+        vec3_scale(neg_s1q0, q0, -s1);
+        vec3 s0q1;
+        vec3_scale(s0q1, q1, s0);
+        
+        vec3 u_axis, v_axis;
+        vec3_sub(u_axis, t1q0, t0q1);
+        vec3_add(v_axis, neg_s1q0, s0q1);
+
+        vec3_add(tangents[i0], tangents[i0], u_axis);
+        vec3_add(binormals[i0], binormals[i0], v_axis);
+        vec3_add(tangents[i1], tangents[i1], u_axis);
+        vec3_add(binormals[i1], binormals[i1], v_axis);
+        vec3_add(tangents[i2], tangents[i2], u_axis);
+        vec3_add(binormals[i2], binormals[i2], v_axis);        
+    }
+
+    for(int i = 0; i < vert_count; i++)
+    {
+        vec3 normal = {mesh->normals[i*3], mesh->normals[i*3 + 1], mesh->normals[i*3 + 2]};
+
+        // Ensure tangent is perpendicular to the normal
+        vec3 displacement;
+        vec3_scale(displacement, normal, vec3_dot(normal, tangents[i]));
+        vec3_sub(tangents[i], tangents[i], displacement);
+        vec3_normalize(tangents[i], tangents[i]);
+
+        // Figure out if we're mirrored
+        vec3 tmp;
+        vec3_cross(tmp, normal, tangents[i]);
+        if(vec3_dot(tmp, binormals[i]) < 0.0f)
+        {
+            det[i] = -1;
+        }else
+        {
+            det[i] = 1;
+        }
+    }
+    // TODO: find a way to check if the mesh already has tangents and dets
+    mesh->tangents = tangents;
+    mesh->det = det;
+    free(binormals);
 }
 
 int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
@@ -201,60 +283,6 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
 
 void initSceneObjects(Scene* scene, const char* scenefile)
 {
-    FILE* fp;
-#ifdef _MSC_VER
-    fopen_s(&fp, scenefile, "r");
-#else
-    fp = fopen(scenefile, "r");
-#endif
-    if(fp)
-    {
-        int num_mat = parseMaterials(scene, fp);
-        char buffer[128];
-        while(getNextTokenInFile(buffer, fp))
-        {
-            if(buffer[0] == '#')
-            {
-                while(fgetc(fp) != '\n'){}
-            }
-            if(strcmp(buffer, "OBJECT") == 0)
-            {
-                getNextTokenInFile(buffer, fp);
-                if(strcmp(buffer, "MESH") == 0)
-                {
-                    OBJShape* shapes = NULL;
-                    int num_mesh;
-                    char mesh_file_names[MAX_MESH][NAME_LENGTH];
-                    int num_file_names = 0;
-                    MeshEntry mesh_entry;
-                    num_mesh = parseMesh(&mesh_entry, &shapes, mesh_file_names, &num_file_names, fp);
-                    if(num_mesh > 0)
-                    {
-                        for(int i = 0; i < num_mesh; i++)
-                        {
-                            Mesh mesh;
-                            Mesh_copyOBJShape(&mesh, &(shapes[i]));
-                            computeTriangleNormals(&mesh);
-                            Scene_addMesh(scene, &mesh);
-                        }
-                    }
-                    if(shapes){free(shapes);}
-                    if(num_mesh != -1)
-                    {
-                        generateMeshTriangles(scene, mesh_entry);
-                    }
-                }else
-                {
-                    Object_t obj;                    
-                    if(parsePrimitive(&obj, fp, scene, buffer))
-                    {
-                        Scene_addObject(scene, &obj);
-                    }
-                }
-            }   
-        }
-    }
-
     SceneLights* sl = &(scene->lights);
     for(int i = 0; i < sl->num_lights; i++)
     {
@@ -264,6 +292,65 @@ void initSceneObjects(Scene* scene, const char* scenefile)
             Object_t obj = {area_light_ptr->obj_type, area_light_ptr->obj_ptr};
             Scene_addObject(scene, &obj);
         }
+    }
+    
+    FILE* fp;
+#ifdef _MSC_VER
+    fopen_s(&fp, scenefile, "r");
+#else
+    fp = fopen(scenefile, "r");
+#endif
+    if(!fp)
+    {
+        return;
+    }
+        
+    int num_mat = parseMaterials(scene, fp);
+    char buffer[128];
+    while(getNextTokenInFile(buffer, fp))
+    {
+        if(buffer[0] == '#')
+        {
+            while(fgetc(fp) != '\n'){}
+        }
+        if(strcmp(buffer, "OBJECT") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            if(strcmp(buffer, "MESH") == 0)
+            {
+                OBJShape* shapes = NULL;
+                int num_mesh;
+                char mesh_file_names[MAX_MESH][NAME_LENGTH];
+                int num_file_names = 0;
+                MeshEntry mesh_entry;
+                num_mesh = parseMesh(&mesh_entry, &shapes, mesh_file_names, &num_file_names, fp);
+                for(int i = 0; i < num_mesh; i++)
+                {
+                    Mesh mesh;
+                    Mesh_copyOBJShape(&mesh, &(shapes[i]));
+                    calcTriangleNormals(&mesh);
+                    Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
+                    if(mat->tex_flags & NORMAL)
+                    {
+                        calcTangentVec(&mesh);
+                    }
+                    Scene_addMesh(scene, &mesh);
+                }
+
+                if(shapes){free(shapes);}
+                if(num_mesh != -1)
+                {
+                    generateMeshTriangles(scene, mesh_entry);
+                }
+            }else
+            {
+                Object_t obj;                    
+                if(parsePrimitive(&obj, fp, scene, buffer))
+                {
+                    Scene_addObject(scene, &obj);
+                }
+            }
+        }   
     }
 }
 
