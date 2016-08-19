@@ -181,25 +181,25 @@ typedef struct SceneMeshes_s
 {
     int size;
     int max;    
-    OBJShape* meshes;
+    Mesh* meshes;
 }SceneMeshes;
 
 SceneMeshes SceneMeshes_create()
 {
     SceneMeshes s_meshes;
-    s_meshes.meshes = (OBJShape*)malloc(sizeof(OBJShape) * MAX_MESH);
+    s_meshes.meshes = (Mesh*)malloc(sizeof(Mesh) * MAX_MESH);
     s_meshes.size = 0;
     s_meshes.max = MAX_MESH;
     return s_meshes;
 }
 
-OBJShape* SceneMeshes_push(SceneMeshes* s_meshes, const OBJShape* obj_shape)
+Mesh* SceneMeshes_push(SceneMeshes* s_meshes, const Mesh* mesh)
 {
     DBuffer mesh_buffer;
-    DBuffer_assume(&mesh_buffer, (char*)s_meshes->meshes, s_meshes->size, s_meshes->max, sizeof(OBJShape));
-    DBuffer_push(mesh_buffer, *obj_shape);
+    DBuffer_assume(&mesh_buffer, (char*)s_meshes->meshes, s_meshes->size, s_meshes->max, sizeof(Mesh));
+    DBuffer_push(mesh_buffer, *mesh);
 
-    s_meshes->meshes = (OBJShape*)(mesh_buffer.data);
+    s_meshes->meshes = (Mesh*)(mesh_buffer.data);
     s_meshes->size = DBuffer_size(mesh_buffer);
     s_meshes->max = DBuffer_max_elements(mesh_buffer);
     return &(s_meshes->meshes[s_meshes->size - 1]);
@@ -209,26 +209,26 @@ void SceneMeshes_destroy(SceneMeshes* s_meshes)
 {
     for(int i = 0; i < s_meshes->size; i++)
     {
-        OBJShape_destroy(&(s_meshes->meshes[i]));
+        Mesh_destroy(&(s_meshes->meshes[i]));
     }
     free(s_meshes->meshes);
     s_meshes->size = 0;
     s_meshes->max = 0;    
 }
 
-OBJShape** findMeshes(int* num_meshes, const SceneMeshes* s_meshes, const char* name)
+Mesh** findMeshes(int* num_meshes, const SceneMeshes* s_meshes, const char* name)
 {
-    DBuffer mesh_buffer = DBuffer_create(OBJShape*);
+    DBuffer mesh_buffer = DBuffer_create(Mesh*);
     for(int i = 0; i < s_meshes->size; i++)
     {
-        OBJShape* mesh_ptr = &(s_meshes->meshes[i]);
+        Mesh* mesh_ptr = &(s_meshes->meshes[i]);
         if(strcmp(name, mesh_ptr->mesh_name) == 0)
         {
             DBuffer_push(mesh_buffer, mesh_ptr);
         }
     }
     *num_meshes = DBuffer_size(mesh_buffer);
-    return (OBJShape**)(mesh_buffer.data);
+    return (Mesh**)(mesh_buffer.data);
 }
 
 typedef struct SceneLights

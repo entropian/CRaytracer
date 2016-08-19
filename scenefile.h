@@ -110,9 +110,8 @@ bool parseColor(vec3 r, FILE* fp)
 // Need to pass SceneTextures
 Texture* parseTexture(Scene* scene, FILE* fp)
 {
-    char buffer[128];
+    char buffer[128];    
     
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // skip TEXTURE
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
     Texture tex;
     if(!loadTexture(&tex, buffer))
@@ -120,6 +119,38 @@ Texture* parseTexture(Scene* scene, FILE* fp)
         return NULL;
     }
     return Scene_addTexture(scene, &tex, buffer);
+}
+
+bool parseTextures(Material* mat, Scene* scene, FILE* fp)
+{
+    char buffer[128];
+    mat->tex_flags = NO_TEXTURE;
+    Texture* tex_ptr;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type
+    if(strcmp(buffer, "END") == 0)
+    {
+        return true;
+    }       
+    if(strcmp(buffer, "DIFFUSE_MAP") == 0)
+    {
+        tex_ptr = parseTexture(scene, fp);
+        if(tex_ptr)
+        {
+            mat->tex_array[0] = tex_ptr;
+            mat->tex_flags = mat->tex_flags | DIFFUSE;
+        }
+    }
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type
+    if(strcmp(buffer, "NORMAL_MAP") == 0)
+    {
+        tex_ptr = parseTexture(scene, fp);
+        if(tex_ptr)
+        {        
+            mat->tex_array[1] = tex_ptr;
+            mat->tex_flags = mat->tex_flags | NORMAL;
+        }
+    }
+    return true;
 }
 
 bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
@@ -137,10 +168,6 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
     strcpy_s(*name, NAME_LENGTH, buffer);
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip TEX_TYPE
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // get texture type
-    mat->tex_type = getTexTypeFromString(buffer);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
     if(!getNextTokenInFile(buffer, fp)){return false;}            
@@ -220,13 +247,7 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
     return false;
 
 Texture:
-    if(mat->tex_type != NO_TEXTURE)
-    {
-        mat->tex = parseTexture(scene, fp);
-    }else
-    {
-        mat->tex = NULL;
-    }
+    parseTextures(mat, scene, fp);
     return true;
 }
 
@@ -240,31 +261,12 @@ int parseMaterials(Scene* scene, FILE* fp)
         {
             Material mat;
             char* name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
-            //parseMatEntry(&mat, &name, fp);
             parseMatEntry(&mat, &name, scene, fp);
-            //SceneMaterials_push(sm, &mat, name);            
             Scene_addMaterial(scene, &mat, name);
         }
     }
     return Scene_getNumMaterials(scene);
 }
-
-#if 0
-Material* findMaterial(const char* mat_name, Material* mat_array, char** name_array, const int num_mat)
-{
-    for(int i = 0; i < num_mat; i++)
-    {
-        if(strcmp(mat_name, name_array[i]) == 0)
-        {
-            return &(mat_array[i]);
-        }
-    }
-    // TODO: return a default material
-    fprintf(stderr, "Material not found\n");
-    return NULL;
-}
-#endif
-
 
 bool parseSphereEntry(Object_t* obj, FILE* fp, Scene* scene)
 {

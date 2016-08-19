@@ -7,7 +7,7 @@
 #include "dbuffer.h"
 #include "hashindex.h"
 
-#define NAME_LENGTH 30
+#define OBJ_NAME_LENGTH 30
 #ifndef _MSC_VER
 #define strcpy_s(a, b, c) strcpy((a), (c))
 #define strncpy_s(a, b, c, d) strncpy((a), (c), (d))
@@ -19,10 +19,10 @@ typedef struct OBJShape_s
     float* normals;
     float* texcoords;
     int* indices;
-    float* face_normals;
-    int num_positions, num_normals, num_texcoords, num_indices, num_face_normals;
-    char mat_name[NAME_LENGTH];
-    char mesh_name[NAME_LENGTH];
+    //float* face_normals;
+    int num_positions, num_normals, num_texcoords, num_indices;
+    char mat_name[OBJ_NAME_LENGTH];
+    char mesh_name[OBJ_NAME_LENGTH];
 }OBJShape;
 
 void OBJShape_destroy(OBJShape* obj_shape)
@@ -31,13 +31,11 @@ void OBJShape_destroy(OBJShape* obj_shape)
     if(obj_shape->num_normals > 0){free(obj_shape->normals);}
     if(obj_shape->num_texcoords > 0){free(obj_shape->texcoords);}
     if(obj_shape->num_indices > 0){free(obj_shape->indices);}
-    if(obj_shape->num_face_normals > 0){free(obj_shape->face_normals);}
 
     obj_shape->num_positions = 0;
     obj_shape->num_normals = 0;
     obj_shape->num_texcoords = 0;
     obj_shape->num_indices = 0;
-    obj_shape->num_face_normals = 0;
 }
 
 typedef struct VertexIndex_s
@@ -305,7 +303,7 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     char mesh_name[128];
     int i;
     for(i = 0; file_name[i] != '.'; i++){}
-    strncpy_s(mesh_name, NAME_LENGTH, file_name, i);
+    strncpy_s(mesh_name, OBJ_NAME_LENGTH, file_name, i);
     mesh_name[i] = '\0';
 
     DBuffer obj_shapes = DBuffer_create(OBJShape);
@@ -399,8 +397,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
             OBJShape shape;
             if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
             {
-                strcpy_s(shape.mesh_name, NAME_LENGTH, mesh_name);
-                strcpy_s(shape.mat_name, NAME_LENGTH, cur_mat_name);
+                strcpy_s(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+                strcpy_s(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
                 DBuffer_push(obj_shapes, shape);
             }
         }
@@ -410,8 +408,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
             OBJShape shape;
             if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
             {
-                strcpy_s(shape.mesh_name, NAME_LENGTH, mesh_name);
-                strcpy_s(shape.mat_name, NAME_LENGTH, cur_mat_name);
+                strcpy_s(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+                strcpy_s(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
                 DBuffer_push(obj_shapes, shape);
             }
             line_ptr += 6;    // Skip over "usemtl"
@@ -430,8 +428,8 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     OBJShape shape;
     if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
     {
-        strcpy_s(shape.mesh_name, NAME_LENGTH, mesh_name);
-        strcpy_s(shape.mat_name, NAME_LENGTH, cur_mat_name);        
+        strcpy_s(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+        strcpy_s(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);        
         DBuffer_push(obj_shapes, shape);
     }
     printf("num shapes %d\n", DBuffer_size(obj_shapes));

@@ -22,7 +22,7 @@ inline float clamp(const float x, const float min, const float max)
     return (x < min ? min : (x > max ? max : x));
 }
 
-inline bool getNextTokenInFile(char buffer[], FILE* fp)
+bool getNextTokenInFile(char buffer[], FILE* fp)
 {
     char c = fgetc(fp);
     while((c ==  ' ' || c == '\n') && c != EOF)

@@ -19,9 +19,10 @@
 #include "scenefile.h"
 #include "shading.h"
 #include "objloader/objloader.h"
+#include "mesh.h"
 
 // Assuming mesh->normals and mesh->face_normals are uninitialized
-void computeTriangleNormals(OBJShape* mesh)
+void computeTriangleNormals(Mesh* mesh)
 {
     mesh->face_normals = (float*)malloc(sizeof(float) * mesh->num_indices);
     int num_face_normals = 0;
@@ -94,12 +95,12 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
     eulerAngToMat3(rotation, mesh_entry.orientation);
 
     int num_mesh_found = 0;
-    OBJShape** meshes = Scene_findMeshes(&num_mesh_found, scene, mesh_entry.mesh_name);
+    Mesh** meshes = Scene_findMeshes(&num_mesh_found, scene, mesh_entry.mesh_name);
     Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
     int triangle_count = 0;
     for(int i = 0; i < num_mesh_found; i++)
     {
-        OBJShape* mesh = meshes[i];
+        Mesh* mesh = meshes[i];
         triangle_count += mesh->num_indices / 3;
         for(int j = 0; j < mesh->num_indices; j += 3)
         {
@@ -231,8 +232,10 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     {
                         for(int i = 0; i < num_mesh; i++)
                         {
-                            computeTriangleNormals(&(shapes[i]));
-                            Scene_addMesh(scene, &(shapes[i]));
+                            Mesh mesh;
+                            Mesh_copyOBJShape(&mesh, &(shapes[i]));
+                            computeTriangleNormals(&mesh);
+                            Scene_addMesh(scene, &mesh);
                         }
                     }
                     if(shapes){free(shapes);}

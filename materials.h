@@ -16,11 +16,14 @@ enum MatType
 
 enum TextureType
 {
-    NO_TEXTURE,
-    DIFFUSE,
-    NORMAL,
-    DIFFUSE_NORMAL
+    NO_TEXTURE = 0,
+    DIFFUSE = 1,
+    NORMAL = 2,
+    SPECULAR = 4
 };
+
+const int DIFFUSE_MAP_INDEX = 0;
+const int NORMAL_MAP_INDEX = 1;
 
 MatType getMatTypeFromString(const char* str)
 {
@@ -45,35 +48,18 @@ MatType getMatTypeFromString(const char* str)
     }            
 }
 
-TextureType getTexTypeFromString(const char* str)
-{
-    if(strcmp(str, "DIFFUSE") == 0)
-    {
-        return DIFFUSE;
-    }else if(strcmp(str, "NORMAL") == 0)
-    {
-        return NORMAL;
-    }else if(strcmp(str, "DIFFUSE_NORMAL") == 0)
-    {
-        return DIFFUSE_NORMAL;
-    }else
-    {
-        return NO_TEXTURE;
-    }
-}
-
 // NOTE: this looks like it sucks
 typedef struct Material_s
 {
     bool shadow;
     MatType mat_type;
-    TextureType tex_type;    // Texture mapping only works with meshes
+    unsigned int tex_flags;
     float ka, kd, ks, ke, kr, exp;
     float ior_in, ior_out;    
     vec3 ca, cd, cs, ce, cr;
     vec3 cf_in, cf_out;
     Samples3D* h_samples;
-    Texture* tex;
+    Texture* tex_array[3];
 }Material;
 
 void printMaterial(const Material* mat)

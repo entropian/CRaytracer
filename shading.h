@@ -14,14 +14,14 @@
 void diffuseBRDF(vec3 f, const ShadeRec* sr)
 {
     vec3 reflectance;
-    if(sr->mat->tex_type == NO_TEXTURE)
-    {
-        vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
-    }else
+    if(sr->mat->tex_flags & DIFFUSE)
     {
         vec3 texel;
-        getTexColor(texel, sr->mat->tex, sr->uv);
-        vec3_scale(reflectance, texel, sr->mat->kd);
+        getTexColor(texel, sr->mat->tex_array[DIFFUSE_MAP_INDEX], sr->uv);
+        vec3_scale(reflectance, texel, sr->mat->kd);        
+    }else
+    {
+        vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
     }
     vec3_scale(f, reflectance, 1.0f/(float)PI);
 }

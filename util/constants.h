@@ -9,6 +9,7 @@ const int MAX_LIGHTS = 10;
 const int MAX_MESH = 20;
 const int DEFAULT_MATERIAL = 20;
 const int MAX_NAME_LENGTH = 128;
+const int NAME_LENGTH = 32;
 
 const int DEFAULT_NUM_TEXTURES = 20;
 
