@@ -7,6 +7,7 @@
 #include "../util/constants.h"
 #include "../materials.h"
 #include "../mesh.h"
+#include "../texture.h"
 
 typedef struct Triangle
 {
@@ -32,6 +33,7 @@ typedef struct SmoothTriangle_s
     int i0, i1, i2;
     vec3 v0, v1, v2;
     vec3 n0, n1, n2;
+    vec3 tan0, tan1, tan2;     // Tentative
     Mesh* mesh_ptr;
     Material* mat;
 }SmoothTriangle;
@@ -139,16 +141,16 @@ float rayIntersectFlatTriangle(ShadeRec* sr, FlatTriangle* tri, const Ray ray)
     return t;
 }
 
-void interpTriangleNormal(vec3 normal, const float beta, const float gamma,
-                       const SmoothTriangle* tri)
+void interpTriangleVec3(vec3 out, const float beta, const float gamma,
+                        const vec3 v0, const vec3 v1, const vec3 v2)
 {
     vec3 tmp;
-    vec3_scale(normal, tri->n0, 1.0f - beta - gamma);
-    vec3_scale(tmp, tri->n1, beta);
-    vec3_add(normal, normal, tmp);
-    vec3_scale(tmp, tri->n2, gamma);    
-    vec3_add(normal, normal, tmp);
-    vec3_normalize(normal, normal);
+    vec3_scale(out, v0, 1.0f - beta - gamma);
+    vec3_scale(tmp, v1, beta);
+    vec3_add(out, out, tmp);
+    vec3_scale(tmp, v2, gamma);    
+    vec3_add(out, out, tmp);
+    vec3_normalize(out, out);
 }
 
 float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ray)
@@ -156,18 +158,28 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     float gamma, beta;  
     float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);    
     if(t == TMAX){return t;}
-    
+
+    interpTriangleVec3(sr->normal, beta, gamma, tri->n0, tri->n1, tri->n2);    
     if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
     {
         interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
-        /*
         if(tri->mat->tex_flags & NORMAL)
         {
-             
+            vec3 tangent, binormal, tex_normal, normal;
+            interpTriangleVec3(tangent, beta, gamma, tri->tan0, tri->tan1, tri->tan2);
+            vec3_cross(binormal, sr->normal, binormal);
+            getTexColor(tex_normal, tri->mat->tex_array[1], sr->uv);
+            orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);
+            // Check if we're mirrored
+            if(vec3_dot(normal, sr->normal) < 0.0f)
+            {
+                vec3_negate(binormal, binormal);
+                orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);                
+            }
+            vec3_normalize(normal, normal);            
+            vec3_copy(sr->normal, normal);
         }
-        */
     }
-    interpTriangleNormal(sr->normal, beta, gamma, tri);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);    
     sr->mat = tri->mat;

@@ -48,8 +48,12 @@ AMB_COLOR YELLOW
 AMB_CONSTANT 1.0
 DIFF_COLOR YELLOW
 DIFF_CONSTANT 0.8
-DIFFUSE_MAP textures/sample.png
+
+NORMAL_MAP textures/sponza_arch_ddn.png
 END
+DIFFUSE_MAP textures/Ship2_diffuse.png
+
+
 
 END_MATERIALS
 
@@ -84,6 +88,15 @@ SMOOTH yes
 SCALING 0.03 0.03 0.03
 LOCATION 0.5 1.0 -1
 Orientation 0 0 0
+MATERIAL matte2
+
+#OBJECT MESH
+FILE models/Ship2.obj
+CAST_SHADOW yes
+SMOOTH yes
+SCALING 0.3 0.3 0.3
+LOCATION 0.5 1.0 -1
+Orientation 100 0 0
 MATERIAL matte2
 
 #OBJECT MESH

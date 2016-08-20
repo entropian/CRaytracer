@@ -108,12 +108,13 @@ void calcTangentVec(Mesh* mesh)
         int i0 = mesh->indices[i];
         int i1 = mesh->indices[i+1];
         int i2 = mesh->indices[i+2];
+        
         vec3 v0 = {mesh->positions[i0*3], mesh->positions[i0*3 + 1], mesh->positions[i0*3 + 2]};
         vec3 v1 = {mesh->positions[i1*3], mesh->positions[i1*3 + 1], mesh->positions[i1*3 + 2]};
         vec3 v2 = {mesh->positions[i2*3], mesh->positions[i2*3 + 1], mesh->positions[i2*3 + 2]};
-        vec2 uv0 = {mesh->texcoords[i0*2], mesh->texcoords[i0*2]};
-        vec2 uv1 = {mesh->texcoords[i1*2], mesh->texcoords[i1*2]};
-        vec2 uv2 = {mesh->texcoords[i2*2], mesh->texcoords[i2*2]};                
+        vec2 uv0 = {mesh->texcoords[i0*2], mesh->texcoords[i0*2 + 1]};
+        vec2 uv1 = {mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]};
+        vec2 uv2 = {mesh->texcoords[i2*2], mesh->texcoords[i2*2 + 1]};                
         
         vec3 q0, q1;
         vec3_sub(q0, v1, v0);
@@ -153,22 +154,19 @@ void calcTangentVec(Mesh* mesh)
         vec3_scale(displacement, normal, vec3_dot(normal, tangents[i]));
         vec3_sub(tangents[i], tangents[i], displacement);
         vec3_normalize(tangents[i], tangents[i]);
-
-        // Figure out if we're mirrored
-        vec3 tmp;
-        vec3_cross(tmp, normal, tangents[i]);
-        if(vec3_dot(tmp, binormals[i]) < 0.0f)
-        {
-            det[i] = -1;
-        }else
-        {
-            det[i] = 1;
-        }
     }
     // TODO: find a way to check if the mesh already has tangents and dets
     mesh->tangents = tangents;
-    mesh->det = det;
     free(binormals);
+}
+
+void transformVector(vec3 vector_out, const vec3 inv_scale, const mat3 rotation, const vec3 vector)
+{
+    vec3 tmp, transformed_vector;
+    vec3_mult(tmp, inv_scale, vector);
+    mat3_mult_vec3(transformed_vector, rotation, tmp);
+    vec3_normalize(transformed_vector, transformed_vector);                
+    vec3_copy(vector_out, transformed_vector);
 }
 
 int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
@@ -247,29 +245,34 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
                 mesh_tri->i2 = i2;
                 vec3_copy(mesh_tri->v0, new_v0);
                 vec3_copy(mesh_tri->v1, new_v1);
-                vec3_copy(mesh_tri->v2, new_v2);                                        
-                vec3 normal, transformed_normal;
+                vec3_copy(mesh_tri->v2, new_v2);
+                vec3 normal;
+                vec3 tangent, transformed_tangent;
+
+                // Normal                
                 int index = i0 * 3;
                 vec3_assign(normal, mesh->normals[index],
                             mesh->normals[index+1], mesh->normals[index+2]);
-                vec3_mult(normal, inv_scale, normal);
-                mat3_mult_vec3(transformed_normal, rotation, normal);
-                vec3_normalize(transformed_normal, transformed_normal);
-                vec3_copy(mesh_tri->n0, transformed_normal);
+                transformVector(mesh_tri->n0, inv_scale, rotation, normal);
+
                 index = i1 * 3;
                 vec3_assign(normal, mesh->normals[index],
                             mesh->normals[index+1], mesh->normals[index+2]);
-                vec3_mult(normal, inv_scale, normal);
-                mat3_mult_vec3(transformed_normal, rotation, normal);
-                vec3_normalize(transformed_normal, transformed_normal);                    
-                vec3_copy(mesh_tri->n1, transformed_normal);
+                transformVector(mesh_tri->n1, inv_scale, rotation, normal);                
+
                 index = i2 * 3;
                 vec3_assign(normal, mesh->normals[index],
                             mesh->normals[index+1], mesh->normals[index+2]);
-                vec3_mult(normal, inv_scale, normal);
-                mat3_mult_vec3(transformed_normal, rotation, normal);
-                vec3_normalize(transformed_normal, transformed_normal);                    
-                vec3_copy(mesh_tri->n2, transformed_normal);
+                transformVector(mesh_tri->n2, inv_scale, rotation, normal);
+                
+                // Tangent vectors
+                if(mesh->num_texcoords > 0 && (mat->tex_flags & NORMAL))
+                {
+                    transformVector(mesh_tri->tan0, inv_scale, rotation, mesh->tangents[i0]);
+                    transformVector(mesh_tri->tan1, inv_scale, rotation, mesh->tangents[i1]);
+                    transformVector(mesh_tri->tan2, inv_scale, rotation, mesh->tangents[i2]);                    
+                }
+
                 mesh_tri->shadow = mesh_entry.shadow;
                 mesh_tri->mesh_ptr = mesh;
                 mesh_tri->mat = mat;                                    
@@ -334,9 +337,9 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     {
                         calcTangentVec(&mesh);
                     }
+                    //calcTangentVec(&mesh);                    
                     Scene_addMesh(scene, &mesh);
                 }
-
                 if(shapes){free(shapes);}
                 if(num_mesh != -1)
                 {

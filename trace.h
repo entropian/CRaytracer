@@ -290,6 +290,7 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
     {
         vec3_copy(radiance, sl->bg_color);
     }
+    //vec3_copy(radiance, min_sr.normal);
     /*
     float tmpf = kr;
     vec3 depth_f = {tmpf, tmpf, tmpf};

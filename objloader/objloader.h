@@ -7,7 +7,7 @@
 #include "dbuffer.h"
 #include "hashindex.h"
 
-#define OBJ_NAME_LENGTH 30
+#define OBJ_NAME_LENGTH 32
 
 void stringCopy(char* dest, const int max_len, const char* src)
 {

@@ -139,8 +139,9 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp)
             mat->tex_array[0] = tex_ptr;
             mat->tex_flags = mat->tex_flags | DIFFUSE;
         }
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type        
     }
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type
+
     if(strcmp(buffer, "NORMAL_MAP") == 0)
     {
         tex_ptr = parseTexture(scene, fp);

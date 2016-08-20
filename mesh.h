@@ -13,8 +13,8 @@ typedef struct Mesh_s
     vec3* tangents;
     int8_t* det;
     int num_positions, num_normals, num_texcoords, num_indices, num_face_normals;
-    char mat_name[30];
-    char mesh_name[30];    
+    char mat_name[NAME_LENGTH];
+    char mesh_name[NAME_LENGTH];    
 }Mesh;
 
 void Mesh_destroy(Mesh* mesh)
@@ -38,6 +38,7 @@ void Mesh_copyOBJShape(Mesh* mesh, const OBJShape* obj_shape)
     mesh->normals = obj_shape->normals;
     mesh->texcoords = obj_shape->texcoords;
     mesh->indices = obj_shape->indices;
+    mesh->face_normals = NULL;
     mesh->num_positions = obj_shape->num_positions;
     mesh->num_normals = obj_shape->num_normals;
     mesh->num_texcoords = obj_shape->num_texcoords;
