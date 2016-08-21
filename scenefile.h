@@ -15,29 +15,6 @@
 #include "sampling.h"
 #include "texture.h"
 
-void printSphere(const Sphere* sphere)
-{
-    printf("shadow %s\n", sphere->shadow ? "true" : "false");
-    printf("min_theta = %f\n", sphere->min_theta);
-    printf("max_theta = %f\n", sphere->max_theta);
-    printf("phi = %f\n", sphere->phi);
-    printf("radius = %f\n", sphere->radius);
-    printf("center = %f, %f, %f\n", sphere->center[0], sphere->center[1], sphere->center[2]);    
-}
-
-/*
-void printTorus(const Torus* torus)
-{
-    printf("shadow %s\n", torus->shadow ? "true" : "false");
-    printf("swept_radius = %f\n", torus->swept_radius);
-    printf("tube_radius = %f\n", torus->tube_radius);
-    printf("phi = %f\n", torus->phi);
-    AABB aabb = torus->aabb;
-    printf("aabb.min = %f, %f, %f\n", aabb.min[0], aabb.min[1], aabb.min[2]);
-    printf("aabb.max = %f, %f, %f\n", aabb.max[0], aabb.max[1], aabb.max[2]);
-}
-*/
-
 bool getPresetColor(vec3 r, const char buffer[])
 {
     if(strcmp(buffer, "RED") == 0)
