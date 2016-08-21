@@ -48,7 +48,6 @@ MatType getMatTypeFromString(const char* str)
     }            
 }
 
-// NOTE: this looks like it sucks
 typedef struct Material_s
 {
     bool shadow;
@@ -58,7 +57,7 @@ typedef struct Material_s
     float ior_in, ior_out;    
     vec3 ca, cd, cs, ce, cr;
     vec3 cf_in, cf_out;
-    Samples3D* h_samples;
+     Samples3D* h_samples;
     Texture* tex_array[3];
 }Material;
 
@@ -81,7 +80,8 @@ void initDefaultMatteMat(Material* mat, const vec3 color)
     mat->ka = 1.0f;
     mat->mat_type  = MATTE;
     mat->shadow = true;
-    mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);    
+    mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+    mat->tex_flags = NO_TEXTURE;
 }       
 
 void initDefaultPhongMat(Material* mat, const vec3 color)
@@ -96,4 +96,5 @@ void initDefaultPhongMat(Material* mat, const vec3 color)
     mat->mat_type = PHONG;
     mat->shadow = true;
     mat->h_samples = genHemisphereSamples(MULTIJITTERED, DEFAULT_GLOSSINESS);
+    mat->tex_flags = NO_TEXTURE;    
 }

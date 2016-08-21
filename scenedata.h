@@ -135,7 +135,8 @@ void SceneMaterials_destroy(SceneMaterials* sm)
         if(sm->materials[i].h_samples)
         {
             freeSamples3D(sm->materials[i].h_samples);
-            free(sm->materials[i].h_samples);
+
+			free(sm->materials[i].h_samples);
         }
         free(sm->names[i]);
     }    

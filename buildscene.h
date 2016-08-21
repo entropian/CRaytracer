@@ -246,10 +246,9 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
                 vec3_copy(mesh_tri->v0, new_v0);
                 vec3_copy(mesh_tri->v1, new_v1);
                 vec3_copy(mesh_tri->v2, new_v2);
-                vec3 normal;
-                vec3 tangent, transformed_tangent;
 
-                // Normal                
+                // Normal
+                vec3 normal;                
                 int index = i0 * 3;
                 vec3_assign(normal, mesh->normals[index],
                             mesh->normals[index+1], mesh->normals[index+2]);
@@ -362,7 +361,7 @@ void initAreaLights(SceneLights* sl)
     // Area light
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-    area_light_ptr->intensity = 20.0f;
+    area_light_ptr->intensity = 2.0f;
     vec3_copy(area_light_ptr->color, WHITE);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
@@ -402,7 +401,7 @@ void initAreaLights(SceneLights* sl)
     sphere->shadow = false;
     //vec3_assign(sphere->center, 2.0f, 4.0f, 1.5f);
     vec3_assign(sphere->center, -0.9f, 5.0f, -3.1f);
-    sphere->radius = 1.0f;
+    sphere->radius = 1.5f;
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;
     sphere->phi = (float)PI;

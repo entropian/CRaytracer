@@ -283,5 +283,3 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
     } break;
     }
 }
-
-

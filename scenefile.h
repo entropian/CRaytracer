@@ -160,6 +160,7 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
     char type_name[128];
     if(!getNextTokenInFile(type_name, fp)){return false;}
     mat->mat_type = getMatTypeFromString(type_name);
+    mat->tex_flags = NO_TEXTURE;
     if(mat->mat_type == INVALID_MAT_TYPE)
     {
         fprintf(stderr, "Invalid material type %s.\n", type_name);
@@ -252,7 +253,6 @@ Texture:
     return true;
 }
 
-//int parseMaterials(SceneMaterials* sm, FILE* fp)
 int parseMaterials(Scene* scene, FILE* fp)
 {
     char buffer[128];

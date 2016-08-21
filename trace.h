@@ -179,15 +179,15 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
     // debug variables
     bool intersected = false, indirect = false, not_tir = false, tir = false;
     
-    vec3_copy(radiance, ORIGIN);
-    float min_t = TMAX;
-    ShadeRec min_sr;
-    min_t = intersectTest(&min_sr, so, ray);
-
     float reflect_t = 0, transmit_t = 0;
     float kr = 0.0f, kt = 0.0f;
     vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
     vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};    
+    vec3_copy(radiance, ORIGIN);
+    
+    float min_t = TMAX;
+    ShadeRec min_sr;
+    min_t = intersectTest(&min_sr, so, ray);
     // Shading
     if(min_t < TMAX)
     {

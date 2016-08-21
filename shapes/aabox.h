@@ -127,6 +127,10 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
             t_min = t1;
             getAABoxNormal(sr->normal, face_out);
         }
+        if(vec3_dot(sr->normal, ray.direction) > 0.0f)
+        {
+            vec3_negate(sr->normal, sr->normal);
+        }
         getPointOnRay(sr->hit_point, ray, t_min);
         sr->mat = aabox->mat;
         sr->hit_status = true;

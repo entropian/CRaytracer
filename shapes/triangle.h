@@ -156,7 +156,7 @@ void interpTriangleVec3(vec3 out, const float beta, const float gamma,
 float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ray)
 {
     float gamma, beta;  
-    float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);    
+    float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
     if(t == TMAX){return t;}
 
     interpTriangleVec3(sr->normal, beta, gamma, tri->n0, tri->n1, tri->n2);    

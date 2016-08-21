@@ -11,7 +11,6 @@ typedef struct Mesh_s
     int* indices;
     float* face_normals;
     vec3* tangents;
-    int8_t* det;
     int num_positions, num_normals, num_texcoords, num_indices, num_face_normals;
     char mat_name[NAME_LENGTH];
     char mesh_name[NAME_LENGTH];    
