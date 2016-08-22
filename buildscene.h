@@ -160,7 +160,6 @@ void calcTangentVec(Mesh* mesh)
     free(binormals);
 }
 
-/*
 int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
 {
     mat3 rotation;
@@ -169,6 +168,10 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
     int num_mesh_found = 0;
     Mesh** meshes = Scene_findMeshes(&num_mesh_found, scene, mesh_entry.mesh_name);
     Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
+    mat3 inv_scale_mat, normal_mat;
+    mat3_scale_inverse(inv_scale_mat, mesh_entry.scaling);
+    mat3_mult(normal_mat, rotation, inv_scale_mat);
+    mat3* normal_mat_ptr =  Scene_addTransform(scene, &normal_mat);    
     int triangle_count = 0;
     for(int i = 0; i < num_mesh_found; i++)
     {
@@ -206,9 +209,6 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
             vec3_add(new_v1, mesh_entry.location, new_v1);
             vec3_add(new_v2, mesh_entry.location, new_v2);
 
-            mat3 inv_scale_mat, normal_mat;
-            mat3_scale_inverse(inv_scale_mat, mesh_entry.scaling);
-            mat3_mult(normal_mat, rotation, inv_scale_mat);
             if(!mesh_entry.smooth)
             {
                 FlatTriangle* mesh_tri = (FlatTriangle*)malloc(sizeof(FlatTriangle));
@@ -234,168 +234,14 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
             }else
             {
                 SmoothTriangle* mesh_tri = (SmoothTriangle*)malloc(sizeof(SmoothTriangle));
+                mesh_tri->normal_mat = normal_mat_ptr;
+
                 mesh_tri->i0 = i0;
                 mesh_tri->i1 = i1;
                 mesh_tri->i2 = i2;
                 vec3_copy(mesh_tri->v0, new_v0);
                 vec3_copy(mesh_tri->v1, new_v1);
                 vec3_copy(mesh_tri->v2, new_v2);
-
-                // Normal
-                vec3 normal;                
-                int index = i0 * 3;
-                vec3_assign(normal, mesh->normals[index],
-                            mesh->normals[index+1], mesh->normals[index+2]);
-                mat3_mult_vec3(mesh_tri->n0, normal_mat, normal);
-
-                index = i1 * 3;
-                vec3_assign(normal, mesh->normals[index],
-                            mesh->normals[index+1], mesh->normals[index+2]);
-                mat3_mult_vec3(mesh_tri->n1, normal_mat, normal);                
-
-                index = i2 * 3;
-                vec3_assign(normal, mesh->normals[index],
-                            mesh->normals[index+1], mesh->normals[index+2]);
-                mat3_mult_vec3(mesh_tri->n2, normal_mat, normal);
-
-                vec3_normalize(mesh_tri->n0, mesh_tri->n0);
-                vec3_normalize(mesh_tri->n1, mesh_tri->n1);
-                vec3_normalize(mesh_tri->n2, mesh_tri->n2);                
-                
-                // Tangent vectors
-                if(mesh->num_texcoords > 0 && (mat->tex_flags & NORMAL))
-                {
-                    mat3_mult_vec3(mesh_tri->tan0, normal_mat, mesh->tangents[i0]);
-                    mat3_mult_vec3(mesh_tri->tan1, normal_mat, mesh->tangents[i1]);
-                    mat3_mult_vec3(mesh_tri->tan2, normal_mat, mesh->tangents[i2]);
-                    vec3_normalize(mesh_tri->tan0, mesh_tri->tan0);
-                    vec3_normalize(mesh_tri->tan1, mesh_tri->tan1);
-                    vec3_normalize(mesh_tri->tan2, mesh_tri->tan2);                                                        
-                }
-
-                mesh_tri->shadow = mesh_entry.shadow;
-                mesh_tri->mesh_ptr = mesh;
-                mesh_tri->mat = mat;                                    
-                Object_t obj = {SMOOTH_TRIANGLE, mesh_tri};
-                Scene_addObject(scene, &obj);                    
-            }                
-        }        
-    }
-    return triangle_count;
-}
-*/
-
-int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
-{
-    mat3 rotation;
-    eulerAngToMat3(rotation, mesh_entry.orientation);
-
-    int num_mesh_found = 0;
-    Mesh** meshes = Scene_findMeshes(&num_mesh_found, scene, mesh_entry.mesh_name);
-    Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
-    int triangle_count = 0;
-    for(int i = 0; i < num_mesh_found; i++)
-    {
-        Mesh* mesh = meshes[i];
-        triangle_count += mesh->num_indices / 3;
-        for(int j = 0; j < mesh->num_indices; j += 3)
-        {
-            int i0, i1, i2;
-            i0 = mesh->indices[j];
-            i1 = mesh->indices[j + 1];
-            i2 = mesh->indices[j + 2];
-
-            vec3 v0, v1, v2;
-            int index;
-            index = i0 * 3;
-            vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
-                        mesh->positions[index+2]);
-            index = i1 * 3;    
-            vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
-                        mesh->positions[index+2]);
-            index = i2 * 3;
-            vec3_assign(v2, mesh->positions[index], mesh->positions[index+1],
-                        mesh->positions[index+2]);
-
-            vec3_mult(v0, mesh_entry.scaling, v0);
-            vec3_mult(v1, mesh_entry.scaling, v1);
-            vec3_mult(v2, mesh_entry.scaling, v2);
-
-            vec3 new_v0, new_v1, new_v2;
-            mat3_mult_vec3(new_v0, rotation, v0);
-            mat3_mult_vec3(new_v1, rotation, v1);
-            mat3_mult_vec3(new_v2, rotation, v2);                
-                
-            vec3_add(new_v0, mesh_entry.location, new_v0);
-            vec3_add(new_v1, mesh_entry.location, new_v1);
-            vec3_add(new_v2, mesh_entry.location, new_v2);
-
-            mat3 inv_scale_mat, normal_mat;
-            mat3_scale_inverse(inv_scale_mat, mesh_entry.scaling);
-            mat3_mult(normal_mat, rotation, inv_scale_mat);
-            if(!mesh_entry.smooth)
-            {
-                FlatTriangle* mesh_tri = (FlatTriangle*)malloc(sizeof(FlatTriangle));
-                mesh_tri->i0 = i0;
-                mesh_tri->i1 = i1;
-                mesh_tri->i2 = i2;
-                vec3_copy(mesh_tri->v0, new_v0);
-                vec3_copy(mesh_tri->v1, new_v1);
-                vec3_copy(mesh_tri->v2, new_v2);                    
-                // Instead of computing an inverse transpose for transforming normals, I just inverted the scaling
-                // and ignored translation
-                vec3 face_normal = {mesh->face_normals[j], mesh->face_normals[j+1], mesh->face_normals[j+2]};
-                vec3 new_face_normal;
-                //vec3_mult(face_normal, inv_scale, face_normal);
-                mat3_mult_vec3(new_face_normal, normal_mat, face_normal);
-                vec3_normalize(new_face_normal, new_face_normal);
-                vec3_copy(mesh_tri->normal, new_face_normal);                     
-                mesh_tri->shadow = mesh_entry.shadow;
-                mesh_tri->mesh_ptr = mesh;
-                mesh_tri->mat = mat;                                    
-                Object_t obj = {FLAT_TRIANGLE, mesh_tri};
-                Scene_addObject(scene, &obj);
-            }else
-            {
-                SmoothTriangle* mesh_tri = (SmoothTriangle*)malloc(sizeof(SmoothTriangle));
-                mesh_tri->i0 = i0;
-                mesh_tri->i1 = i1;
-                mesh_tri->i2 = i2;
-                vec3_copy(mesh_tri->v0, new_v0);
-                vec3_copy(mesh_tri->v1, new_v1);
-                vec3_copy(mesh_tri->v2, new_v2);
-
-                // Normal
-                vec3 normal;                
-                int index = i0 * 3;
-                vec3_assign(normal, mesh->normals[index],
-                            mesh->normals[index+1], mesh->normals[index+2]);
-                mat3_mult_vec3(mesh_tri->n0, normal_mat, normal);
-
-                index = i1 * 3;
-                vec3_assign(normal, mesh->normals[index],
-                            mesh->normals[index+1], mesh->normals[index+2]);
-                mat3_mult_vec3(mesh_tri->n1, normal_mat, normal);                
-
-                index = i2 * 3;
-                vec3_assign(normal, mesh->normals[index],
-                            mesh->normals[index+1], mesh->normals[index+2]);
-                mat3_mult_vec3(mesh_tri->n2, normal_mat, normal);
-
-                vec3_normalize(mesh_tri->n0, mesh_tri->n0);
-                vec3_normalize(mesh_tri->n1, mesh_tri->n1);
-                vec3_normalize(mesh_tri->n2, mesh_tri->n2);                
-                
-                // Tangent vectors
-                if(mesh->num_texcoords > 0 && (mat->tex_flags & NORMAL))
-                {
-                    mat3_mult_vec3(mesh_tri->tan0, normal_mat, mesh->tangents[i0]);
-                    mat3_mult_vec3(mesh_tri->tan1, normal_mat, mesh->tangents[i1]);
-                    mat3_mult_vec3(mesh_tri->tan2, normal_mat, mesh->tangents[i2]);
-                    vec3_normalize(mesh_tri->tan0, mesh_tri->tan0);
-                    vec3_normalize(mesh_tri->tan1, mesh_tri->tan1);
-                    vec3_normalize(mesh_tri->tan2, mesh_tri->tan2);                                                        
-                }
 
                 mesh_tri->shadow = mesh_entry.shadow;
                 mesh_tri->mesh_ptr = mesh;

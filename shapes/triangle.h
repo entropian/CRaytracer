@@ -9,6 +9,7 @@
 #include "../mesh.h"
 #include "../texture.h"
 
+
 typedef struct Triangle
 {
     bool shadow;
@@ -32,8 +33,7 @@ typedef struct SmoothTriangle_s
     bool shadow;
     int i0, i1, i2;
     vec3 v0, v1, v2;
-    vec3 n0, n1, n2;
-    vec3 tan0, tan1, tan2;     // Tentative
+    mat3* normal_mat;
     Mesh* mesh_ptr;
     Material* mat;
 }SmoothTriangle;
@@ -159,22 +159,35 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
     if(t == TMAX){return t;}
 
-    interpTriangleVec3(sr->normal, beta, gamma, tri->n0, tri->n1, tri->n2);    
+    Mesh* mesh = tri->mesh_ptr;
+        
+    vec3 n0, n1, n2, tmp_normal;
+    int index_0 = tri->i0 * 3;
+    int index_1 = tri->i1 * 3;
+    int index_2 = tri->i2 * 3;    
+    vec3_assign(n0, mesh->normals[index_0], mesh->normals[index_0+1], mesh->normals[index_0+2]);
+    vec3_assign(n1, mesh->normals[index_1], mesh->normals[index_1+1], mesh->normals[index_1+2]);
+    vec3_assign(n2, mesh->normals[index_2], mesh->normals[index_2+1], mesh->normals[index_2+2]);
+    interpTriangleVec3(tmp_normal, beta, gamma, n0, n1, n2);
+    mat3_mult_vec3(sr->normal, *(tri->normal_mat), tmp_normal);
+    vec3_normalize(sr->normal, sr->normal);
+
     if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
     {
         interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
         if(tri->mat->tex_flags & NORMAL)
         {
             vec3 tangent, binormal, tex_normal, normal, tmp;
-            interpTriangleVec3(tangent, beta, gamma, tri->tan0, tri->tan1, tri->tan2);
+            interpTriangleVec3(tmp, beta, gamma, mesh->tangents[tri->i0], mesh->tangents[tri->i1], mesh->tangents[tri->i2]);
+            mat3_mult_vec3(tangent, *(tri->normal_mat), tmp);
+            vec3_normalize(tangent, tangent);
+            
             vec3_cross(binormal, sr->normal, tangent);
             vec3_normalize(binormal, binormal);
             
             getTexColor(tex_normal, tri->mat->tex_array[1], sr->uv);
             orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);
             vec3_normalize(normal, normal);
-            float tmp_float = vec3_dot(normal, sr->normal);
-            vec3_assign(tmp, tmp_float, tmp_float, tmp_float);
             vec3_copy(sr->normal, normal);
         }
     }
@@ -183,41 +196,6 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     sr->mat = tri->mat;
     return t;
 }
-
-/*
-float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ray)
-{
-    float gamma, beta;  
-    float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
-    if(t == TMAX){return t;}
-
-    interpTriangleVec3(sr->normal, beta, gamma, tri->n0, tri->n1, tri->n2);    
-    if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
-    {
-        interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
-        if(tri->mat->tex_flags & NORMAL)
-        {
-            vec3 tangent, binormal, tex_normal, normal;
-            interpTriangleVec3(tangent, beta, gamma, tri->tan0, tri->tan1, tri->tan2);
-            vec3_cross(binormal, sr->normal, binormal);
-            getTexColor(tex_normal, tri->mat->tex_array[1], sr->uv);
-            orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);
-            // Check if we're mirrored
-            if(vec3_dot(normal, sr->normal) < 0.0f)
-            {
-                vec3_negate(binormal, binormal);
-                orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);                
-            }
-            vec3_normalize(normal, normal);            
-            vec3_copy(sr->normal, normal);
-        }
-    }
-    getPointOnRay(sr->hit_point, ray, t);
-    vec3_negate(sr->wo, ray.direction);    
-    sr->mat = tri->mat;
-    return t;
-}
-*/
 
 
 float shadowRayIntersectTriangle(const Triangle* tri, const Ray ray)

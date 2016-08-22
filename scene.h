@@ -54,7 +54,7 @@ Mesh* Scene_addMesh(Scene* scene, const Mesh* mesh)
     return SceneMeshes_push(&(scene->meshes), mesh);
 }
 
-mat3* Scene_addTransfrom(Scene* scene, const mat3* mat)
+mat3* Scene_addTransform(Scene* scene, const mat3* mat)
 {
     return SceneTransforms_push(&(scene->transforms), mat);
 }
