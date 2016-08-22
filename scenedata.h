@@ -232,6 +232,41 @@ Mesh** findMeshes(int* num_meshes, const SceneMeshes* s_meshes, const char* name
     return (Mesh**)(mesh_buffer.data);
 }
 
+typedef struct SceneTransforms_s
+{
+    int size;
+    int max;
+    mat3* matrices;
+}SceneTransforms;
+
+SceneTransforms SceneTransforms_create()
+{
+    SceneTransforms transforms;
+    transforms.matrices = (mat3*)malloc(sizeof(mat3) * 128);
+    transforms.size = 0;
+    transforms.max = 128;
+    return transforms;
+}
+
+mat3* SceneTransforms_push(SceneTransforms* transforms, const mat3* mat)
+{
+    DBuffer matrix_buffer;
+    DBuffer_assume(&matrix_buffer, (char*)transforms->matrices, transforms->size, transforms->max, sizeof(mat3));
+    DBuffer_push(matrix_buffer, *mat);
+
+    transforms->matrices = (mat3*)(matrix_buffer.data);
+    transforms->size = DBuffer_size(matrix_buffer);
+    transforms->max = DBuffer_max_elements(matrix_buffer);
+    return &(transforms->matrices[transforms->size - 1]);
+}
+
+void SceneTransforms_destroy(SceneTransforms* transforms)
+{
+    free(transforms->matrices);
+    transforms->size = 0;
+    transforms->max = 0;
+}
+
 typedef struct SceneLights
 {
     int num_lights;
