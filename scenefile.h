@@ -107,14 +107,20 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp)
     if(strcmp(buffer, "END") == 0)
     {
         return true;
-    }       
+    }
+    if(strcmp(buffer, "NOISE") == 0)
+    {
+        mat->tex_flags |= NOISE;
+        return true;
+    }
+            
     if(strcmp(buffer, "DIFFUSE_MAP") == 0)
     {
         tex_ptr = parseTexture(scene, fp);
         if(tex_ptr)
         {
             mat->tex_array[0] = tex_ptr;
-            mat->tex_flags = mat->tex_flags | DIFFUSE;
+            mat->tex_flags |= DIFFUSE;
         }
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type        
     }
@@ -125,7 +131,7 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp)
         if(tex_ptr)
         {        
             mat->tex_array[1] = tex_ptr;
-            mat->tex_flags = mat->tex_flags | NORMAL;
+            mat->tex_flags |= NORMAL;
         }
     }
     return true;

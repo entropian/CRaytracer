@@ -41,7 +41,6 @@
 bool EXIT = false;
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
-LatticeNoise lattice_noise;
 
 // TODO: 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -86,12 +85,11 @@ int main()
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
-    // Lattice noise
-    LatticeNoise_init(&(lattice_noise));
+    LatticeNoise_init();
     
     // Samples
     setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 
-                                                    // sample struct that follows
+                                                                         // sample struct that follows
     srand((unsigned int)time(NULL));    
     Samples2D unit_square_samples = Samples2D_default;
     Samples2D disk_samples = Samples2D_default;

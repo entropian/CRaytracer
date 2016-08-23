@@ -8,44 +8,45 @@ const int NOISE_TABLE_SIZE = 256;
 const int NOISE_TABLE_MASK = NOISE_TABLE_SIZE - 1;
 const int NOISE_SEED = 253;
 
-
 typedef struct LatticeNoise_s
 {
     unsigned char perm_table[NOISE_TABLE_SIZE];
     float value_table[NOISE_TABLE_SIZE];
 }LatticeNoise;
 
-void LatticeNoise_init(LatticeNoise* ln)
+LatticeNoise lattice_noise;
+
+void LatticeNoise_init()
 {
     srand(NOISE_SEED);
     for(int i = 0; i < NOISE_TABLE_SIZE; i++)
     {
-        ln->value_table[i] = 1.0f - 2.0f * ((float)rand() / (float)RAND_MAX);
-        ln->perm_table[i] = i;
+        lattice_noise.value_table[i] = 1.0f - 2.0f * ((float)rand() / (float)RAND_MAX);
+        lattice_noise.perm_table[i] = i;
     }
     // Shuffle the elements of perm_table
     for(int i = 0; i < NOISE_TABLE_SIZE; i++)
     {
         int random_index = rand() % NOISE_TABLE_SIZE;
-        unsigned char tmp = ln->perm_table[i];
-        ln->perm_table[i] = ln->perm_table[random_index];
-        ln->perm_table[random_index] = tmp;
+        unsigned char tmp = lattice_noise.perm_table[i];
+        lattice_noise.perm_table[i] = lattice_noise.perm_table[random_index];
+        lattice_noise.perm_table[random_index] = tmp;
     }    
 }
 
-inline unsigned char getPermIndex(const LatticeNoise* ln, const int a)
+inline unsigned char getPermIndex(const int a)
 {
-    return ln->perm_table[a & NOISE_TABLE_MASK];
+    return lattice_noise.perm_table[a & NOISE_TABLE_MASK];
 }
 
-inline float getLatticeVal(const LatticeNoise* ln, const int ix, const int iy, const int iz)
+inline float getLatticeVal(const int ix, const int iy, const int iz)
 {
-    int index = getPermIndex(ln, ix + getPermIndex(ln, iy + getPermIndex(ln, iz)));
-    return ln->value_table[index];
+    int index = getPermIndex(ix + getPermIndex(iy + getPermIndex(iz)));
+    return lattice_noise.value_table[index];
 }
 
 // Calculate noise value with trilinear interpolation
-float calcLinNoiseVal(const LatticeNoise* ln, const vec3 p)
+float calcLinNoiseVal(const vec3 p)
 {
     int ix, iy, iz;
     float fx, fy, fz;    
@@ -65,7 +66,7 @@ float calcLinNoiseVal(const LatticeNoise* ln, const vec3 p)
         {
             for(int i = 0; i <= 1; i++)
             {
-                d[k][j][i] = getLatticeVal(ln, ix + i, iy + j, iz + k);
+                d[k][j][i] = getLatticeVal(ix + i, iy + j, iz + k);
             }
         }
     }

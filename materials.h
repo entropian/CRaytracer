@@ -19,7 +19,8 @@ enum TextureType
     NO_TEXTURE = 0,
     DIFFUSE = 1,
     NORMAL = 2,
-    SPECULAR = 4
+    SPECULAR = 4,
+    NOISE = 8
 };
 
 const int DIFFUSE_MAP_INDEX = 0;
