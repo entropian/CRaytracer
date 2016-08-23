@@ -34,12 +34,14 @@
 #include "trace.h"
 #include "config.h"
 #include "texture.h"
+#include "noise.h"
 
 #define SHOW_PROGRESS 1
 
 bool EXIT = false;
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
+LatticeNoise lattice_noise;
 
 // TODO: 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -83,6 +85,9 @@ int main()
     int frame_res_width = params.image_width, frame_res_height = params.image_height;
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
+
+    // Lattice noise
+    LatticeNoise_init(&(lattice_noise));
     
     // Samples
     setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 

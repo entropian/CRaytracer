@@ -49,3 +49,4 @@ inline void printVec3WithText(const char* text, const vec3 v)
 {
     printf("%s %f, %f, %f\n", text, v[0], v[1], v[2]);
 }
+

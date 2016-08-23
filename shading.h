@@ -10,10 +10,19 @@
 #include "sampling.h"
 #include "intersect.h"
 #include "texture.h"
+#include "noise.h"
+
+extern LatticeNoise lattice_noise;
+#define NOISE 
 
 void diffuseBRDF(vec3 f, const ShadeRec* sr)
 {
     vec3 reflectance;
+
+#ifdef NOISE
+    float noise_val = (1.0f + calcLinNoiseVal(&lattice_noise, sr->hit_point)) * 0.5f;
+    vec3_assign(reflectance, noise_val, noise_val, noise_val);
+#else
     if(sr->mat->tex_flags & DIFFUSE)
     {
         vec3 texel;
@@ -23,6 +32,7 @@ void diffuseBRDF(vec3 f, const ShadeRec* sr)
     {
         vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
     }
+#endif
     vec3_scale(f, reflectance, 1.0f/(float)PI);
 }
 

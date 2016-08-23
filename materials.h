@@ -57,8 +57,8 @@ typedef struct Material_s
     float ior_in, ior_out;    
     vec3 ca, cd, cs, ce, cr;
     vec3 cf_in, cf_out;
-     Samples3D* h_samples;
-    Texture* tex_array[3];
+    Samples3D* h_samples;
+    Texture* tex_array[3];    
 }Material;
 
 void printMaterial(const Material* mat)

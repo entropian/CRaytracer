@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include "vec.h"
 #include "constants.h"
 #include "mat.h"
@@ -89,6 +90,12 @@ void eulerAngToMat4(mat4 r, const vec3 euler_ang)
     mat4_rotate_y(y_rot, y_rad);    
     mat4_mult(tmp, x_rot, z_rot);
     mat4_mult(r, y_rot, tmp);
+}
+
+float lerp(const float x, const float a, const float b)
+{
+    assert(x >= 0.0f && x <= 1.0f);
+    return a + (b - a) * x;
 }
 
 
