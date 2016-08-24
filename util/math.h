@@ -92,20 +92,20 @@ void eulerAngToMat4(mat4 r, const vec3 euler_ang)
     mat4_mult(r, y_rot, tmp);
 }
 
-float lerp(const float x, const float a, const float b)
+inline float lerp(const float x, const float a, const float b)
 {
     assert(x >= 0.0f && x <= 1.0f);
     return a + (b - a) * x;
 }
 
 // Assumes knots[] has four elements
-float fourKnotSpline(const float x, const float knots[])
+inline float fourKnotSpline(const float x, const float knots[])
 {
     float c3 = -0.5f * knots[0] + 1.5f * knots[1] - 1.5f * knots[2] + 0.5f * knots[3];
     float c2 = knots[0] - 2.5f * knots[1] + 2.0f * knots[2] - 0.5f * knots[3];
     float c1 = 0.5f * (-knots[0] + knots[2]);
-    float c0 = knots[1];
-    return ((c3*x + c2)*x + c1)*x + c0;
+    //float c0 = knots[1];
+    return ((c3*x + c2)*x + c1)*x + knots[1];
 }
 
 /*

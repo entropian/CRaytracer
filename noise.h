@@ -17,6 +17,8 @@ typedef struct LatticeNoise_s
 {
     unsigned char perm_table[NOISE_TABLE_SIZE];
     float value_table[NOISE_TABLE_SIZE];
+    int num_octaves;
+    float fs_min, fs_max;
 }LatticeNoise;
 
 LatticeNoise lattice_noise;
@@ -26,14 +28,35 @@ LatticeNoise lattice_noise;
   0 -- Linear interploation
   1 -- Cubic interpolation
  */
-void LatticeNoise_init(const int nt)
+void LatticeNoise_init(const int noise_type, const int num_octaves)
 {
-    int noise_type;
-    if(nt < 0 || nt > 1)
+    if(num_octaves < 1)
+    {
+        fprintf(stderr, "Number of octaves cannot be less than 1. Defaulting to 3.\n");
+        lattice_noise.num_octaves = 3;
+    }else
+    {        
+        lattice_noise.num_octaves = num_octaves;
+    }
+
+    // Compute fractal sum bounds
+    lattice_noise.fs_max = 0.0f;
+    for(int i = 0; i < lattice_noise.num_octaves; i++)
+    {
+        lattice_noise.fs_max += 1.0f / powf(2, i);        
+    }
+    lattice_noise.fs_min = -lattice_noise.fs_max;
+
+    int nt;
+    if(noise_type < 0 || noise_type > 1)
     {
         fprintf(stderr, "Invalid noise type. Defaulting to linear.\n");
-        noise_type = 0;
+        nt = 0;
+    }else
+    {
+        nt = noise_type;
     }
+    
     switch(nt)
     {
     case 0:
@@ -43,6 +66,7 @@ void LatticeNoise_init(const int nt)
         noiseFunc = &calcCubicNoiseVal;
         break;
     }
+    
     srand(NOISE_SEED);
     for(int i = 0; i < NOISE_TABLE_SIZE; i++)
     {
@@ -135,3 +159,18 @@ float calcCubicNoiseVal(const vec3 p)
     return clamp(fourKnotSpline(fz, zknots), -1.0f, 1.0f);
 }
 
+float valueFractalSum(const vec3 p)
+{
+    float amplitude = 1.0f;
+    float frequency = 1.0f;
+    float fractal_sum = 0.0f;
+    vec3 p_freq;
+    for(int j = 0; j < lattice_noise.num_octaves; j++)
+    {
+        vec3_scale(p_freq, p, frequency);
+        fractal_sum += amplitude * noiseFunc(p_freq);
+        amplitude *= 0.5f;
+        frequency *= 2.0f;
+    }
+    return (fractal_sum - lattice_noise.fs_min) / (lattice_noise.fs_max - lattice_noise.fs_min);    
+}
