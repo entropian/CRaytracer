@@ -8,6 +8,11 @@ const int NOISE_TABLE_SIZE = 256;
 const int NOISE_TABLE_MASK = NOISE_TABLE_SIZE - 1;
 const int NOISE_SEED = 253;
 
+float (*noiseFunc)(const vec3);
+
+float calcLinNoiseVal(const vec3);
+float calcCubicNoiseVal(const vec3);
+
 typedef struct LatticeNoise_s
 {
     unsigned char perm_table[NOISE_TABLE_SIZE];
@@ -16,8 +21,28 @@ typedef struct LatticeNoise_s
 
 LatticeNoise lattice_noise;
 
-void LatticeNoise_init()
+/*
+  nt:
+  0 -- Linear interploation
+  1 -- Cubic interpolation
+ */
+void LatticeNoise_init(const int nt)
 {
+    int noise_type;
+    if(nt < 0 || nt > 1)
+    {
+        fprintf(stderr, "Invalid noise type. Defaulting to linear.\n");
+        noise_type = 0;
+    }
+    switch(nt)
+    {
+    case 0:
+        noiseFunc = &calcLinNoiseVal;
+        break;
+    case 1:
+        noiseFunc = &calcCubicNoiseVal;
+        break;
+    }
     srand(NOISE_SEED);
     for(int i = 0; i < NOISE_TABLE_SIZE; i++)
     {
@@ -80,5 +105,33 @@ float calcLinNoiseVal(const vec3 p)
     z0 = lerp(fz, y0, y1);
 
     return z0;
+}
+
+float calcCubicNoiseVal(const vec3 p)
+{
+    int ix, iy, iz;
+    float fx, fy, fz;
+    float xknots[4], yknots[4], zknots[4];
+
+    ix = (int)floor(p[0]);
+    fx = p[0] - ix;
+    iy = (int)floor(p[1]);
+    fy = p[1] - iy;
+    iz = (int)floor(p[2]);
+    fz = p[2] - iz;
+
+    for(int k = -1; k <= 2; k++)
+    {
+        for(int j = -1; j <= 2; j++)
+        {
+            for(int i = -1; i <= 2; i++)
+            {
+                xknots[i+1] = getLatticeVal(ix + i, iy + j, iz + k);
+            }
+            yknots[j+1] = fourKnotSpline(fx, xknots);
+        }
+        zknots[k+1] = fourKnotSpline(fy, yknots);        
+    }
+    return clamp(fourKnotSpline(fz, zknots), -1.0f, 1.0f);
 }
 

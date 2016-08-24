@@ -111,7 +111,7 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp)
     if(strcmp(buffer, "NOISE") == 0)
     {
         mat->tex_flags |= NOISE;
-        return true;
+        if(!getNextTokenInFile(buffer, fp)){return false;}            
     }
             
     if(strcmp(buffer, "DIFFUSE_MAP") == 0)

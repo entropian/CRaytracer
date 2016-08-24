@@ -98,6 +98,15 @@ float lerp(const float x, const float a, const float b)
     return a + (b - a) * x;
 }
 
+// Assumes knots[] has four elements
+float fourKnotSpline(const float x, const float knots[])
+{
+    float c3 = -0.5f * knots[0] + 1.5f * knots[1] - 1.5f * knots[2] + 0.5f * knots[3];
+    float c2 = knots[0] - 2.5f * knots[1] + 2.0f * knots[2] - 0.5f * knots[3];
+    float c1 = 0.5f * (-knots[0] + knots[2]);
+    float c0 = knots[1];
+    return ((c3*x + c2)*x + c1)*x + c0;
+}
 
 /*
   Utility functions to find cubic and quartic roots.
