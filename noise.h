@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include "util/util.h"
 #include "util/vec.h"
+#include <emmintrin.h>
+#include <xmmintrin.h>
+
+#define LINEAR 0
+#define CUBIC 1
 
 const int NOISE_TABLE_SIZE = 256;
 const int NOISE_TABLE_MASK = NOISE_TABLE_SIZE - 1;
@@ -19,6 +24,7 @@ typedef struct LatticeNoise_s
     float value_table[NOISE_TABLE_SIZE];
     int num_octaves;
     float fs_min, fs_max;
+    float gain, lacunarity;
 }LatticeNoise;
 
 LatticeNoise lattice_noise;
@@ -28,8 +34,9 @@ LatticeNoise lattice_noise;
   0 -- Linear interploation
   1 -- Cubic interpolation
  */
-void LatticeNoise_init(const int noise_type, const int num_octaves)
-{
+void LatticeNoise_init(const int noise_type, const int num_octaves,
+                       const float gain, const float lacunarity)
+{       
     if(num_octaves < 1)
     {
         fprintf(stderr, "Number of octaves cannot be less than 1. Defaulting to 3.\n");
@@ -39,11 +46,29 @@ void LatticeNoise_init(const int noise_type, const int num_octaves)
         lattice_noise.num_octaves = num_octaves;
     }
 
+    if(gain < 0)
+    {
+        fprintf(stderr, "Noise gain must not be negative. Defaulting to 0.5\n");
+        lattice_noise.gain = 0.5f;
+    }else
+    {
+        lattice_noise.gain = gain;
+    }
+
+    if(lacunarity <= 0)
+    {
+        fprintf(stderr, "Noise lacunarity must be greater than 0. Defaulting to 2.0.\n");
+        lattice_noise.lacunarity = 2.0f;
+    }else
+    {
+        lattice_noise.lacunarity = lacunarity;
+    }
+
     // Compute fractal sum bounds
     lattice_noise.fs_max = 0.0f;
     for(int i = 0; i < lattice_noise.num_octaves; i++)
     {
-        lattice_noise.fs_max += 1.0f / powf(2, i);        
+        lattice_noise.fs_max += powf(lattice_noise.gain, i);        
     }
     lattice_noise.fs_min = -lattice_noise.fs_max;
 
@@ -59,10 +84,10 @@ void LatticeNoise_init(const int noise_type, const int num_octaves)
     
     switch(nt)
     {
-    case 0:
+    case LINEAR:
         noiseFunc = &calcLinNoiseVal;
         break;
-    case 1:
+    case CUBIC:
         noiseFunc = &calcCubicNoiseVal;
         break;
     }
@@ -159,18 +184,36 @@ float calcCubicNoiseVal(const vec3 p)
     return clamp(fourKnotSpline(fz, zknots), -1.0f, 1.0f);
 }
 
-float valueFractalSum(const vec3 p)
+float turbulenceNoise(const vec3 p)
 {
     float amplitude = 1.0f;
     float frequency = 1.0f;
-    float fractal_sum = 0.0f;
+    float turbulence = 0.0f;
+
     vec3 p_freq;
-    for(int j = 0; j < lattice_noise.num_octaves; j++)
+    for(int i = 0; i < lattice_noise.num_octaves; i++)
     {
-        vec3_scale(p_freq, p, frequency);
-        fractal_sum += amplitude * noiseFunc(p_freq);
+        vec3_scale(p_freq, p, frequency);            
+        turbulence += amplitude * fabs(noiseFunc(p_freq));
         amplitude *= 0.5f;
         frequency *= 2.0f;
     }
-    return (fractal_sum - lattice_noise.fs_min) / (lattice_noise.fs_max - lattice_noise.fs_min);    
+    return turbulence /= lattice_noise.fs_max;    
+}
+
+float fBm(const vec3 p)
+{
+    float amplitude = 1.0f;
+    float frequency = 1.0f;
+    float fBm = 0.0f;
+
+    vec3 p_freq;    
+    for(int i = 0; i < lattice_noise.num_octaves; i++)
+    {
+        vec3_scale(p_freq, p, frequency);                    
+        fBm += amplitude * noiseFunc(p_freq);
+        amplitude *= lattice_noise.gain;
+        frequency *= lattice_noise.lacunarity;        
+    }
+    return (fBm - lattice_noise.fs_min) / (lattice_noise.fs_max - lattice_noise.fs_min);        
 }

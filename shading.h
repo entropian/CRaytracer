@@ -28,8 +28,8 @@ void diffuseBRDF(vec3 f, const ShadeRec* sr)
 
     if(sr->mat->tex_flags & NOISE)
     {
-        //float noise_val = (1.0f + noiseFunc(sr->hit_point)) * 0.5f;
-        float noise_val = valueFractalSum(sr->hit_point);
+        //float noise_val = turbulenceNoise(sr->hit_point);
+        float noise_val = fBm(sr->hit_point);
         vec3_scale(reflectance, reflectance, noise_val);
     }    
 

@@ -4,6 +4,8 @@
 #include "vec.h"
 #include "constants.h"
 #include "mat.h"
+#include <emmintrin.h>
+#include <xmmintrin.h>
 
 inline void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
 {
@@ -98,14 +100,52 @@ inline float lerp(const float x, const float a, const float b)
     return a + (b - a) * x;
 }
 
+__m128 fourKnotSplineSSE(const __m128* x, const __m128* k0, const __m128* k1, const __m128* k2, const __m128* k3)
+{
+
+    __m128 coeff = _mm_set_ps1(-0.5f);
+    __m128 tmp1 = _mm_mul_ps(*k0, coeff);
+    coeff = _mm_set_ps1(1.5f);
+    __m128 tmp2 = _mm_mul_ps(*k1, coeff);
+    coeff = _mm_set_ps1(-1.5f);    
+    __m128 tmp3 = _mm_mul_ps(*k2, coeff);
+    coeff = _mm_set_ps1(0.5f);
+    __m128 tmp4 = _mm_mul_ps(*k3, coeff);
+    tmp1 = _mm_add_ps(tmp1, tmp2);
+    tmp2 = _mm_add_ps(tmp3, tmp4);
+    __m128 c3 = _mm_add_ps(tmp1, tmp2);
+
+    coeff = _mm_set_ps1(-2.5f);
+    tmp1 = _mm_mul_ps(coeff, *k1);
+    coeff = _mm_set_ps1(2.0f);
+    tmp2 = _mm_mul_ps(coeff, *k2);
+    coeff = _mm_set_ps1(-0.5f);
+    tmp3 = _mm_mul_ps(coeff, *k3);
+    tmp1 = _mm_add_ps(*k0, tmp1);
+    tmp2 = _mm_add_ps(tmp2, tmp3);
+    __m128 c2 = _mm_add_ps(tmp1, tmp2);
+
+    coeff = _mm_set_ps1(-1.0f);
+    tmp1 = _mm_mul_ps(coeff, *k0);
+    tmp1 = _mm_add_ps(tmp1, *k2);
+    coeff = _mm_set_ps1(0.5f);
+    __m128 c1 = _mm_mul_ps(coeff, tmp1);
+
+    return _mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(c3, *x), c1), *x), *k1);
+
+    __m128 zero = _mm_set_ps1(0.0f);
+    return zero;
+}
+
+
 // Assumes knots[] has four elements
 inline float fourKnotSpline(const float x, const float knots[])
 {
     float c3 = -0.5f * knots[0] + 1.5f * knots[1] - 1.5f * knots[2] + 0.5f * knots[3];
     float c2 = knots[0] - 2.5f * knots[1] + 2.0f * knots[2] - 0.5f * knots[3];
     float c1 = 0.5f * (-knots[0] + knots[2]);
-    //float c0 = knots[1];
-    return ((c3*x + c2)*x + c1)*x + knots[1];
+    float c0 = knots[1];
+    return ((c3*x + c2)*x + c1)*x + c0;
 }
 
 /*
