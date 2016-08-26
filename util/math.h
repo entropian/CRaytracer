@@ -100,7 +100,7 @@ inline float lerp(const float x, const float a, const float b)
     return a + (b - a) * x;
 }
 
-__m128 fourKnotSplineSSE(const __m128* x, const __m128* k0, const __m128* k1, const __m128* k2, const __m128* k3)
+__m128 fourKnotSplineSSE(__m128* x, __m128* k0, __m128* k1, __m128* k2, __m128* k3)
 {
 
     __m128 coeff = _mm_set_ps1(-0.5f);
@@ -131,10 +131,8 @@ __m128 fourKnotSplineSSE(const __m128* x, const __m128* k0, const __m128* k1, co
     coeff = _mm_set_ps1(0.5f);
     __m128 c1 = _mm_mul_ps(coeff, tmp1);
 
-    return _mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(c3, *x), c1), *x), *k1);
-
-    __m128 zero = _mm_set_ps1(0.0f);
-    return zero;
+    __m128 output = _mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(c3, *x), c2), *x), c1), *x), *k1);
+    return output;
 }
 
 

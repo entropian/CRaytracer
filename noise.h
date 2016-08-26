@@ -17,6 +17,7 @@ float (*noiseFunc)(const vec3);
 
 float calcLinNoiseVal(const vec3);
 float calcCubicNoiseVal(const vec3);
+float calcCubicNoiseValSSE(const vec3);
 
 typedef struct LatticeNoise_s
 {
@@ -88,7 +89,8 @@ void LatticeNoise_init(const int noise_type, const int num_octaves,
         noiseFunc = &calcLinNoiseVal;
         break;
     case CUBIC:
-        noiseFunc = &calcCubicNoiseVal;
+        //noiseFunc = &calcCubicNoiseVal;
+        noiseFunc = &calcCubicNoiseValSSE;
         break;
     }
     
@@ -154,6 +156,106 @@ float calcLinNoiseVal(const vec3 p)
     z0 = lerp(fz, y0, y1);
 
     return z0;
+}
+
+typedef union uSIMD_u
+{
+    __m128 m;
+    float a[4];
+}uSIMD;
+
+float calcCubicNoiseValSSE(const vec3 p)    
+{
+    int ix, iy, iz;
+    //float fx, fy, fz;
+    __m128 fx, fy;
+    float fz;
+    //float xknots[4], yknots[4], zknots[4];
+
+    ix = (int)floor(p[0]);
+    fx = _mm_set_ps1(p[0] - ix);    
+    iy = (int)floor(p[1]);
+    fy = _mm_set_ps1(p[1] - iy);
+    iz = (int)floor(p[2]);
+    fz = p[2] - iz;
+
+    uSIMD k0, k1, k2, k3;
+    __m128 out0, out1, out2, out3;
+
+    for(int k = -1; k <= 2; k++)
+    {
+        for(int j = -1; j <= 2; j++)
+        {
+            /*
+            for(int i = -1; i <= 2; i++)
+            {                
+                //xknots[i+1] = getLatticeVal(ix + i, iy + j, iz + k);
+                
+            }
+            */
+            k0.a[j+1] = getLatticeVal(ix-1, iy + j, iz + k);
+            k1.a[j+1] = getLatticeVal(ix+0, iy + j, iz + k);
+            k2.a[j+1] = getLatticeVal(ix+1, iy + j, iz + k);
+            k3.a[j+1] = getLatticeVal(ix+2, iy + j, iz + k);            
+            
+            //yknots[j+1] = fourKnotSpline(fx, xknots);
+        }
+        switch(k)
+        {
+        case -1:
+            out0 = fourKnotSplineSSE(&fx, &(k0.m), &(k1.m), &(k2.m), &(k3.m));
+            break;
+        case 0:
+            out1 = fourKnotSplineSSE(&fx, &(k0.m), &(k1.m), &(k2.m), &(k3.m));            
+            break;
+        case 1:
+            out2 = fourKnotSplineSSE(&fx, &(k0.m), &(k1.m), &(k2.m), &(k3.m));            
+            break;
+        case 2:
+            out3 = fourKnotSplineSSE(&fx, &(k0.m), &(k1.m), &(k2.m), &(k3.m));            
+            break;
+        }
+        //zknots[k+1] = fourKnotSpline(fy, yknots);        
+    }
+    __m128 t1 = _mm_movelh_ps(out1, out0);
+    __m128 t2 = _mm_movehl_ps(out0, out1);
+    __m128 t3 = _mm_movelh_ps(out3, out2);
+    __m128 t4 = _mm_movehl_ps(out2, out3);
+    k0.m = _mm_shuffle_ps(t1, t3, _MM_SHUFFLE(0, 2, 0, 2));
+    k1.m = _mm_shuffle_ps(t1, t3, _MM_SHUFFLE(1, 3, 1, 3));
+    k2.m = _mm_shuffle_ps(t2, t4, _MM_SHUFFLE(0, 2, 0, 2));
+    k3.m = _mm_shuffle_ps(t2, t4, _MM_SHUFFLE(1, 3, 1, 3));                    
+    // Swizzle
+    /*v1 v2 v3 v4 a1 a2 a3 a4
+      b1 b2 b3 b4
+      c1 c2 c3 c4
+      d1 d2 d3 d4
+
+      desired result
+      a1 b1 c1 d1
+      a2 b2 c2 d2
+      a3 b3 c3 d3
+      a4 b4 c4 d4
+
+      t1 = _mm_movelh_ps(v2, v1)
+      t2 = _mm_movehl_ps(v1, v2)
+      t1: a1 b1 a2 b2
+      t2: c1 d1 c2 d2
+
+      t3 = _mm_movelh_ps(v4, v3)
+      t4 = _mm_movehl_ps(v3, v4)
+      t3: a3 b3 a4 b4
+      t4: c3 d3 c4 d4
+
+      o1 = _mm_shuffle_ps(t1, t3, _MM_SHUFFLE(0, 2, 0, 2));
+      o2 = _mm_shuffle_ps(t1, t3, _MM_SHUFFLE(1, 3, 1, 3));
+      o3 = _mm_shuffle_ps(t2, t4, _MM_SHUFFLE(0, 2, 0, 2));
+      o4 = _mm_shuffle_ps(t2, t4, _MM_SHUFFLE(1, 3, 1, 3));                    
+    */    
+    uSIMD final_knots;
+    final_knots.m  = fourKnotSplineSSE(&fy, &(k0.m), &(k1.m), &(k2.m), &(k3.m));
+    return clamp(fourKnotSpline(fz, final_knots.a), -1.0f, 1.0f);
+    //return clamp(fourKnotSpline(fz, zknots), -1.0f, 1.0f);
 }
 
 float calcCubicNoiseVal(const vec3 p)

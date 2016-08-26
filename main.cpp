@@ -85,7 +85,7 @@ int main()
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
-    LatticeNoise_init(CUBIC, 3, 0.5f, 2.0f);
+    LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
     
     // Samples
     setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 
