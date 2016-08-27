@@ -1,4 +1,4 @@
-Debug calcCubicNoiseValSSE()
+Gotta rethink global variables.
 After removing normals and tangent in smooth triangle, memory usage increases slightly over time during rendering.
 Figure out how to load san miguel.
 Optimize mesh loading

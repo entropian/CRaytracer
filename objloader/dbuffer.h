@@ -16,6 +16,20 @@ typedef struct
 #define DBuffer_size(a) ((a).size) / ((a).element_size)
 #define DBuffer_max_elements(a) ((a).max) / ((a).element_size)
 
+void DBuffer_push_f(DBuffer* dbuf, const char* new_element, const size_t element_size);
+#define DBuffer_push(a, b) DBuffer_push_f((&(a)), (const char*)(&b), sizeof(b))
+
+DBuffer DBuffer_create_f(const int element_size);
+#define DBuffer_create(a) DBuffer_create_f(sizeof(a))
+
+DBuffer DBuffer_create_cap_f(const int element_size, const int max_elements);
+#define DBuffer_create_cap(a, b) DBuffer_create_cap_f(sizeof(a), b)
+
+void DBuffer_erase(DBuffer* dbuf);
+void DBuffer_assume(DBuffer* dbuf, char* data_ptr, const int size, const int max, const size_t element_size);
+void DBuffer_destroy(DBuffer* dbuf);
+
+#ifdef OBJ_LOADER_IMPLEMENTATION    
 void DBuffer_push_f(DBuffer* dbuf, const char* new_element, const size_t element_size)
 {
     if(dbuf->size + element_size > (unsigned)dbuf->max)
@@ -40,7 +54,6 @@ void DBuffer_push_f(DBuffer* dbuf, const char* new_element, const size_t element
     }
 }
 
-#define DBuffer_push(a, b) DBuffer_push_f((&(a)), (const char*)(&b), sizeof(b))
 
 DBuffer DBuffer_create_f(const int element_size)
 {
@@ -51,7 +64,6 @@ DBuffer DBuffer_create_f(const int element_size)
     dbuf.element_size = element_size;
     return dbuf;
 }
-#define DBuffer_create(a) DBuffer_create_f(sizeof(a))
 
 DBuffer DBuffer_create_cap_f(const int element_size, const int max_elements)
 {
@@ -62,7 +74,6 @@ DBuffer DBuffer_create_cap_f(const int element_size, const int max_elements)
     dbuf.element_size = element_size;
     return dbuf;    
 }
-#define DBuffer_create_cap(a, b) DBuffer_create_cap_f(sizeof(a), b)
 
 void DBuffer_erase(DBuffer* dbuf)
 {
@@ -88,13 +99,4 @@ void DBuffer_destroy(DBuffer* dbuf)
     dbuf->size = 0;
     dbuf->element_size = 0;
 }
-
-void DBuffer_insert(DBuffer* dbuf, const int index, const char* new_element, const int element_size)
-{
-
-}
-
-void DBuffer_remove(DBuffer* dbuf, const int index, const size_t element_size)
-{
-
-}
+#endif

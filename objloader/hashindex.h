@@ -19,7 +19,7 @@ typedef struct HashIndex_s
     int lookup_mask;    
 }HashIndex;
 
-bool isPowerOfTwo(int x)
+inline bool isPowerOfTwo(int x)
 {
     return (x & (x - 1)) == 0 && x > 0;
 }
@@ -51,46 +51,8 @@ inline void HashIndex_free(HashIndex* hash_index)
     hash_index->lookup_mask = 0;
 }
 
-void HashIndex_alloc(HashIndex* hash_index, const int new_hash_size, const int new_index_size)
-{
-    assert(isPowerOfTwo(new_hash_size));
-    HashIndex_free(hash_index);
-    hash_index->hash_size = new_hash_size;
-    hash_index->hash = (int*)malloc(sizeof(int) * new_hash_size);
-    memset(hash_index->hash, 0xff, new_hash_size * sizeof(hash_index->hash[0]));
-    hash_index->index_size = new_index_size;
-    hash_index->index_chain = (int*)malloc(sizeof(int) * new_index_size);
-    memset(hash_index->index_chain, 0xff, new_index_size * sizeof(hash_index->index_chain[0]));
-    hash_index->hash_mask = new_hash_size - 1;
-    hash_index->lookup_mask = -1;
-}
-
-
-void HashIndex_resize_index(HashIndex* hash_index, const int new_index_size)
-{
-    if(new_index_size <= hash_index->index_size)
-    {
-        return;
-    }
-    
-    int mod = new_index_size % hash_index->granularity;
-    int new_size;
-    if(!mod)
-    {
-        new_size = new_index_size;
-    }else
-    {
-        new_size = new_index_size + hash_index->granularity - mod;
-    }
-
-    int* old_chain = hash_index->index_chain;
-    hash_index->index_chain = (int*)malloc(sizeof(int) * new_size);
-    int index_size = hash_index->index_size;
-    memcpy(hash_index->index_chain, old_chain, index_size * sizeof(int));
-    memset(hash_index->index_chain + index_size, 0xff, (new_size - index_size) * sizeof(int));
-    free(old_chain);
-    hash_index->index_size = new_size;
-}
+void HashIndex_alloc(HashIndex* hash_index, const int new_hash_size, const int new_index_size);
+void HashIndex_resize_index(HashIndex* hash_index, const int new_index_size);
 
 inline void HashIndex_add(HashIndex* hash_index, const int key, const int index)
 {
@@ -164,3 +126,47 @@ inline int HashIndex_Next(const HashIndex* hash_index, const int index)
 
 
 
+
+#ifdef OBJ_LOADER_IMPLEMENTATION
+void HashIndex_alloc(HashIndex* hash_index, const int new_hash_size, const int new_index_size)
+{
+    assert(isPowerOfTwo(new_hash_size));
+    HashIndex_free(hash_index);
+    hash_index->hash_size = new_hash_size;
+    hash_index->hash = (int*)malloc(sizeof(int) * new_hash_size);
+    memset(hash_index->hash, 0xff, new_hash_size * sizeof(hash_index->hash[0]));
+    hash_index->index_size = new_index_size;
+    hash_index->index_chain = (int*)malloc(sizeof(int) * new_index_size);
+    memset(hash_index->index_chain, 0xff, new_index_size * sizeof(hash_index->index_chain[0]));
+    hash_index->hash_mask = new_hash_size - 1;
+    hash_index->lookup_mask = -1;
+}
+
+
+void HashIndex_resize_index(HashIndex* hash_index, const int new_index_size)
+{
+    if(new_index_size <= hash_index->index_size)
+    {
+        return;
+    }
+    
+    int mod = new_index_size % hash_index->granularity;
+    int new_size;
+    if(!mod)
+    {
+        new_size = new_index_size;
+    }else
+    {
+        new_size = new_index_size + hash_index->granularity - mod;
+    }
+
+    int* old_chain = hash_index->index_chain;
+    hash_index->index_chain = (int*)malloc(sizeof(int) * new_size);
+    int index_size = hash_index->index_size;
+    memcpy(hash_index->index_chain, old_chain, index_size * sizeof(int));
+    memset(hash_index->index_chain + index_size, 0xff, (new_size - index_size) * sizeof(int));
+    free(old_chain);
+    hash_index->index_size = new_size;
+}
+
+#endif

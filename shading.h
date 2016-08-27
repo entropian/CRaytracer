@@ -6,7 +6,7 @@
 #include "materials.h"
 #include "shapes/shapes.h"
 #include "lights.h"
-#include "scenedata.h"
+#include "scene/scenedata.h"
 #include "sampling.h"
 #include "intersect.h"
 #include "texture.h"

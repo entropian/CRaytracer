@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "util/util.h"
-#include "scenedata.h"
+#include "scene/scenedata.h"
 #include "trace.h"
 
 typedef struct ConfigParams_s

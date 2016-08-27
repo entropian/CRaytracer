@@ -1,6 +1,9 @@
 #pragma once
 
+#include <stdio.h>
 #include "vec.h"
+
+bool getNextTokenInFile(char buffer[], FILE* fp);
 
 inline float min(float a, float b)
 {
@@ -22,28 +25,6 @@ inline float clamp(const float x, const float min, const float max)
     return (x < min ? min : (x > max ? max : x));
 }
 
-bool getNextTokenInFile(char buffer[], FILE* fp)
-{
-    char c = fgetc(fp);
-    while((c ==  ' ' || c == '\n') && c != EOF)
-    {
-        c = fgetc(fp);
-    }
-    if(c != EOF)
-    {
-        int i;
-        for(i = 0 ; c != ' ' && c != '\n' && c != EOF; i++)
-        {
-            buffer[i] = c;
-            c = fgetc(fp);
-        }
-        buffer[i] = '\0';
-        return true;
-    }else
-    {
-        return false;
-    }
-}
 
 inline void printVec3WithText(const char* text, const vec3 v)
 {

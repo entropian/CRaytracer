@@ -27,7 +27,7 @@
 #include "camera.h"
 #include "lights.h"
 //#include "sceneobj.h"
-#include "scene.h"
+#include "scene/scene.h"
 #include "shading.h"
 #include "buildscene.h"
 #include "intersect.h"
@@ -91,9 +91,9 @@ int main()
     setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 
                                                                          // sample struct that follows
     srand((unsigned int)time(NULL));    
-    Samples2D unit_square_samples = Samples2D_default;
-    Samples2D disk_samples = Samples2D_default;
-    Samples3D h_samples = Samples3D_default;
+    Samples2D unit_square_samples = getDefaultSamples2D();
+    Samples2D disk_samples = getDefaultSamples2D();
+    Samples3D h_samples = getDefaultSamples3D();
     genMultijitteredSamples(&unit_square_samples);
     mapSamplesToDisk(&disk_samples, &unit_square_samples);
     mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
@@ -134,7 +134,7 @@ int main()
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
-        for(int p = 0; p < NUM_SAMPLES; p++)
+        for(int p = 0; p < params.num_samples; p++)
         {
             // NOTE: put the code below into a function
             vec2 sample, imageplane_coord;
@@ -153,7 +153,7 @@ int main()
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights));
             vec3_add(color, color, radiance);
         }        
-        vec3_scale(color, color, 1.0f/NUM_SAMPLES);
+        vec3_scale(color, color, 1.0f/params.num_samples);
         maxToOne(color, color);
         image[i*3] = (char)(color[0] * 255.0f);
         image[i*3 + 1] = (char)(color[1] * 255.0f);

@@ -5,7 +5,7 @@
 #include "util/ray.h"
 #include "util/shaderec.h"
 #include "util/constants.h"
-#include "scenedata.h"
+#include "scene/scenedata.h"
 #include "shading.h"
 #include "intersect.h"
 
@@ -108,7 +108,7 @@ float calcSpecRefRadiance(vec3 spec_ref_radiance, const int depth,  const vec3 h
         getVec3InLocalBasis(sample_ray.direction, reflected_sample, reflect_dir);
     }
     float raydotr = vec3_dot(sample_ray.direction, reflect_dir);
-    double phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
+    float phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
     float pdf = phong_lobe * (vec3_dot(normal, sample_ray.direction));
     vec3 brdf;
     vec3_scale(brdf, sr->mat->cs, phong_lobe);   // Deferring reflectance scaling
@@ -314,7 +314,7 @@ float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr, c
         vec3 reflected_sample = {-new_sample[0], -new_sample[1], new_sample[2]};
         getVec3InLocalBasis(sample_ray.direction, reflected_sample, reflect_dir);
     }
-    double phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
+    float phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
     float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
     vec3 brdf;
     vec3_scale(brdf, sr->mat->cs, phong_lobe); // Defer reflectance scaling

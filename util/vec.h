@@ -172,7 +172,7 @@ inline void vec4_clear(vec4 a)
 
 inline void vec2_normalize(vec2 r, const vec2 a)
 {
-    float length = sqrt(vec2_dot(a, a));
+    float length = (float)sqrt(vec2_dot(a, a));
     if(length == 0)
     {
         vec2_clear(r);
@@ -183,7 +183,7 @@ inline void vec2_normalize(vec2 r, const vec2 a)
 
 inline void vec3_normalize(vec2 r, const vec3 a)
 {
-    float length = sqrt(vec3_dot(a, a));
+    float length = (float)sqrt(vec3_dot(a, a));
     if(length == 0)
     {
         vec3_clear(r);
@@ -194,7 +194,7 @@ inline void vec3_normalize(vec2 r, const vec3 a)
 
 inline void vec4_normalize(vec4 r, vec4 a)
 {
-    float length = sqrt(vec4_dot(a, a));
+    float length = (float)sqrt(vec4_dot(a, a));
     if(length == 0)
     {
         vec4_clear(r);
@@ -212,17 +212,17 @@ inline void vec3_cross(vec3 r, const vec3 a, const vec3 b)
 
 inline float vec2_length(const vec2 a)
 {
-    return sqrt(vec2_dot(a, a));
+    return (float)sqrt(vec2_dot(a, a));
 }
 
 inline float vec3_length(const vec3 a)
 {
-    return sqrt(vec3_dot(a, a));
+    return (float)sqrt(vec3_dot(a, a));
 }
 
 inline float vec4_length(const vec4 a)
 {
-    return sqrt(vec4_dot(a, a));
+    return (float)sqrt(vec4_dot(a, a));
 }
 
 inline void vec2_copy(vec2 r, const vec2 a)

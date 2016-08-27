@@ -9,7 +9,7 @@
 
 #define OBJ_NAME_LENGTH 32
 
-void stringCopy(char* dest, const int max_len, const char* src)
+static void stringCopy(char* dest, const int max_len, const char* src)
 {
 #ifdef _MSC_VER
     strcpy_s(dest, max_len, src);
@@ -18,7 +18,7 @@ void stringCopy(char* dest, const int max_len, const char* src)
 #endif
 }
 
-void stringNCopy(char* dest, const int max_len, const char*src, const int len)
+static void stringNCopy(char* dest, const int max_len, const char*src, const int len)
 {
 #ifdef _MSC_VER
     strncpy_s(dest, max_len, src, len);
@@ -27,7 +27,7 @@ void stringNCopy(char* dest, const int max_len, const char*src, const int len)
 #endif
 }
 
-typedef struct OBJShape_s
+struct OBJShape_s
 {
     float* positions;
     float* normals;
@@ -37,27 +37,17 @@ typedef struct OBJShape_s
     int num_positions, num_normals, num_texcoords, num_indices;
     char mat_name[OBJ_NAME_LENGTH];
     char mesh_name[OBJ_NAME_LENGTH];
-}OBJShape;
+};
+typedef struct OBJShape_s OBJShape;
 
-void OBJShape_destroy(OBJShape* obj_shape)
-{
-    if(obj_shape->num_positions > 0){free(obj_shape->positions);}
-    if(obj_shape->num_normals > 0){free(obj_shape->normals);}
-    if(obj_shape->num_texcoords > 0){free(obj_shape->texcoords);}
-    if(obj_shape->num_indices > 0){free(obj_shape->indices);}
-
-    obj_shape->num_positions = 0;
-    obj_shape->num_normals = 0;
-    obj_shape->num_texcoords = 0;
-    obj_shape->num_indices = 0;
-}
+void OBJShape_destroy(OBJShape* obj_shape);
 
 typedef struct VertexIndex_s
 {
     int v_idx, vn_idx, vt_idx;
 }VertexIndex;
 
-bool OBJGetLine(FILE* fp, int* read_result, char buffer[], const int buffer_size)
+static bool OBJGetLine(FILE* fp, int* read_result, char buffer[], const int buffer_size)
 {
     bool not_end_of_file = true;
     bool reading = true;
@@ -131,7 +121,7 @@ static inline int fixIndex(const int index, const int size)
     return -1;
 }
 
-VertexIndex OBJParseFaceTriple(const char** str)
+static VertexIndex OBJParseFaceTriple(const char** str)
 {
     VertexIndex vi = {0, 0, 0};
 
@@ -167,7 +157,7 @@ VertexIndex OBJParseFaceTriple(const char** str)
 }
 
 // TODO: length problem
-void OBJParseString(char buffer[], const char** str)
+static void OBJParseString(char buffer[], const char** str)
 {
     *str += strspn(*str, " \t");
     int length = strcspn(*str, " \t\r\0");
@@ -176,12 +166,12 @@ void OBJParseString(char buffer[], const char** str)
     *str += length;
 }
 
-inline void getVertexIndexString(char* string, const VertexIndex* vi)
+static inline void getVertexIndexString(char* string, const VertexIndex* vi)
 {
     sprintf_s(string, 256, "p%dn%dt%d", vi->v_idx, vi->vn_idx, vi->vt_idx);
 }
 
-inline bool vertexIndexComp(const VertexIndex* a, const VertexIndex* b)
+static inline bool vertexIndexComp(const VertexIndex* a, const VertexIndex* b)
 {
     if(a->v_idx != b->v_idx){return false;}
     if(a->vn_idx != b->vn_idx){return false;}
@@ -189,7 +179,7 @@ inline bool vertexIndexComp(const VertexIndex* a, const VertexIndex* b)
     return true;
 }
 
-int UpdateVertexCache(DBuffer* positions, DBuffer* normals, DBuffer* texcoords, HashIndex* hash_index,
+static int UpdateVertexCache(DBuffer* positions, DBuffer* normals, DBuffer* texcoords, HashIndex* hash_index,
                       DBuffer* vi_cache,
                       const VertexIndex* vi, const DBuffer* in_positions, const DBuffer* in_normals,
                       const DBuffer* in_texcoords)
@@ -236,7 +226,7 @@ int UpdateVertexCache(DBuffer* positions, DBuffer* normals, DBuffer* texcoords, 
     return index;
 }
 
-bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuffer* in_normals,
+static bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuffer* in_normals,
                         const DBuffer* in_texcoords, DBuffer* in_face_group)
 {
     if(DBuffer_size(*in_face_group) == 0)
@@ -297,6 +287,9 @@ bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuf
     return true;
 }
 
+int loadOBJ(OBJShape** shapes, const char*  file_name);
+
+#ifdef OBJ_LOADER_IMPLEMENTATION
 int loadOBJ(OBJShape** shapes, const char*  file_name)
 {
     FILE* fp;
@@ -538,3 +531,17 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     *shapes = (OBJShape*)(obj_shapes.data);
     return DBuffer_size(obj_shapes);
 }
+
+void OBJShape_destroy(OBJShape* obj_shape)
+{
+    if(obj_shape->num_positions > 0){free(obj_shape->positions);}
+    if(obj_shape->num_normals > 0){free(obj_shape->normals);}
+    if(obj_shape->num_texcoords > 0){free(obj_shape->texcoords);}
+    if(obj_shape->num_indices > 0){free(obj_shape->indices);}
+
+    obj_shape->num_positions = 0;
+    obj_shape->num_normals = 0;
+    obj_shape->num_texcoords = 0;
+    obj_shape->num_indices = 0;
+}
+#endif

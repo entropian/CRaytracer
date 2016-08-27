@@ -57,7 +57,7 @@ void initPinholeCameraDefault(Camera *camera)
     camera->lens_radius = 0.0f;
     // TODO: move below into initThinLensCameraDefault
     camera->samples = (Samples2D*)malloc(sizeof(Samples2D));
-    *(camera->samples) = Samples2D_default;
+    *(camera->samples) = getDefaultSamples2D();
     genMultijitteredSamples(camera->samples);
     mapSamplesToDisk(camera->samples, camera->samples);
 }
