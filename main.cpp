@@ -85,6 +85,8 @@ int main()
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
+    float* color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));;
+
     LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
     
     // Samples
@@ -107,15 +109,15 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    //vec3 position = {0.4f, 2.0f, 2.0f};
-    //vec3 look_point = {2.0f, 0.0f, -2.0f};
-    vec3 position = {0.0f, 2.0f, 1.5f};
-    vec3 look_point = {0.0f, 2.0f, -2.0f};    
+    //vec3 position = {0.0f, 2.0f, 1.5f};
+    //vec3 look_point = {0.0f, 2.0f, -2.0f};
+    vec3 position = {278.0f, 273.0f, 800.0f};
+    vec3 look_point = {278.0f, 273.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
     // TODO: throw these in a struct for camera scaling
-    float fov = 90.0f;
+    float fov = 70.0f / 180.0f * PI;
     float frame_length = 2.0f * (sin(fov/2.0f) * camera.focal_pt_dist);
     float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
     float pixel_length = frame_length/(float)(frame_res_width);
@@ -131,11 +133,63 @@ int main()
     //drawSamples(image, &disk_samples, frame_res_width, frame_res_height, num_pixels);
     //drawHemisphereSamples2D(image, &h_samples, frame_res_width, frame_res_height, num_pixels);
 //#if 0
+
+
+    for(unsigned int p = 0; p < params.num_samples; p++)
+    {
+        for(int i = 0; i < num_pixels; i++)
+        {
+            vec3 color = {0.0f, 0.0f, 0.0f};
+            // NOTE: put the code below into a function
+            vec2 sample, imageplane_coord;
+            getNextSample2D(sample, &unit_square_samples);
+            imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
+            imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
+            
+            Ray ray;
+            calcCameraRay(&ray, imageplane_coord, &camera);
+
+            // Hemisphere sample for ambient occlusion
+            vec3 h_sample;
+            getNextSample3D(h_sample, &h_samples);
+
+            vec3 radiance;
+            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights));
+            vec3_add(color, color, radiance);
+
+            // NEW
+            color_buffer[i*3] += color[0];
+            color_buffer[i*3 + 1] += color[1];
+            color_buffer[i*3 + 2] += color[2];
+            vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
+            vec3_scale(color, color, 1/(float)(p+1));
+            maxToOne(color, color);            
+
+            image[i*3] = (char)(color[0] * 255.0f);
+            image[i*3 + 1] = (char)(color[1] * 255.0f);
+            image[i*3 + 2] = (char)(color[2] * 255.0f);            
+        }        
+        if(SHOW_PROGRESS)
+        {
+            displayImage(window, viewport, image, frame_res_width, frame_res_height);                
+            //int cur_percent = (int)((float)i / (float)(num_pixels) * 100.0f);
+            int cur_percent = (int)((float)p / (float)(params.num_samples) * 100.0f);
+            if(cur_percent > prev_percent)
+            {
+                prev_percent = cur_percent;
+                printf("%d%%\n", cur_percent);
+
+            }
+        }
+    }
+
+    /*
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
-        for(int p = 0; p < params.num_samples; p++)
+        for(unsigned int p = 0; p < params.num_samples; p++)
         {
+
             // NOTE: put the code below into a function
             vec2 sample, imageplane_coord;
             getNextSample2D(sample, &unit_square_samples);
@@ -158,10 +212,10 @@ int main()
         image[i*3] = (char)(color[0] * 255.0f);
         image[i*3 + 1] = (char)(color[1] * 255.0f);
         image[i*3 + 2] = (char)(color[2] * 255.0f);
-        
+
         if(SHOW_PROGRESS)
         {
-            int cur_percent = (float)i / (float)(num_pixels) * 100.0f;
+            int cur_percent = (int)((float)i / (float)(num_pixels) * 100.0f);
             if(cur_percent > prev_percent)
             {
                 prev_percent = cur_percent;
@@ -170,6 +224,7 @@ int main()
             }
         }
     }
+    */
 //#endif 
     end_time = glfwGetTime();
     double sec = end_time - start_time;

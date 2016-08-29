@@ -114,6 +114,28 @@ bool isGridObjType(const Object_t obj)
     return false;
 }
 
+void updateAABB(AABB *out, const mat4 transform, const AABB a)
+{
+    for(int i = 0; i < 3; i++)
+    {
+        out->min[i] = out->max[i] = transform[i][3];
+        for(int j = 0; j < 3; j++)
+        {
+            float e = transform[j][i] * a.min[j];
+            float f = transform[j][i] * a.max[j];
+            if(e < f)
+            {
+                out->min[i] += e;
+                out->max[i] += f; 
+            }else
+            {
+                out->min[i] += f;
+                out->max[i] += e; 
+            }
+        }
+    }
+}
+
 void getObjectAABB(AABB* aabb, const Object_t obj)
 {
     switch(obj.type)
@@ -150,9 +172,14 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
         {
             for(int j = 0; j < 3; j++)
             {
-                if(pts[i][j] < aabb->min[j]){aabb->min[j] = pts[i][j] - K_EPSILON;}
-                if(pts[i][j] > aabb->max[j]){aabb->max[j] = pts[i][j] + K_EPSILON;}
+                if(pts[i][j] < aabb->min[j]){aabb->min[j] = pts[i][j];}
+                if(pts[i][j] > aabb->max[j]){aabb->max[j] = pts[i][j];}
             }
+        }
+        for(int i = 0; i < 3; i++)
+        {
+            aabb->min[i] -= K_EPSILON;
+            aabb->max[i] += K_EPSILON;            
         }
     } break;
     case AABOX:
@@ -251,15 +278,22 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
     {
         InstancedShape* is = (InstancedShape*)obj.ptr;
         getObjectAABB(aabb, is->obj);
+        AABB tmp;
+        vec3_copy(tmp.min, aabb->min);
+        vec3_copy(tmp.max, aabb->max);        
         mat4 transform;
         affine_inverse(transform, is->inv_transform);
-        vec3 tmp1, tmp2;
+        /*
+        vec4 tmp1, tmp2;
+        vec3 tmp_min, tmp_max;
         vec4_assign(tmp1, aabb->min[0], aabb->min[1], aabb->min[2], 1.0f);
         mat4_mult_vec4(tmp2, transform, tmp1);
         vec3_assign(aabb->min, tmp2[0], tmp2[1], tmp2[2]);
         vec4_assign(tmp1, aabb->max[0], aabb->max[1], aabb->max[2], 1.0f);
         mat4_mult_vec4(tmp2, transform, tmp1);
-        vec3_assign(aabb->max, tmp2[0], tmp2[1], tmp2[2]);        
+        vec3_assign(aabb->max, tmp2[0], tmp2[1], tmp2[2]);
+        */
+        updateAABB(aabb, transform, tmp);
     } break;
     case COMPOUND:
     {

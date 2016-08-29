@@ -1,3 +1,6 @@
+Make a proper cornell box
+Sample direct and indirect illumination separately
+Cook-Torrance
 Gotta rethink global variables.
 After removing normals and tangent in smooth triangle, memory usage increases slightly over time during rendering.
 Figure out how to load san miguel.

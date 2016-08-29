@@ -318,11 +318,11 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
     unsigned int size = src_samples->num_samples * src_samples->num_sets;    
     for(unsigned int i = 0; i < size; i++)
     {
-        float cos_phi = cos(2.0f * (float)PI * src_samples->samples[i][0]);
-        float sin_phi = sin(2.0f * (float)PI * src_samples->samples[i][0]);
+        float cos_phi = (float)cos(2.0f * (float)PI * src_samples->samples[i][0]);
+        float sin_phi = (float)sin(2.0f * (float)PI * src_samples->samples[i][0]);
         float cos_theta = powf((1.0f - fabs(src_samples->samples[i][1])), 1.0f / (e + 1.0f));
         //float cos_theta = pow((1.0f - (src_samples->samples[i][1])), 1.0f / (e + 1.0f));
-        float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+        float sin_theta = (float)sqrt(1.0f - cos_theta * cos_theta);
         float pu = sin_theta * cos_phi;
         float pv = sin_theta * sin_phi;
         float pw = cos_theta;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "objecttype.h"
-#include "aabox.h"
 #include "plane.h"
 #include "rect.h"
 #include "sphere.h"
@@ -11,6 +10,7 @@
 #include "generic.h"
 #include "cylinder.h"
 #include "torus.h"
+#include "box.h"
 #include "../aabb.h"
 
 

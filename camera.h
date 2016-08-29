@@ -49,8 +49,8 @@ void initPinholeCameraDefault(Camera *camera)
     vec3_copy(camera->x_axis, x_axis);
     vec3_copy(camera->y_axis, y_axis);
     vec3_copy(camera->z_axis, z_axis);
-    camera->focal_pt_dist = 1.0f;
-    vec3 focal_point = {0.0f, 0.0f, 1.0f};
+    camera->focal_pt_dist = 0.035f;
+    vec3 focal_point = {0.0f, 0.0f, camera->focal_pt_dist};
     vec3_copy(camera->focal_point, focal_point);
     camera->camera_type = Pinhole;
     camera->focal_length = 0.0f;

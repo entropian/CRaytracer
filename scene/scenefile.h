@@ -148,93 +148,106 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
     if(mat->mat_type == INVALID_MAT_TYPE)
     {
         fprintf(stderr, "Invalid material type %s.\n", type_name);
+        if(!getNextTokenInFile(buffer, fp)){return false;}
         return false;
     }
-    
+
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-    strcpy_s(*name, NAME_LENGTH, buffer);
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
-    if(!getNextTokenInFile(buffer, fp)){return false;}            
-    if(strcmp(buffer, "yes") == 0)
+    strcpy_s(*name, NAME_LENGTH, buffer);    
+    if(mat->mat_type == EMISSIVE)
     {
-        mat->shadow = true;
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word COLOR
+        if(!parseColor(mat->ce, fp)){return false;}
+
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word INTENSITY
+        if(!getNextTokenInFile(buffer, fp)){return false;}        
+        mat->ke = (float)atof(buffer);
+        mat->shadow = false;
+        mat->h_samples = NULL;        
     }else
     {
-        mat->shadow = false;
-    }
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
+        if(!getNextTokenInFile(buffer, fp)){return false;}            
+        if(strcmp(buffer, "yes") == 0)
+        {
+            mat->shadow = true;
+        }else
+        {
+            mat->shadow = false;
+        }
         
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
-    if(!parseColor(mat->ca, fp)){return false;}
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
+        if(!parseColor(mat->ca, fp)){return false;}
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_CONSTANT
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->ka = (float)atof(buffer);        
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_CONSTANT
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->ka = (float)atof(buffer);        
         
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_COLOR
-    if(!parseColor(mat->cd, fp)){return false;}
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_COLOR
+        if(!parseColor(mat->cd, fp)){return false;}
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_CONSTANT
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->kd = (float)atof(buffer);
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_CONSTANT
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->kd = (float)atof(buffer);
 
-    if(mat->mat_type == MATTE)
-    {
-        mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-        goto Texture;
-    }
+        if(mat->mat_type == MATTE)
+        {
+            mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+            goto Texture;
+        }
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_COLOR
-    if(!parseColor(mat->cs, fp)){return false;}
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_COLOR
+        if(!parseColor(mat->cs, fp)){return false;}
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_CONSTANT
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->ks = (float)atof(buffer);        
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_CONSTANT
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->ks = (float)atof(buffer);        
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_EXPONENT
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->exp = (float)atof(buffer);
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_EXPONENT
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->exp = (float)atof(buffer);
 
-    if(mat->mat_type == PHONG)
-    {
-        mat->h_samples = NULL;
-        goto Texture;
-    }       
+        if(mat->mat_type == PHONG)
+        {
+            mat->h_samples = NULL;
+            goto Texture;
+        }       
         
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word REF_CONSTANT
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->kr = (float)atof(buffer);
-    mat->h_samples = genHemisphereSamples(MULTIJITTERED, mat->exp);
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word REF_CONSTANT
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->kr = (float)atof(buffer);
+        mat->h_samples = genHemisphereSamples(MULTIJITTERED, mat->exp);
     
-    if(mat->mat_type == REFLECTIVE)
-    {
-        goto Texture;
+        if(mat->mat_type == REFLECTIVE)
+        {
+            goto Texture;
+        }
+
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR_IN
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->ior_in = (float)atof(buffer);
+
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR_OUT
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->ior_out = (float)atof(buffer);
+
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_IN
+        if(!parseColor(mat->cf_in, fp)){return false;}    
+
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_OUT
+        if(!parseColor(mat->cf_out, fp)){return false;}
+
+        if(mat->mat_type == TRANSPARENT)
+        {
+            goto Texture;
+        }
+        return false;
+
+    Texture:
+        parseTextures(mat, scene, fp);
+        return true;
     }
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR_IN
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->ior_in = (float)atof(buffer);
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word IOR_OUT
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    mat->ior_out = (float)atof(buffer);
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_IN
-    if(!parseColor(mat->cf_in, fp)){return false;}    
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_OUT
-    if(!parseColor(mat->cf_out, fp)){return false;}
-
-    if(mat->mat_type == TRANSPARENT)
-    {
-        goto Texture;
-    }
-    return false;
-
-Texture:
-    parseTextures(mat, scene, fp);
-    return true;
 }
 
 int parseMaterials(Scene* scene, FILE* fp)
@@ -393,32 +406,56 @@ bool parseTriangleEntry(Object_t* obj,  FILE* fp, Scene* scene)
     return true;
 }
 
-bool parseAABoxEntry(Object_t* obj,  FILE* fp, Scene* scene)
+bool parseBoxEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
-    AABox* aabox_ptr = (AABox*)malloc(sizeof(AABox));
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
     if(!getNextTokenInFile(buffer, fp)){return false;}
+    bool shadow;
     if(strcmp(buffer, "yes") == 0)
     {
-        aabox_ptr->shadow = true;
+        shadow = true;
     }else
     {
-        aabox_ptr->shadow = false;
+        shadow = false;
     }
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MIN
-    if(!parseVec3(aabox_ptr->min, fp)){return false;}
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LENGTH
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get x span
+    float length = (float)atof(buffer);
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MAX
-    if(!parseVec3(aabox_ptr->max, fp)){return false;}
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word HEIGHT
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get y span
+    float height = (float)atof(buffer);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word WIDTH
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get z span
+    float width = (float)atof(buffer);
+
+    vec3 location;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
+    if(!parseVec3(location, fp)){return false;}    
+    vec3 scale;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SCALE
+    if(!parseVec3(scale, fp)){return false;}        
+    vec3 orientation;
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word ORIENTATION
+    if(!parseVec3(orientation, fp)){return false;}    
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get material name    
-    aabox_ptr->mat = Scene_findMaterial(scene, buffer);        
+    Material* mat = Scene_findMaterial(scene, buffer);
 
-    obj->ptr = aabox_ptr;
-    obj->type = AABOX;
+    mat4 inv_scale, rotation, inv_rotation, inv_translation, tmp, inv_transform;
+    mat4_scale_inverse(inv_scale, scale);
+    mat4_translate(inv_translation, -location[0], -location[1], -location[2]);
+    eulerAngToMat4(rotation, orientation);
+    mat4_invert_rotation(inv_rotation, rotation);
+    mat4_mult(tmp, inv_scale, inv_rotation);
+    mat4_mult(inv_transform, tmp, inv_translation);        
+
+    obj->ptr = initBox(inv_transform, length, height, width, mat, shadow);
+    obj->type = INSTANCED;
     return true;
 }
 
@@ -735,9 +772,9 @@ bool parsePrimitive(Object_t* obj, FILE* fp, Scene* scene, const char* prim_name
     }else if(strcmp(prim_name, "TRIANGLE") == 0)
     {
         parse_status = parseTriangleEntry(obj, fp, scene);
-    }else if(strcmp(prim_name, "AABOX") == 0)
+    }else if(strcmp(prim_name, "BOX") == 0)
     {
-        parse_status = parseAABoxEntry(obj, fp, scene);
+        parse_status = parseBoxEntry(obj, fp, scene);
     }else if(strcmp(prim_name, "OPENCYLINDER") == 0)
     {
         parse_status = parseOpenCylEntry(obj, fp, scene);

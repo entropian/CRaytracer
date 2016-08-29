@@ -67,7 +67,11 @@ float rayIntersectTriangle(ShadeRec* sr, Triangle* tri, const Ray ray)
 
     vec3_copy(sr->normal, tri->normal);
     getPointOnRay(sr->hit_point, ray, t);
-    vec3_negate(sr->wo, ray.direction);    
+    vec3_negate(sr->wo, ray.direction);
+    if(vec3_dot(sr->wo, sr->normal) < 0.0f)
+    {
+        vec3_negate(sr->normal, sr->normal);
+    }
     sr->mat = tri->mat;
     return t;
 }

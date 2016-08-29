@@ -2,7 +2,6 @@
 
 #include "../util/mat.h"
 #include "objecttype.h"
-#include "../aabb.h"
 #include "generic.h"
 
 typedef struct CompoundObject

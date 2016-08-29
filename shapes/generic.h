@@ -44,3 +44,15 @@ void computeGenericTorusNormal(vec3 r, const GenericTorus* torus, const vec3 hit
 void calcAABBGenericTorus(AABB* aabb, GenericTorus* torus);
 float rayIntersectGenericTorus(ShadeRec* sr, GenericTorus* torus, const Ray ray);
 float shadowRayIntersectGenericTorus(const GenericTorus* torus, const Ray ray);
+
+
+typedef struct AABox
+{
+    bool shadow;
+    vec3 min, max;
+    Material* mat;
+} AABox;
+
+void getAABoxNormal(vec3 r, const int face_hit);
+float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray);
+float shadowRayIntersectAABox(const AABox* aabox, const Ray ray);

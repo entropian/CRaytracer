@@ -9,7 +9,6 @@
 #include "../util/constants.h"
 #include "../materials.h"
 #include "../aabb.h"
-#include "generic.h"
 #include "instanced.h"
 
 typedef InstancedShape Torus;
