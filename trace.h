@@ -9,6 +9,8 @@
 #include "shading.h"
 #include "intersect.h"
 
+extern int MAX_DEPTH;
+
 enum TraceType
 {
     RAYCAST,
@@ -292,7 +294,7 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
     }
     //vec3_copy(radiance, min_sr.normal);
     /*
-    float tmpf = min_t / 1600;
+    float tmpf = (min_t - 800.0f) / 600.0f;
     vec3 depth_f = {tmpf, tmpf, tmpf};
     vec3_copy(radiance, depth_f);
     */
@@ -337,12 +339,42 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
     {    
         if(min_sr.mat->mat_type == EMISSIVE)
         {
-            vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke);
+            if(depth == MAX_DEPTH - 1)
+            {
+                vec3_copy(radiance, BLACK);
+            }else
+            {
+                vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke);
+            }
             //maxToOne(radiance, radiance);                
         }else
         {
-            if(depth > 0)
+            if(depth >= 0)
             {
+
+                // Direct illumination
+                if(depth == MAX_DEPTH)
+                {
+                    for(int i = 0; i < sl->num_lights; i++)
+                    {
+                        if(sl->light_types[i] == AREALIGHT)
+                        {
+                            vec3 light_dir;
+                            getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr);
+                            float ndotwi = vec3_dot(light_dir, min_sr.normal);
+                            if(ndotwi > 0)
+                            {
+                                bool in_shadow = shadowTest(i, sl, so, light_dir, &min_sr);
+                                if(!in_shadow)
+                                {
+                                    directIllumShading(radiance, ndotwi, light_dir, sl->light_ptrs[i],
+                                                       sl->light_types[i], &min_sr);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if(min_sr.mat->mat_type == MATTE)
                 {
                     vec3 new_sample;

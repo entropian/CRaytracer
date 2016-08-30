@@ -1,4 +1,5 @@
 #include "sampling.h"
+#include <assert.h>
 
 const Samples2D Samples2D_default = {0, 0, NULL, NULL, 0, 0};
 const Samples3D Samples3D_default = {0, 0, NULL, NULL, 0, 0};
@@ -61,9 +62,32 @@ void getNextSample2D(vec2 r, Samples2D *samples)
     {
         samples->jump = (rand() % samples->num_sets) * samples->num_samples;
     }
+    // sample->jump is offset for different sets
     vec2_copy(r, samples->samples[samples->jump + samples->shuffled_indices[samples->jump +
                                                                             samples->count++ % samples->num_samples]]);
 }
+
+void interleaveSampleSets(Samples2D* samples)
+{
+    vec2* new_samples = (vec2*)malloc(sizeof(vec2) * NUM_SAMPLES * NUM_SAMPLE_SETS);
+    for(int i = 0; i < NUM_SAMPLES; i++)
+    {
+        int offset = i * NUM_SAMPLE_SETS;
+        for(int j = 0; j < NUM_SAMPLE_SETS; j++)
+        {
+            vec2_copy(new_samples[j + offset], samples->samples[j * NUM_SAMPLES +
+                                                                samples->shuffled_indices[j * NUM_SAMPLES + i]]);
+        }
+    }
+    free(samples->samples);
+    samples->samples = new_samples;
+}
+
+void getInterleavedSample2D(vec2 r, Samples2D* samples)
+{
+    vec2_copy(r, samples->samples[(samples->count++) % (NUM_SAMPLES * NUM_SAMPLE_SETS)]);
+}
+
 
 void getNextSample3D(vec3 r, Samples3D *samples)
 {

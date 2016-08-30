@@ -29,7 +29,7 @@ typedef struct PointLight_s
 
 typedef struct AreaLight_s
 {
-    ObjectType obj_type;
+    ObjectType obj_type; 
     void* obj_ptr;
     float intensity;
     float pdf;

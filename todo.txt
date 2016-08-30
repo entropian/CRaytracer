@@ -1,5 +1,6 @@
-Make a proper cornell box
-Sample direct and indirect illumination separately
+Test sampling with AO
+Correct sampling pattern for new rendering loop by interleaving the sets of samples.
+Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
 Gotta rethink global variables.
 After removing normals and tangent in smooth triangle, memory usage increases slightly over time during rendering.

@@ -39,6 +39,7 @@
 #define SHOW_PROGRESS 1
 
 bool EXIT = false;
+int MAX_DEPTH = 0;
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
@@ -73,6 +74,7 @@ int main()
 {
     ConfigParams params;
     parseConfigFile(&params);
+    MAX_DEPTH = params.max_depth;
     
     GLFWwindow* window = initWindow(params.window_width, params.window_height);
     glfwSetKeyCallback(window, keyCallback);
@@ -126,6 +128,10 @@ int main()
     float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
     trace = getTraceFunc(params.trace_type);
 
+    // Fix samples for new rendering loop
+    interleaveSampleSets(&unit_square_samples);
+    vec2 sample_array[83];
+
     double start_time, end_time;
     start_time = glfwGetTime(); 
 
@@ -134,15 +140,16 @@ int main()
     //drawHemisphereSamples2D(image, &h_samples, frame_res_width, frame_res_height, num_pixels);
 //#if 0
 
-
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
+        //getSamplesArray(sample_array, &unit_square_samples, p);
         for(int i = 0; i < num_pixels; i++)
         {
             vec3 color = {0.0f, 0.0f, 0.0f};
             // NOTE: put the code below into a function
             vec2 sample, imageplane_coord;
-            getNextSample2D(sample, &unit_square_samples);
+            //getNextSample2D(sample, &unit_square_samples);
+            getInterleavedSample2D(sample, &unit_square_samples);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
             
