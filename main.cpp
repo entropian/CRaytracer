@@ -111,10 +111,11 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    //vec3 position = {0.0f, 2.0f, 1.5f};
-    //vec3 look_point = {0.0f, 2.0f, -2.0f};
-    vec3 position = {278.0f, 273.0f, 800.0f};
-    vec3 look_point = {278.0f, 273.0f, 0.0f};
+    vec3 position = {0.0f, 2.0f, 5.0f};
+    vec3 look_point = {0.0f, 0.0f, 0.0f};
+    // Cornell box camera coordinates
+    //vec3 position = {278.0f, 273.0f, 800.0f};
+    //vec3 look_point = {278.0f, 273.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -129,8 +130,8 @@ int main()
     trace = getTraceFunc(params.trace_type);
 
     // Fix samples for new rendering loop
-    interleaveSampleSets(&unit_square_samples);
-    vec2 sample_array[83];
+    interleaveSampleSets2D(&unit_square_samples);
+    interleaveSampleSets3D(&h_samples);
 
     double start_time, end_time;
     start_time = glfwGetTime(); 
@@ -158,7 +159,8 @@ int main()
 
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
-            getNextSample3D(h_sample, &h_samples);
+            //getNextSample3D(h_sample, &h_samples);
+            getInterleavedSample3D(h_sample, &h_samples);
 
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights));

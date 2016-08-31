@@ -1,5 +1,5 @@
 Test sampling with AO
-Correct sampling pattern for new rendering loop by interleaving the sets of samples.
+Change sample patterns for things other than camera rays
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
 Gotta rethink global variables.

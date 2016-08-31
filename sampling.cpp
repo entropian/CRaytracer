@@ -56,10 +56,12 @@ void freeSamples3D(Samples3D *samples)
     samples->count = samples->jump = samples->num_sets = samples->num_samples = 0;
 }
 
+// Used for rendering one pixel at a time
 void getNextSample2D(vec2 r, Samples2D *samples)
 {
     if(samples->count % samples->num_samples == 0)
     {
+        // Randomizes which set of samples a given pixel uses
         samples->jump = (rand() % samples->num_sets) * samples->num_samples;
     }
     // sample->jump is offset for different sets
@@ -67,7 +69,20 @@ void getNextSample2D(vec2 r, Samples2D *samples)
                                                                             samples->count++ % samples->num_samples]]);
 }
 
-void interleaveSampleSets(Samples2D* samples)
+// Used for rendering one pixel at a time
+void getNextSample3D(vec3 r, Samples3D *samples)
+{
+    if(samples->count % samples->num_samples == 0)
+    {
+        samples->jump = (rand() % samples->num_sets) * samples->num_samples;
+    }
+    vec3_copy(r, samples->samples[samples->jump + samples->shuffled_indices[samples->jump +
+                                                                            samples->count++ % samples->num_samples]]);
+}
+
+// Used for rendering the entire image one sample at a time
+// Interlveaves samples across sample sets
+void interleaveSampleSets2D(Samples2D* samples)
 {
     vec2* new_samples = (vec2*)malloc(sizeof(vec2) * NUM_SAMPLES * NUM_SAMPLE_SETS);
     for(int i = 0; i < NUM_SAMPLES; i++)
@@ -79,25 +94,69 @@ void interleaveSampleSets(Samples2D* samples)
                                                                 samples->shuffled_indices[j * NUM_SAMPLES + i]]);
         }
     }
+    
     free(samples->samples);
     samples->samples = new_samples;
 }
 
+// Used for rendering the entire image one sample at a time
+// Interlveaves samples across sample sets
+void interleaveSampleSets3D(Samples3D* samples)
+{
+    vec3* new_samples = (vec3*)malloc(sizeof(vec3) * NUM_SAMPLES * NUM_SAMPLE_SETS);
+    for(int i = 0; i < NUM_SAMPLES; i++)
+    {
+        int offset = i * NUM_SAMPLE_SETS;
+        for(int j = 0; j < NUM_SAMPLE_SETS; j++)
+        {
+            vec3_copy(new_samples[j + offset], samples->samples[j * NUM_SAMPLES +
+                                                                samples->shuffled_indices[j * NUM_SAMPLES + i]]);
+        }
+    }
+    free(samples->samples);
+    samples->samples = new_samples;
+}
+
+
+// Used for rendering the entire image one sample at a time
 void getInterleavedSample2D(vec2 r, Samples2D* samples)
 {
-    vec2_copy(r, samples->samples[(samples->count++) % (NUM_SAMPLES * NUM_SAMPLE_SETS)]);
-}
-
-
-void getNextSample3D(vec3 r, Samples3D *samples)
-{
-    if(samples->count % samples->num_samples == 0)
+    if(samples->count % NUM_SAMPLE_SETS == 0)
     {
-        samples->jump = (rand() % samples->num_sets) * samples->num_samples;
+        for(int i = 0; i < NUM_SAMPLE_SETS; i++)
+        {
+            int random_index = rand() % NUM_SAMPLE_SETS;
+            int tmp = samples->interleave_indices[i];
+            samples->interleave_indices[i] = samples->interleave_indices[random_index];
+            samples->interleave_indices[random_index] = tmp;
+        }
     }
-    vec3_copy(r, samples->samples[samples->jump + samples->shuffled_indices[samples->jump +
-                                                                            samples->count++ % samples->num_samples]]);
+    
+    int offset = (samples->count % (NUM_SAMPLES * NUM_SAMPLE_SETS)) / NUM_SAMPLE_SETS;
+    vec2_copy(r, samples->samples[samples->interleave_indices[samples->count++ % NUM_SAMPLE_SETS] + offset]);    
+    //vec2_copy(r, samples->samples[(rand() % NUM_SAMPLE_SETS) + offset]);
+    //vec2_copy(r, samples->samples[(samples->count++) % (NUM_SAMPLES * NUM_SAMPLE_SETS)]);
 }
+
+// Used for rendering the entire image one sample at a time
+void getInterleavedSample3D(vec3 r, Samples3D* samples)
+{
+    if(samples->count % NUM_SAMPLE_SETS == 0)
+    {
+        for(int i = 0; i < NUM_SAMPLE_SETS; i++)
+        {
+            int random_index = rand() % NUM_SAMPLE_SETS;
+            int tmp = samples->interleave_indices[i];
+            samples->interleave_indices[i] = samples->interleave_indices[random_index];
+            samples->interleave_indices[random_index] = tmp;
+        }
+    }
+    int offset = (samples->count++ % (NUM_SAMPLES * NUM_SAMPLE_SETS)) / NUM_SAMPLE_SETS;
+    vec3_copy(r, samples->samples[samples->interleave_indices[samples->count++ % NUM_SAMPLE_SETS] + offset]);        
+    //vec3_copy(r, samples->samples[(rand() % NUM_SAMPLE_SETS) + offset]);    
+    //vec3_copy(r, samples->samples[(samples->count++) % (NUM_SAMPLES * NUM_SAMPLE_SETS)]);
+}
+
 
 void shuffleIndices(int **indices)
 {
@@ -138,6 +197,12 @@ void prepSample2DStruct(Samples2D *samples)
     samples->num_samples = NUM_SAMPLES;
     samples->num_sets = NUM_SAMPLE_SETS;
     shuffleIndices(&(samples->shuffled_indices));
+
+    samples->interleave_indices = (int*)malloc(sizeof(int) * NUM_SAMPLE_SETS);
+    for(int i = 0; i < NUM_SAMPLE_SETS; i++)
+    {
+        samples->interleave_indices[i] = i;
+    }
 }
 
 void prepSample3DStruct(Samples3D *samples)
@@ -155,6 +220,12 @@ void prepSample3DStruct(Samples3D *samples)
     samples->num_samples = NUM_SAMPLES;
     samples->num_sets = NUM_SAMPLE_SETS;
     shuffleIndices(&(samples->shuffled_indices));
+
+    samples->interleave_indices = (int*)malloc(sizeof(int) * NUM_SAMPLE_SETS);
+    for(int i = 0; i < NUM_SAMPLE_SETS; i++)
+    {
+        samples->interleave_indices[i] = i;
+    }    
 }
 
 void genRegularSamples(Samples2D *samples)

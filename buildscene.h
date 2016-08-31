@@ -418,8 +418,8 @@ void initAmbLight(SceneLights *sl)
 {
     sl->amb_light = (AmbientLight*)malloc(sizeof(AmbientLight));
     vec3_copy(sl->amb_light->color, WHITE);
-    sl->amb_light->intensity = 0.0f;
-    sl->amb_light->amb_occlusion = false;
+    sl->amb_light->intensity = 1.0f;
+    sl->amb_light->amb_occlusion = true;
 }
 
 void initBackgroundColor(SceneLights* sl)
@@ -469,7 +469,7 @@ void initSceneLights(SceneLights* sl)
 
 
 
-    initAreaLights(sl);
+    //initAreaLights(sl);
     //initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
