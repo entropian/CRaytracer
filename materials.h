@@ -6,12 +6,12 @@
 
 enum MatType
 {
-    INVALID_MAT_TYPE,
-    MATTE,
-    PHONG,
-    REFLECTIVE,
-    TRANSPARENT,
-    EMISSIVE,
+    INVALID_MAT_TYPE = 0,
+    MATTE = 1,
+    PHONG = 2,
+    REFLECTIVE = 4,
+    TRANSPARENT = 8,
+    EMISSIVE = 16,
 };
 
 enum TextureType

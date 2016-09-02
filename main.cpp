@@ -37,6 +37,7 @@
 #include "noise.h"
 
 #define SHOW_PROGRESS 1
+#define PROG
 
 bool EXIT = false;
 int MAX_DEPTH = 0;
@@ -87,13 +88,23 @@ int main()
     int num_pixels = frame_res_width * frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
-    float* color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));;
+    float* color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
 
     LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
     
     // Samples
     setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 
                                                                          // sample struct that follows
+
+
+#ifdef PROG
+    setInterleaved(true);
+    unsigned char* set_buffer = (unsigned char*)malloc(sizeof(unsigned char) * num_pixels);
+    for(unsigned int i = 0; i < num_pixels; i++)
+    {
+        set_buffer[i] = (unsigned char)(rand() % params.num_sample_sets);
+    }    
+#endif
     srand((unsigned int)time(NULL));    
     Samples2D unit_square_samples = getDefaultSamples2D();
     Samples2D disk_samples = getDefaultSamples2D();
@@ -111,11 +122,11 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    vec3 position = {0.0f, 2.0f, 5.0f};
-    vec3 look_point = {0.0f, 0.0f, 0.0f};
+    //vec3 position = {0.0f, 2.0f, 5.0f};
+    //vec3 look_point = {0.0f, 0.0f, 0.0f};
     // Cornell box camera coordinates
-    //vec3 position = {278.0f, 273.0f, 800.0f};
-    //vec3 look_point = {278.0f, 273.0f, 0.0f};
+    vec3 position = {278.0f, 273.0f, 800.0f};
+    vec3 look_point = {278.0f, 273.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -129,18 +140,12 @@ int main()
     float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
     trace = getTraceFunc(params.trace_type);
 
-    // Fix samples for new rendering loop
-    interleaveSampleSets2D(&unit_square_samples);
-    interleaveSampleSets3D(&h_samples);
-
     double start_time, end_time;
     start_time = glfwGetTime(); 
 
     int prev_percent = 0;
-    //drawSamples(image, &disk_samples, frame_res_width, frame_res_height, num_pixels);
-    //drawHemisphereSamples2D(image, &h_samples, frame_res_width, frame_res_height, num_pixels);
 //#if 0
-
+#ifdef PROG
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
         //getSamplesArray(sample_array, &unit_square_samples, p);
@@ -149,8 +154,8 @@ int main()
             vec3 color = {0.0f, 0.0f, 0.0f};
             // NOTE: put the code below into a function
             vec2 sample, imageplane_coord;
-            //getNextSample2D(sample, &unit_square_samples);
-            getInterleavedSample2D(sample, &unit_square_samples);
+            //getInterleavedSample2D(sample, &unit_square_samples);
+            getSample2D(sample, &unit_square_samples, p, set_buffer[i]);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
             
@@ -159,8 +164,8 @@ int main()
 
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
-            //getNextSample3D(h_sample, &h_samples);
-            getInterleavedSample3D(h_sample, &h_samples);
+            //getInterleavedSample3D(h_sample, &h_samples);
+            getSample3D(h_sample, &h_samples, p, set_buffer[i]);            
 
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights));
@@ -192,7 +197,7 @@ int main()
         }
     }
 
-    /*
+#else
     for(int i = 0; i < num_pixels; i++)
     {
         vec3 color = {0.0f, 0.0f, 0.0f};
@@ -233,7 +238,7 @@ int main()
             }
         }
     }
-    */
+#endif
 //#endif 
     end_time = glfwGetTime();
     double sec = end_time - start_time;

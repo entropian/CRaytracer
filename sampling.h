@@ -59,7 +59,9 @@ void drawSamples(unsigned char *image, Samples2D *samples,
                  const int frame_res_width, const int frame_res_height, const int num_pixels);
 void drawHemisphereSamples2D(unsigned char *image, Samples3D *samples,
                              const int frame_res_width, const int frame_res_height, const int num_pixels);
+void setInterleaved(bool interleaved);
 void interleaveSampleSets2D(Samples2D* samples);
 void interleaveSampleSets3D(Samples3D* samples);
-void getInterleavedSample2D(vec2 r, Samples2D* samples);
-void getInterleavedSample3D(vec3 r, Samples3D* samples);
+void copySamples2D(Samples2D* dst, Samples2D* src);
+void getSample2D(vec2 r, const Samples2D* samples, const int sample_index, const int set_index);
+void getSample3D(vec3 r, const Samples3D* samples, const int sample_index, const int set_index);

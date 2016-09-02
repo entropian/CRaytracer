@@ -1,5 +1,3 @@
-Test sampling with AO
-Change sample patterns for things other than camera rays
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
 Gotta rethink global variables.
@@ -42,4 +40,5 @@ Smooth teapot seems darker than flat teapot
        Cause: forgot to normalize the interpolated normal AKA I'm a moron.
 
 Many image sizes cause problems
+
 

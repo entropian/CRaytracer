@@ -351,9 +351,8 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
         {
             if(depth >= 0)
             {
-
                 // Direct illumination
-                if(depth == MAX_DEPTH)
+                if(min_sr.mat->mat_type & (MATTE | PHONG) && depth == MAX_DEPTH)
                 {
                     for(int i = 0; i < sl->num_lights; i++)
                     {
@@ -399,7 +398,8 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
                 if(min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == PHONG)
                 {
                     vec3 reflected_illum;
-                    calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl);
+                    // NOTE: depth - 1 is a shitty hack
+                    calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth-1, so, sl);
                     vec3_scale(reflected_illum, reflected_illum, min_sr.mat->ks);
                     vec3_add(radiance, radiance, reflected_illum);
                 }
