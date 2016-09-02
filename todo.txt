@@ -1,3 +1,5 @@
+Image saving.
+Fix material sampling
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
 Gotta rethink global variables.

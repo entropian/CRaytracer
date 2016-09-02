@@ -2,9 +2,12 @@
 #include <assert.h>
 
 static bool INTERLEAVED = false;
+static unsigned char* set_buffer;
+static int count = 0;
+static int jump = 0;
 
-const Samples2D Samples2D_default = {0, 0, NULL, NULL, 0, 0};
-const Samples3D Samples3D_default = {0, 0, NULL, NULL, 0, 0};
+const Samples2D Samples2D_default = {0, 0, NULL, NULL};
+const Samples3D Samples3D_default = {0, 0, NULL, NULL};
 
 /*
   All sampling structs share the same number of samples and sets
@@ -45,7 +48,7 @@ void freeSamples2D(Samples2D *samples)
         free(samples->shuffled_indices);
         samples->shuffled_indices = NULL;
     }
-    samples->count = samples->jump = samples->num_sets = samples->num_samples = 0;
+    samples->num_sets = samples->num_samples = 0;
 }
 
 void freeSamples3D(Samples3D *samples)
@@ -60,7 +63,7 @@ void freeSamples3D(Samples3D *samples)
         free(samples->shuffled_indices);
         samples->shuffled_indices = NULL;
     }
-    samples->count = samples->jump = samples->num_sets = samples->num_samples = 0;
+    samples->num_sets = samples->num_samples = 0;
 }
 
 void copySamples2D(Samples2D* dst, Samples2D* src)
@@ -74,39 +77,29 @@ void copySamples2D(Samples2D* dst, Samples2D* src)
     }
 }
 
-// Used for rendering one pixel at a time
-void getNextSample2D(vec2 r, Samples2D *samples)
+int calcNextSampleIndex()
 {
-    if(samples->count % samples->num_samples == 0)
+    if(count % NUM_SAMPLES == 0)
     {
-        // Randomizes which set of samples a given pixel uses
-        samples->jump = (rand() % samples->num_sets) * samples->num_samples;
+        jump = (rand() % NUM_SAMPLE_SETS) * NUM_SAMPLES;
     }
-    // sample->jump is offset for different sets
-    vec2_copy(r, samples->samples[samples->jump + samples->shuffled_indices[samples->jump +
-                                                                            samples->count++ % samples->num_samples]]);
+    int sample_index = count++ % NUM_SAMPLES;
+    return jump + sample_index;
 }
 
-// Assume samples are interleaved
-void getSample2D(vec2 r, const Samples2D* samples, const int sample_index, const int set_index)
+int calcInterleavedSampleIndex(const int sample_index, const int set_index)
 {
-    vec2_copy(r, samples->samples[sample_index * NUM_SAMPLE_SETS + set_index]);
+    return sample_index * NUM_SAMPLE_SETS + set_index;
 }
 
-// Used for rendering one pixel at a time
-void getNextSample3D(vec3 r, Samples3D *samples)
+void getSample2D(vec2 r, const Samples2D* samples, const int sample_index)
 {
-    if(samples->count % samples->num_samples == 0)
-    {
-        samples->jump = (rand() % samples->num_sets) * samples->num_samples;
-    }
-    vec3_copy(r, samples->samples[samples->jump + samples->shuffled_indices[samples->jump +
-                                                                            samples->count++ % samples->num_samples]]);
+    vec2_copy(r, samples->samples[sample_index]);
 }
 
-void getSample3D(vec3 r, const Samples3D* samples, const int sample_index, const int set_index)
+void getSample3D(vec3 r, const Samples3D* samples, const int sample_index)
 {
-    vec3_copy(r, samples->samples[sample_index * NUM_SAMPLE_SETS + set_index]);
+    vec3_copy(r, samples->samples[sample_index]);
 }
 
 // Used for rendering the entire image one sample at a time
@@ -180,7 +173,6 @@ void prepSample2DStruct(Samples2D *samples)
     {
         free(samples->shuffled_indices);
     }
-    samples->count = samples->jump = 0;
     samples->samples = (vec2*)malloc(sizeof(vec2) * NUM_SAMPLES * NUM_SAMPLE_SETS);    
     samples->num_samples = NUM_SAMPLES;
     samples->num_sets = NUM_SAMPLE_SETS;
@@ -197,7 +189,6 @@ void prepSample3DStruct(Samples3D *samples)
     {
         free(samples->shuffled_indices);
     }
-    samples->count = samples->jump = 0;
     samples->samples = (vec3*)malloc(sizeof(vec3) * NUM_SAMPLES * NUM_SAMPLE_SETS);    
     samples->num_samples = NUM_SAMPLES;
     samples->num_sets = NUM_SAMPLE_SETS;
@@ -229,6 +220,20 @@ void genRegularSamples(Samples2D *samples)
     if(INTERLEAVED)
     {
         interleaveSampleSets2D(samples);
+    }else
+    {
+        for(int i = 0; i < samples->num_sets; i++)
+        {
+            int offset = i * samples->num_samples;
+            for(int j = 0; j < samples->num_samples; j++)
+            {
+                int random_index = (rand() % samples->num_samples) + offset;
+                vec2 tmp;
+                vec2_copy(tmp, samples->samples[j + offset]);
+                vec2_copy(samples->samples[j + offset], samples->samples[random_index]);
+                vec2_copy(samples->samples[random_index], tmp);
+            }
+        }
     }    
 }
 
@@ -293,6 +298,20 @@ void genMultijitteredSamples(Samples2D *samples)
     if(INTERLEAVED)
     {
         interleaveSampleSets2D(samples);
+    }else
+    {
+        for(int i = 0; i < samples->num_sets; i++)
+        {
+            int offset = i * samples->num_samples;
+            for(int j = 0; j < samples->num_samples; j++)
+            {
+                int random_index = (rand() % samples->num_samples) + offset;
+                vec2 tmp;
+                vec2_copy(tmp, samples->samples[j + offset]);
+                vec2_copy(samples->samples[j + offset], samples->samples[random_index]);
+                vec2_copy(samples->samples[random_index], tmp);
+            }
+        }
     }
 }
 
@@ -331,7 +350,21 @@ void genHammersleySamples(Samples2D *samples)
     if(INTERLEAVED)
     {
         interleaveSampleSets2D(samples);
-    }    
+    }else
+    {
+        for(int i = 0; i < samples->num_sets; i++)
+        {
+            int offset = i * samples->num_samples;
+            for(int j = 0; j < samples->num_samples; j++)
+            {
+                int random_index = (rand() % samples->num_samples) + offset;
+                vec2 tmp;
+                vec2_copy(tmp, samples->samples[j + offset]);
+                vec2_copy(samples->samples[j + offset], samples->samples[random_index]);
+                vec2_copy(samples->samples[random_index], tmp);
+            }
+        }
+    }
 }
 
 void mapSamplesToDisk(Samples2D *dest_samples, const Samples2D *src_samples)
@@ -457,7 +490,9 @@ void drawSamples(unsigned char *image, Samples2D *samples,
     for(int i = 0; i < samples->num_samples; i++)
     {
         vec2 sample;
-        getNextSample2D(sample, samples);
+        int sample_index = calcNextSampleIndex();
+        //getNextSample2D(sample, samples);
+        getSample2D(sample, samples, sample_index);
         int x = (int)(sample[0] * frame_res_width);
         int y = (int)((1.0f - sample[1]) * frame_res_height);        
         int index = y * frame_res_width + x;
@@ -479,7 +514,9 @@ void drawHemisphereSamples2D(unsigned char *image, Samples3D *samples,
     for(int i = 0; i < samples->num_samples; i++)
     {
         vec3 sample;
-        getNextSample3D(sample, samples);
+        int sample_index = calcNextSampleIndex();        
+        //getNextSample3D(sample, samples);
+        getSample3D(sample, samples, sample_index);
         int x = (int)((sample[0] * 0.5f + 0.5f) * frame_res_width);
         int y = (int)((1.0f - (sample[1] * 0.5f + 0.5f)) * frame_res_height);        
         int index = y * frame_res_width + x;

@@ -122,11 +122,11 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    //vec3 position = {0.0f, 2.0f, 5.0f};
-    //vec3 look_point = {0.0f, 0.0f, 0.0f};
+    vec3 position = {0.0f, 2.0f, 5.0f};
+    vec3 look_point = {0.0f, 0.0f, 0.0f};
     // Cornell box camera coordinates
-    vec3 position = {278.0f, 273.0f, 800.0f};
-    vec3 look_point = {278.0f, 273.0f, 0.0f};
+    //vec3 position = {278.0f, 273.0f, 800.0f};
+    //vec3 look_point = {278.0f, 273.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -137,7 +137,7 @@ int main()
     float pixel_length = frame_length/(float)(frame_res_width);
 
     // Set trace function
-    float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*);
+    float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*, const int);
     trace = getTraceFunc(params.trace_type);
 
     double start_time, end_time;
@@ -151,24 +151,25 @@ int main()
         //getSamplesArray(sample_array, &unit_square_samples, p);
         for(int i = 0; i < num_pixels; i++)
         {
+            int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
             vec3 color = {0.0f, 0.0f, 0.0f};
             // NOTE: put the code below into a function
             vec2 sample, imageplane_coord;
             //getInterleavedSample2D(sample, &unit_square_samples);
-            getSample2D(sample, &unit_square_samples, p, set_buffer[i]);
+            getSample2D(sample, &unit_square_samples, sample_index);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
             
             Ray ray;
-            calcCameraRay(&ray, imageplane_coord, &camera);
+            calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
 
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
             //getInterleavedSample3D(h_sample, &h_samples);
-            getSample3D(h_sample, &h_samples, p, set_buffer[i]);            
+            getSample3D(h_sample, &h_samples, sample_index);            
 
             vec3 radiance;
-            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights));
+            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
 
             // NEW
@@ -203,22 +204,23 @@ int main()
         vec3 color = {0.0f, 0.0f, 0.0f};
         for(unsigned int p = 0; p < params.num_samples; p++)
         {
-
-            // NOTE: put the code below into a function
+            int sample_index = calcNextSampleIndex();
             vec2 sample, imageplane_coord;
-            getNextSample2D(sample, &unit_square_samples);
+            //getNextSample2D(sample, &unit_square_samples);
+            getSample2D(sample, &unit_square_samples, sample_index);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
             
             Ray ray;
-            calcCameraRay(&ray, imageplane_coord, &camera);
+            calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
 
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
-            getNextSample3D(h_sample, &h_samples);
+            //getNextSample3D(h_sample, &h_samples);
+            getSample3D(h_sample, &h_samples, sample_index);
 
             vec3 radiance;
-            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights));
+            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
         }        
         vec3_scale(color, color, 1.0f/params.num_samples);

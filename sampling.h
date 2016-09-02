@@ -25,9 +25,6 @@ struct Samples2D_s
     int num_sets;
     vec2 *samples;
     int *shuffled_indices;
-    unsigned long count;
-    int *interleave_indices; // Tentative    
-    int jump;
 };
 typedef Samples2D_s Samples2D;
 
@@ -37,9 +34,6 @@ struct Samples3D_s
     int num_sets;
     vec3 *samples;
     int *shuffled_indices;
-    unsigned long count;
-    int *interleave_indices; // Tentative    
-    int jump;
 };
 typedef Samples3D_s Samples3D;
 
@@ -63,5 +57,7 @@ void setInterleaved(bool interleaved);
 void interleaveSampleSets2D(Samples2D* samples);
 void interleaveSampleSets3D(Samples3D* samples);
 void copySamples2D(Samples2D* dst, Samples2D* src);
-void getSample2D(vec2 r, const Samples2D* samples, const int sample_index, const int set_index);
-void getSample3D(vec3 r, const Samples3D* samples, const int sample_index, const int set_index);
+int calcNextSampleIndex();
+int calcInterleavedSampleIndex(const int sample_index, const int set_index);
+void getSample2D(vec2 r, const Samples2D* samples, const int sample_index);
+void getSample3D(vec3 r, const Samples3D* samples, const int sample_index);

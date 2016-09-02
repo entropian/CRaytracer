@@ -31,7 +31,7 @@ void assignPointLight(PointLight *point_light, const float intensity, const vec3
     vec3_copy(point_light->point, point);
 }
 
-void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, const ShadeRec* sr)
+void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, const ShadeRec* sr, const int sample_index)
 {
     switch(light_type)
     {
@@ -54,7 +54,8 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         case RECTANGLE:
         {
             vec2 sample;
-            getNextSample2D(sample, area_light_ptr->samples2D);
+            //getNextSample2D(sample, area_light_ptr->samples2D);
+            getSample2D(sample, area_light_ptr->samples2D, sample_index);
             vec3 displacement;
             Rectangle* rect = (Rectangle*)(area_light_ptr->obj_ptr);
             vec3_scale(displacement, rect->width, sample[0]);
@@ -67,7 +68,8 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         case SPHERE:
         {
             vec3 h_sample;
-            getNextSample3D(h_sample, area_light_ptr->samples3D);
+            //getNextSample3D(h_sample, area_light_ptr->samples3D);
+            getSample3D(h_sample, area_light_ptr->samples3D, sample_index);
             getVec3InLocalBasis(area_light_ptr->sample_point, h_sample, sr->normal);
             vec3_add(area_light_ptr->sample_point, area_light_ptr->sample_point,
                      ((Sphere*)(area_light_ptr->obj_ptr))->center);
@@ -84,7 +86,8 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         // transform sample by orthonormal basis
         EnvLight* env_light_ptr = (EnvLight*)light_ptr;
         vec3 h_sample;
-        getNextSample3D(h_sample, env_light_ptr->samples3D);
+        //getNextSample3D(h_sample, env_light_ptr->samples3D);
+        getSample3D(h_sample, env_light_ptr->samples3D, sample_index);
         getVec3InLocalBasis(r, h_sample, sr->normal);        
     } break;
     }

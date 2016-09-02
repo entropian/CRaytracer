@@ -112,10 +112,11 @@ void calcRayPinhole(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
 }
 
 // Compute a ray for thin lens camera
-void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
+void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const Camera *camera, const int sample_index)
 {
     vec2 disk_sample;
-    getNextSample2D(disk_sample, camera->samples);
+    //getNextSample2D(disk_sample, camera->samples);
+    getSample2D(disk_sample, camera->samples, sample_index);
     // NOTE: consider doing the calculations in camera space instead of transforming the resulting ray to camera space
     vec3 point_viewplane = {viewplane_coord[0], viewplane_coord[1], 0.0f};
     vec3_copy(ray->origin, camera->focal_point);
@@ -145,7 +146,7 @@ void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
     vec3_add(ray->origin, tmp_vec_1, camera->position);
 }
 
-void calcCameraRay(Ray* ray, const vec2 imageplane_coord, const Camera* camera)
+void calcCameraRay(Ray* ray, const vec2 imageplane_coord, const Camera* camera, const int sample_index)
 {
     switch(camera->camera_type)
     {
@@ -155,7 +156,7 @@ void calcCameraRay(Ray* ray, const vec2 imageplane_coord, const Camera* camera)
     } break;
     case ThinLens:
     {
-        calcRayThinLens(ray, imageplane_coord, camera);
+        calcRayThinLens(ray, imageplane_coord, camera, sample_index);
     } break;
     }
 }
