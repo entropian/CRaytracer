@@ -24,7 +24,6 @@ struct Samples2D_s
     int num_samples;
     int num_sets;
     vec2 *samples;
-    int *shuffled_indices;
 };
 typedef Samples2D_s Samples2D;
 
@@ -33,7 +32,6 @@ struct Samples3D_s
     int num_samples;
     int num_sets;
     vec3 *samples;
-    int *shuffled_indices;
 };
 typedef Samples3D_s Samples3D;
 

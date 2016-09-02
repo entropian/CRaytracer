@@ -101,7 +101,6 @@ float calcSpecRefRadiance(vec3 spec_ref_radiance,
         vec3_negate(normal, normal);
     }
     vec3 new_sample;
-    //getNextSample3D(new_sample, sr->mat->h_samples);
     getSample3D(new_sample, sr->mat->h_samples, sample_index);
     Ray sample_ray;
     vec3_copy(sample_ray.origin, sr->hit_point);
@@ -309,7 +308,6 @@ float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr, c
     vec3 reflect_dir;
     calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
     vec3 new_sample;
-    //getNextSample3D(new_sample, sr->mat->h_samples);
     getSample3D(new_sample, sr->mat->h_samples, sample_index);    
     Ray sample_ray;
     vec3_copy(sample_ray.origin, sr->hit_point);
@@ -380,7 +378,6 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
                 if(min_sr.mat->mat_type == MATTE)
                 {
                     vec3 new_sample;
-                    //getNextSample3D(new_sample, min_sr.mat->h_samples);
                     getSample3D(new_sample, min_sr.mat->h_samples, sample_index);
                     Ray sample_ray;
                     getVec3InLocalBasis(sample_ray.direction, new_sample, min_sr.normal);

@@ -354,7 +354,6 @@ void initAreaLights(SceneLights* sl)
     
     Samples2D* samples = (Samples2D*)malloc(sizeof(Samples2D));
     samples->samples = NULL;
-    samples->shuffled_indices = NULL;
     genMultijitteredSamples(samples);
 
     area_light_ptr->pdf = 1.0f/(width * height);
