@@ -3,7 +3,6 @@
 #include <cassert>
 #include "../util/constants.h"
 #include "../util/vec.h"
-#include "../util/intvector.h"
 #include "../aabb.h"
 #include "../shapes/objecttype.h"
 #include "../shapes/shapes.h"
@@ -17,11 +16,11 @@ enum BVHNodeType
     LEAF
 };
 
-typedef struct BVHNode
+typedef struct BVHNode_s
 {
     BVHNodeType type;
     int num_obj;
-    BVHNode *left, *right;    
+    struct BVHNode_s *left, *right;    
     Object_t obj;
     AABB aabb;
 } BVHNode;

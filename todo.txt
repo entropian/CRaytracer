@@ -1,5 +1,5 @@
+Trying writing a SSE BVH thing
 Image saving.
-Fix material sampling
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
 Gotta rethink global variables.
@@ -18,29 +18,86 @@ Update the clean up section.
 
 
 
-bugs:
-Noise when drawing transparent boxes
-      cause: bounding box for boxes fit too tight
+SSE BVH:
+SIMD bbox intersection test
+Figure out a way to compare the result of SSE BVH to BVH
+Try to keep the interface to both the same
+Look into branch-free bbox intersection
+Try converting BVH to an array based representation?
+Look into stack based traversal
 
-Blocks appear when drawing a transparent sphere against a white background.
-       increasing number of samples has no effect
-       it looks like kr/kt is the same within each block
-       after zooming in, it seems that there is a gradient within each block
-       since kt is derived from kr, it only makes sense that both transmission and reflection are affected
-       Cause: scaling up image by non-integer factors?
 
-Smooth triangles causes pdf to be zero in glossy reflection shading, but flat triangles don't?
-       see calcSpecRefRadiance in trace.h
+Concerns:
+Cache? Alignment?
+Deal with triangle numbers that aren't a multiple of 4.
 
-Both smooth and flat transparent teapot has stripes on the triangle edges
-       see teapot_stripe.png and trans_flat_teapot_stripe.png
+Features:
+each BVH node contains 4 bounding boxes instead of one
+four child pointers and the three split axes are stored for each inner node
+Construct a sorted index array for triangles?
 
-Smooth teapot seems darker than flat teapot
-       caused by reflected radiance not working properly on smooth triangles.
-       see smooth_reflected_only.png
-       reflected radiance only appears near quad edges for some reason, which cause those stripes.
-       Cause: forgot to normalize the interpolated normal AKA I'm a moron.
+Data layout for tree nodes:
+struct SIMD_BVH_Node
+{
+    float bbox[2*4*3]; // 96 bytes
+    int child[4];      // 16 bytes
+    int axis0, axis1, axis2; // 12 bytes
+    int fill; // 1 bytes
+    // Total: 125 bytes
+};
+2*4*3 = 24 float; 24 * 4 = 96 bytes
+The 4 bbox are stored in structure of arrays(SOA) layout for direct processing in SIMD registers.
+In the paper's implementation, the turee data is stored in an array, therefore the child pointers could be
+   indices instead. Changing it would change the cache alignment?
+For a leaf, no additional SIMD_BVH_Node is created. The leaf bbox is already stored in the parent and the leaf data can
+    be encoded directly into the corresponding child integer.
+Use the sign of the child index to encode whether a node is a leaf or an inner node.
 
-Many image sizes cause problems
+Questions:
+Not sure why the split axes are needed.
+    Answer: Storing the split axes allows exploiting the spatial order of the boxes for a more efficient
+    pruning using the sign of the ray direction during tree traversal. However, the advantaged gain by this compared to
+    sorting by intersection distance is small. So perhaps I won't need to store the axes in the nodes.
+The paper is big on storing leaf informations elsewhere and keeping the BVH small.
+How to deal with different primitives
+    1. One option is to split the leaf, so that each new leaf node only contains one type of primitive
+SIMD triangle intersection -- is it worth the trouble?
+     try testing by shooting rays at a bunch of triangles with no accelerator
+     doesn't seem worth it right now, at least not at the level that I can get it to.
 
+
+Alternative layout:
+Data layout for tree nodes:
+struct SIMD_BVH_Node
+{
+    float bbox[2*4*3]; // 96 bytes
+    SIMD_BVH_Node* child[4] // 16 bytes
+    int fill; // 1 bytes
+    // Total: 125 bytes
+};
+
+SIMD triangle intersection test:
+For each ray, test against every triangle.
+Teapot was used. 480x480 at 1 sample
+If data is set up decently, speed up is significant though less than 2x.
+Release
+49.98 vectorall
+42.6 reference instead of vectorall
+41.02 pointers (WTF?)
+70.127 non-SIMD
+
+time spent in:
+     total 20s
+     SIMD
+     main 11.04s
+     calcTriangleIntersect4 9.27
+     
+     Non-SIMD
+     Total 30s
+     all in calcTriangleIntersect
+
+Debug
+254.47  SIMD 
+364.64  Non-SIMD
+199.331 for only intersection calc without shaderec bs ???
 

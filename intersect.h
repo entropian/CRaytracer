@@ -5,6 +5,7 @@
 #include "lights.h"
 #include "accelerator/uniformgrid.h"
 #include "accelerator/bvh.h"
+#include "accelerator/bvh4.h"
 
 float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 {
@@ -314,7 +315,6 @@ float BVHShadowIntersectTest(const BVHNode* tree, const Ray ray)
     }
 }
 
-// NOTE: try using function pointer to condense the code?
 float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 {
     if(so->accel == GRID)
@@ -323,7 +323,6 @@ float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
     }else if(so->accel == BVH)
     {
         BVHNode* tree = (BVHNode*)(so->accel_ptr);
-        // Assuming that rayIntersectAABB() works whether the ray originates inside or outside of the AABB
         float t = TMAX;
         if(rayIntersectAABB(&(tree->aabb), ray) < TMAX)
         {

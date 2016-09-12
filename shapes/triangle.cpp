@@ -1,4 +1,5 @@
 #include "triangle.h"
+#include "../util/simd.h"
 
 void calcTriangleNormal(vec3 r, const vec3 v0, const vec3 v1, const vec3 v2)
 {
@@ -34,21 +35,11 @@ float calcTriangleIntersect(float* beta_out, float* gamma_out,
     *beta_out = beta;
     *gamma_out = gamma;
 
-    if(beta < 0.0f)
-    {
-        return TMAX;
-    }    
-
-    if(gamma < 0.0f)
+    if(beta < 0.0f || gamma < 0.0f || beta + gamma > 1.0f) 
     {
         return TMAX;
     }
-
-    if(beta + gamma > 1.0f)
-    {
-        return TMAX;
-    }
-
+    
     float e3 = a*p - b*r + d*s;
     float t = e3 * inv_denom;
 
@@ -59,7 +50,75 @@ float calcTriangleIntersect(float* beta_out, float* gamma_out,
     return t;
 }
 
-// NOTE: perhaps rewrite this so that it makes more sense to me
+// Intersects a ray with four triangles
+__m128 calcTriangleIntersect4(__m128* beta_out, __m128* gamma_out, const vec3_4* v0, const vec3_4* v1,
+                                           const vec3_4* v2, const vec3_4* ray_o, const vec3_4* ray_d)
+{
+    
+    __m128 a = _mm_sub_ps(v0->x, v1->x), b = _mm_sub_ps(v0->x, v2->x), c = ray_d->x, d = _mm_sub_ps(v0->x, ray_o->x);
+    __m128 e = _mm_sub_ps(v0->y, v1->y), f = _mm_sub_ps(v0->y, v2->y), g = ray_d->y, h = _mm_sub_ps(v0->y, ray_o->y);
+    __m128 i = _mm_sub_ps(v0->z, v1->z), j = _mm_sub_ps(v0->z, v2->z), k = ray_d->z, l = _mm_sub_ps(v0->z, ray_o->z);
+    
+    //m = f*k - g*j, n = h*k - g*l, p = f*l - h*j;
+    //q = g*i - e*k, s = e*j - f*i;
+    __m128 m = _mm_sub_ps(_mm_mul_ps(f, k), _mm_mul_ps(g, j));
+    __m128 n = _mm_sub_ps(_mm_mul_ps(h, k), _mm_mul_ps(g, l));
+    __m128 p = _mm_sub_ps(_mm_mul_ps(f, l), _mm_mul_ps(h, j));
+    __m128 q = _mm_sub_ps(_mm_mul_ps(g, i), _mm_mul_ps(e, k));
+    __m128 s = _mm_sub_ps(_mm_mul_ps(e, j), _mm_mul_ps(f, i));
+
+    // inv_denom = 1.0f / (a*m + b*q + c*s);
+    __m128 one = _mm_set1_ps(1.0f);
+    __m128 tmp1 = _mm_mul_ps(a, m);
+    __m128 tmp2 = _mm_mul_ps(b, q);
+    __m128 tmp3 = _mm_mul_ps(c, s);
+    __m128 inv_denom = _mm_div_ps(one, _mm_add_ps(_mm_add_ps(tmp1, tmp2), tmp3));
+
+    // e1 = d*m - b*n - c*p;
+    tmp1 = _mm_mul_ps(d, m);
+    tmp2 = _mm_mul_ps(b, n);
+    tmp3 = _mm_mul_ps(c, p);
+    __m128 e1 = _mm_sub_ps(_mm_sub_ps(tmp1, tmp2), tmp3);
+
+    __m128 beta = _mm_mul_ps(e1, inv_denom);
+
+    // r = e*l - h*i;      
+    tmp1 = _mm_mul_ps(e, l);
+    tmp2 = _mm_mul_ps(h, i);
+    __m128 r = _mm_sub_ps(tmp1, tmp2);
+    
+    // e2 = a*n + d*q + c*r;
+    tmp1 = _mm_mul_ps(a, n);
+    tmp2 = _mm_mul_ps(d, q);
+    tmp3 = _mm_mul_ps(c, r);
+    __m128 e2 = _mm_add_ps(_mm_add_ps(tmp1, tmp2), tmp3);
+
+    __m128 gamma = _mm_mul_ps(e2, inv_denom);
+    *beta_out = beta;
+    *gamma_out = gamma;
+
+    __m128 zeroes = _mm_set1_ps(0.0f);
+    __m128 beta_mask = _mm_cmplt_ps(zeroes, beta);
+    __m128 gamma_mask = _mm_cmplt_ps(zeroes, gamma);
+    __m128 sum_mask = _mm_cmplt_ps(_mm_add_ps(beta, gamma), one);
+    __m128 mask = _mm_and_ps(_mm_and_ps(beta_mask, gamma_mask), sum_mask);
+    __m128 inv_mask = _mm_andnot_ps(mask, one);
+
+    //float e3 = a*p - b*r + d*s;
+    tmp1 = _mm_mul_ps(a, p);
+    tmp2 = _mm_mul_ps(b, r);
+    tmp3 = _mm_mul_ps(d, s);    
+    __m128 e3 = _mm_add_ps(_mm_sub_ps(tmp1, tmp2), tmp3);
+    
+    __m128 t = _mm_and_ps(_mm_mul_ps(e3, inv_denom), mask);    
+    __m128 t_max = _mm_set1_ps(TMAX);
+    __m128 t_max_mask = _mm_and_ps(inv_mask, t_max);    
+    t = _mm_and_ps(t, mask);
+    t = _mm_or_ps(t, t_max_mask);
+    return t;
+}
+
+
 float rayIntersectTriangle(ShadeRec* sr, Triangle* tri, const Ray ray)
 {
     float gamma, beta; // For smooth triangles. Unused here.

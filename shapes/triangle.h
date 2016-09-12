@@ -10,6 +10,7 @@
 #include "../texture.h"
 #include "../util/mat.h"
 #include "../util/math.h"
+#include "../util/simd.h"
 
 
 typedef struct Triangle
@@ -37,7 +38,7 @@ typedef struct SmoothTriangle_s
     vec3 v0, v1, v2;
     mat3* normal_mat;
     Mesh* mesh_ptr;
-    Material* mat;
+    Material* mat; 
 }SmoothTriangle;
 
 void calcTriangleNormal(vec3 r, const vec3 v0, const vec3 v1, const vec3 v2);
@@ -76,4 +77,7 @@ inline float shadowRayIntersectSmoothTriangle(const SmoothTriangle* tri, const R
     return calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
 }
 
-
+__m128 calcTriangleIntersect4(__m128* beta_out, __m128* gamma_out, const vec3_4* v0, const vec3_4* v1,
+                              const vec3_4* v2, const vec3_4* ray_origin, const vec3_4* ray_direction);
+float calcTriangleIntersect(float* beta_out, float* gamma_out,
+                            const vec3 v0, const vec3 v1, const vec3 v2, const Ray ray);
