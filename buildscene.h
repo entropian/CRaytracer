@@ -333,11 +333,13 @@ void initAreaLights(SceneLights* sl)
     // Area light
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
+    // Cornell rectangle light intensity
     area_light_ptr->intensity = 55.0f;
+    //area_light_ptr->intensity = 20.0f;
     vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
-
+    
     // Rectangle
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
@@ -384,6 +386,7 @@ void initAreaLights(SceneLights* sl)
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
 
+
     area_light_ptr->pdf = 1.0f / (4.0f * (float)PI * sphere->radius * sphere->radius);
     area_light_ptr->samples2D = NULL;
     area_light_ptr->samples3D = samples;
@@ -417,8 +420,8 @@ void initAmbLight(SceneLights *sl)
 {
     sl->amb_light = (AmbientLight*)malloc(sizeof(AmbientLight));
     vec3_copy(sl->amb_light->color, WHITE);
-    sl->amb_light->intensity = 1.0f;
-    sl->amb_light->amb_occlusion = true;
+    sl->amb_light->intensity = 0.0f;
+    sl->amb_light->amb_occlusion = false;
 }
 
 void initBackgroundColor(SceneLights* sl)
@@ -468,7 +471,7 @@ void initSceneLights(SceneLights* sl)
 
 
 
-    //initAreaLights(sl);
+    initAreaLights(sl);
     //initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
@@ -503,6 +506,15 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
         printf("BVH build time: %f sec\n", end - start);
         //int leaf_count = 0;
         //printBVH(tree, &leaf_count, 0);        
+        so->accel_ptr = tree;
+    }else if(so->accel == BVH4)
+    {
+        BVHNode4* tree;
+        double start, end;
+        start = glfwGetTime();
+        BVH4_build(&tree, &(so->objects[so->num_non_grid_obj]), so->num_obj - so->num_non_grid_obj);
+        end = glfwGetTime();
+        printf("BVH4 build time: %f sec\n", end - start);
         so->accel_ptr = tree;
     }
 }

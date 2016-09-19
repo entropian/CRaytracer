@@ -91,6 +91,9 @@ void parseConfigFile(ConfigParams* cp)
             }else if(strcmp(buffer, "GRID") == 0)
             {
                 cp->accel_type = GRID;
+            }else if(strcmp(buffer, "BVH4") == 0)
+            {
+                cp->accel_type = BVH4;
             }else
             {
                 cp->accel_type = NONE;

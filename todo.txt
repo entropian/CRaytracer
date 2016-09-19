@@ -1,5 +1,5 @@
 Trying writing a SSE BVH thing
-Image saving.
+calcCameraRay is slow
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
 Gotta rethink global variables.
@@ -19,7 +19,7 @@ Update the clean up section.
 
 
 SSE BVH:
-SIMD bbox intersection test
+SIMD bbox intersection test -- seems like it works! 
 Figure out a way to compare the result of SSE BVH to BVH
 Try to keep the interface to both the same
 Look into branch-free bbox intersection
@@ -30,6 +30,7 @@ Look into stack based traversal
 Concerns:
 Cache? Alignment?
 Deal with triangle numbers that aren't a multiple of 4.
+
 
 Features:
 each BVH node contains 4 bounding boxes instead of one
@@ -100,4 +101,9 @@ Debug
 254.47  SIMD 
 364.64  Non-SIMD
 199.331 for only intersection calc without shaderec bs ???
+
+
+Current:
+How to build the leafs?
+
 

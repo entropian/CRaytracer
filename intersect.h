@@ -5,7 +5,6 @@
 #include "lights.h"
 #include "accelerator/uniformgrid.h"
 #include "accelerator/bvh.h"
-#include "accelerator/bvh4.h"
 
 float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 {
@@ -345,6 +344,27 @@ float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
             return min_t;
         }
         return t;
+    }else if(so->accel == BVH4)
+    {
+        BVHNode4* tree = (BVHNode4*)(so->accel_ptr);        
+        float t = BVH4IntersectTest(sr, tree, ray);
+        float tmp_t = TMAX,  min_t = TMAX;
+        ShadeRec tmp_sr, min_sr;
+        for(int i = 0; i < so->num_non_grid_obj; i++)
+        {
+            tmp_t = rayIntersectObject(&tmp_sr, so->objects[i], ray);
+            if(tmp_t < min_t)
+            {
+                min_t = tmp_t;
+                min_sr = tmp_sr;
+            }
+        }
+        if(min_t < t)
+        {
+            *sr = min_sr;
+            return min_t;
+        }
+        return t;        
     }else
     {
         float tmp_t = TMAX,  min_t = TMAX;
@@ -367,7 +387,6 @@ float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 }
 
 
-
 float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray)
 {
     if(so->accel == GRID)
@@ -383,6 +402,22 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray)
         }
         if(t == TMAX)
         { 
+            for(int i = 0; i < so->num_non_grid_obj; i++)
+            {
+                t = shadowRayIntersectObject(so->objects[i], shadow_ray);
+                if(t < TMAX)
+                {
+                    return t;
+                }
+            }
+        }
+        return t;
+    }else if(so->accel == BVH4)
+    {
+        BVHNode4* tree = (BVHNode4*)(so->accel_ptr);        
+        float t = BVH4ShadowIntersectTest(tree, shadow_ray);
+        if(t == TMAX)
+        {
             for(int i = 0; i < so->num_non_grid_obj; i++)
             {
                 t = shadowRayIntersectObject(so->objects[i], shadow_ray);

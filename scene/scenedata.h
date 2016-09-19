@@ -5,6 +5,7 @@
 #include "lights.h"
 #include "accelerator/uniformgrid.h"
 #include "accelerator/bvh.h"
+#include "accelerator/bvh4.h"
 #include "objloader/objloader.h"
 #include "texture.h"
 
@@ -12,7 +13,8 @@ enum AccelType
 {
     NONE,
     GRID,
-    BVH
+    BVH,
+    BVH4
 };
 
 typedef struct 

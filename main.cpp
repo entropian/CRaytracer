@@ -122,11 +122,11 @@ int main()
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
     
-    vec3 position = {0.0f, 2.0f, 5.0f};
-    vec3 look_point = {0.0f, 0.0f, 0.0f};
+    //vec3 position = {0.0f, 2.0f, 5.0f};
+    //vec3 look_point = {0.0f, 0.0f, 0.0f};
     // Cornell box camera coordinates
-    //vec3 position = {278.0f, 273.0f, 800.0f};
-    //vec3 look_point = {278.0f, 273.0f, 0.0f};
+    vec3 position = {278.0f, 273.0f, 800.0f};
+    vec3 look_point = {278.0f, 273.0f, 0.0f};
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
