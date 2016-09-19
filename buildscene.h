@@ -334,12 +334,12 @@ void initAreaLights(SceneLights* sl)
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
-    area_light_ptr->intensity = 55.0f;
-    //area_light_ptr->intensity = 20.0f;
+    //area_light_ptr->intensity = 55.0f;
+    area_light_ptr->intensity = 20.0f;
     vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
-    
+    /*
     // Rectangle
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
@@ -367,8 +367,9 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
+    */
 
-    /*
+
     // Sphere
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
@@ -396,7 +397,7 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-    */
+
 }
 
 void initEnvLight(SceneLights* sl)

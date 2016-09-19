@@ -1,10 +1,15 @@
 #pragma once
 
+#include <GLFW/glfw3.h>
 #include "shapes/shapes.h"
 #include "shapes/instanced.h"
 #include "lights.h"
 #include "accelerator/uniformgrid.h"
 #include "accelerator/bvh.h"
+
+#define MEASURE_TRAVERSAL_TIME
+
+double g_traversal_time = 0.0f;
 
 float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 {
@@ -273,7 +278,7 @@ float BVHIntersectTest(ShadeRec* sr, const SceneObjects* so, const BVHNode* tree
         {
             t1 = BVHIntersectTest(&sr1, so, tree->left, ray);
         }
-        if(rayIntersectAABB(&(tree->right->aabb), ray) < TMAX)
+        if(rayIntersectAABB(&(tree->right->aabb), ray) < t1)
         {
             t2 = BVHIntersectTest(&sr2, so, tree->right, ray);
         }
@@ -316,58 +321,54 @@ float BVHShadowIntersectTest(const BVHNode* tree, const Ray ray)
 
 float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 {
+#ifdef MEASURE_TRAVERSAL_TIME
+    double start_time, end_time;
+    start_time = glfwGetTime();
+#endif
+    float min_t = TMAX;
     if(so->accel == GRID)
     {
-        return gridIntersectTest(sr, so, ray);
+        min_t = gridIntersectTest(sr, so, ray);
+        goto RETURN;
     }else if(so->accel == BVH)
     {
+
         BVHNode* tree = (BVHNode*)(so->accel_ptr);
-        float t = TMAX;
         if(rayIntersectAABB(&(tree->aabb), ray) < TMAX)
         {
-            t = BVHIntersectTest(sr, so, tree, ray);
+            min_t = BVHIntersectTest(sr, so, tree, ray);
         }
-        float tmp_t = TMAX,  min_t = TMAX;
-        ShadeRec tmp_sr, min_sr;
+        float tmp_t = TMAX;
+        ShadeRec tmp_sr;
         for(int i = 0; i < so->num_non_grid_obj; i++)
         {
             tmp_t = rayIntersectObject(&tmp_sr, so->objects[i], ray);
             if(tmp_t < min_t)
             {
                 min_t = tmp_t;
-                min_sr = tmp_sr;
+                *sr = tmp_sr;
             }
         }
-        if(min_t < t)
-        {
-            *sr = min_sr;
-            return min_t;
-        }
-        return t;
+        goto RETURN;
     }else if(so->accel == BVH4)
     {
         BVHNode4* tree = (BVHNode4*)(so->accel_ptr);        
-        float t = BVH4IntersectTest(sr, tree, ray);
-        float tmp_t = TMAX,  min_t = TMAX;
-        ShadeRec tmp_sr, min_sr;
+        min_t = BVH4IntersectTest(sr, tree, ray);
+        float tmp_t = TMAX;
+        ShadeRec tmp_sr;
         for(int i = 0; i < so->num_non_grid_obj; i++)
         {
             tmp_t = rayIntersectObject(&tmp_sr, so->objects[i], ray);
             if(tmp_t < min_t)
             {
                 min_t = tmp_t;
-                min_sr = tmp_sr;
+                *sr = tmp_sr;
             }
         }
-        if(min_t < t)
-        {
-            *sr = min_sr;
-            return min_t;
-        }
-        return t;        
+        goto RETURN;
     }else
     {
-        float tmp_t = TMAX,  min_t = TMAX;
+        float tmp_t = TMAX;
         ShadeRec tmp_sr, min_sr;
         for(int i = 0; i < so->num_obj; i++)
         {
@@ -384,6 +385,12 @@ float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
         }
         return min_t;
     }
+RETURN:
+#ifdef MEASURE_TRAVERSAL_TIME
+    end_time = glfwGetTime();        
+    g_traversal_time += end_time - start_time;            
+#endif
+    return min_t;
 }
 
 

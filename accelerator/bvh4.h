@@ -269,21 +269,41 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     }            
 }
 
+
+
+
 float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
 {
     CACHE_ALIGN float bbox_result[5] = {TMAX, TMAX, TMAX, TMAX, TMAX};
     __m128 tmp = rayIntersectAABB4(tree->bbox, ray);
     _mm_store_ps(bbox_result, tmp);
+
+    int indices[4] = {0, 1, 2, 3};
+    for(int i = 1; i < 4; i++)
+    {
+        float x = bbox_result[i];
+        int index = indices[i];
+        int j;
+        for(j = i - 1; j >= 0 && bbox_result[j] > x; j--)
+        {
+            bbox_result[j+1] = bbox_result[j];
+            indices[j+1] = indices[j];
+        }
+        bbox_result[j+1] = x;
+        indices[j+1] = index;
+    }
+
     float min_t = TMAX;
     for(int i = 0; i < 4; i++)
     {        
-        if(bbox_result[i] < TMAX)
+        if(bbox_result[i] < min_t)
         {
+            int index = indices[i];
             float t;
             ShadeRec tmp_sr;
-            if(tree->type[i] == 0)
+            if(tree->type[index] == 0)
             {
-                t = BVH4IntersectTest(&tmp_sr, (BVHNode4*)(tree->child[i]), ray);
+                t = BVH4IntersectTest(&tmp_sr, (BVHNode4*)(tree->child[index]), ray);
                 if(t < min_t)
                 {
                     min_t = t;
@@ -291,8 +311,8 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
                 }                
             }else // child[i] is a leaf
             {
-                Object_t* obj_ptr = (Object_t*)(tree->child[i]);
-                for(int j = 0; j < tree->type[i]; j++)
+                Object_t* obj_ptr = (Object_t*)(tree->child[index]);
+                for(int j = 0; j < tree->type[index]; j++)
                 {
                     t = rayIntersectObject(&tmp_sr, *obj_ptr, ray);
                     obj_ptr++;
@@ -308,6 +328,7 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
     }
     return min_t;
 }
+
 
 float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray)
 {
@@ -343,61 +364,4 @@ float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray)
         }
     }
     return TMAX;
-}
-
-/*
-bool BVH4IntersectTest(const BVHNode4* tree, const Ray ray, const int depth)
-{
-    CACHE_ALIGN float t[5] = {TMAX, TMAX, TMAX, TMAX, TMAX};
-    
-    __m128 bbox_result = rayIntersectAABB4(tree->bbox, ray);
-    _mm_store_ps(t, bbox_result);
-    bool hit_status = false;
-    for(int i = 0; i < 4 && !hit_status; i++)
-    {        
-        if(t[i] < TMAX)
-        {
-            if(tree->type[i] == 0)
-            {
-                if(BVH4IntersectTest((BVHNode4*)(tree->child[i]), ray, depth + 1))
-                {
-                    hit_status = true;
-                }
-            }else if(tree->type[i] == 1)
-            {
-                hit_status = true;
-            }
-        }
-        if(hit_status)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-*/
-
-void BVH4_print(const BVHNode4 *tree, const int depth, FILE *fp)
-{
-    char tabs[56];
-    int i;
-    for(i = 0; i < depth; i++)
-    {
-        tabs[i] = '\t';
-    }
-    tabs[i] = '\0';
-
-    for(int i = 0; i < 4; i++)
-    {
-        fprintf(fp, "%s%f %f %f\n", tabs, tree->bbox[i], tree->bbox[i+4], tree->bbox[i+8]);
-        fprintf(fp, "%s%f %f %f\n", tabs, tree->bbox[i+12], tree->bbox[i+16], tree->bbox[i+20]);        
-    }
-
-    for(int i = 0; i < 4; i++)
-    {
-        if(tree->type[i] == 0)
-        {
-            BVH4_print((BVHNode4*)(tree->child[i]), depth+1, fp);
-        }
-    }
 }

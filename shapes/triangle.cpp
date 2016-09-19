@@ -35,10 +35,27 @@ float calcTriangleIntersect(float* beta_out, float* gamma_out,
     *beta_out = beta;
     *gamma_out = gamma;
 
+    if(beta < 0.0f)
+    {
+        return TMAX;
+    }    
+
+    if(gamma < 0.0f)
+    {
+        return TMAX;
+    }
+
+    if(beta + gamma > 1.0f)
+    {
+        return TMAX;
+    }
+
+    /*
     if(beta < 0.0f || gamma < 0.0f || beta + gamma > 1.0f) 
     {
         return TMAX;
     }
+    */
     
     float e3 = a*p - b*r + d*s;
     float t = e3 * inv_denom;
