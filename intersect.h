@@ -394,7 +394,7 @@ RETURN:
 }
 
 
-float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray)
+float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray, const float light_dist)
 {
     if(so->accel == GRID)
     {
@@ -407,12 +407,12 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray)
         {
             t = BVHShadowIntersectTest(tree, shadow_ray);
         }
-        if(t == TMAX)
+        if(t >= light_dist)
         { 
             for(int i = 0; i < so->num_non_grid_obj; i++)
             {
                 t = shadowRayIntersectObject(so->objects[i], shadow_ray);
-                if(t < TMAX)
+                if(t < light_dist)
                 {
                     return t;
                 }
@@ -422,13 +422,13 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray)
     }else if(so->accel == BVH4)
     {
         BVHNode4* tree = (BVHNode4*)(so->accel_ptr);        
-        float t = BVH4ShadowIntersectTest(tree, shadow_ray);
-        if(t == TMAX)
+        float t = BVH4ShadowIntersectTest(tree, shadow_ray, light_dist);
+        if(t >= light_dist)
         {
             for(int i = 0; i < so->num_non_grid_obj; i++)
             {
                 t = shadowRayIntersectObject(so->objects[i], shadow_ray);
-                if(t < TMAX)
+                if(t < light_dist)
                 {
                     return t;
                 }
@@ -441,7 +441,7 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray)
         for(int i = 0; i < so->num_obj; i++)
         {
             t = shadowRayIntersectObject(so->objects[i], shadow_ray);
-            if(t < TMAX)
+            if(t < light_dist)
             {
                 return t;
             }

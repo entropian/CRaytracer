@@ -70,7 +70,7 @@ float AOTest(const vec3 h_sample, const SceneObjects *so, const ShadeRec* sr)
     Ray shadow_ray;
     getVec3InLocalBasis(shadow_ray.direction, h_sample, sr->normal);
     vec3_copy(shadow_ray.origin, sr->hit_point);
-    return shadowIntersectTest(so, shadow_ray);
+    return shadowIntersectTest(so, shadow_ray, TMAX);
 }
 
 void ambientShading(vec3 radiance, const AmbientLight* amb_light, const vec3 sample,
@@ -215,10 +215,10 @@ bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects
         Ray shadow_ray;
         vec3_copy(shadow_ray.origin, sr->hit_point);
         vec3_copy(shadow_ray.direction, light_dir);
-        float min_t = shadowIntersectTest(so, shadow_ray);     
-        float t = calcLightDistance(sl->light_types[light_index],
+        float light_dist = calcLightDistance(sl->light_types[light_index],
                                     sl->light_ptrs[light_index], sr->hit_point);
-        if(min_t < t)
+        float min_t = shadowIntersectTest(so, shadow_ray, light_dist);             
+        if(min_t < light_dist)
         {
             return true;
         }

@@ -1,4 +1,6 @@
-Trying writing a SSE BVH thing
+Actually, shadow is fundamentally broken.
+Issue with QBVH shadow
+Fix cornell box lighting weirdness
 calcCameraRay is slow
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
@@ -20,39 +22,17 @@ Update the clean up section.
 
 SSE BVH:
 SIMD bbox intersection test -- seems like it works! 
-Figure out a way to compare the result of SSE BVH to BVH
-Try to keep the interface to both the same
-Look into branch-free bbox intersection
 Try converting BVH to an array based representation?
 Look into stack based traversal
 
 
 Concerns:
 Cache? Alignment?
-Deal with triangle numbers that aren't a multiple of 4.
-
 
 Features:
 each BVH node contains 4 bounding boxes instead of one
 four child pointers and the three split axes are stored for each inner node
 Construct a sorted index array for triangles?
-
-Data layout for tree nodes:
-struct SIMD_BVH_Node
-{
-    float bbox[2*4*3]; // 96 bytes
-    int child[4];      // 16 bytes
-    int axis0, axis1, axis2; // 12 bytes
-    int fill; // 1 bytes
-    // Total: 125 bytes
-};
-2*4*3 = 24 float; 24 * 4 = 96 bytes
-The 4 bbox are stored in structure of arrays(SOA) layout for direct processing in SIMD registers.
-In the paper's implementation, the turee data is stored in an array, therefore the child pointers could be
-   indices instead. Changing it would change the cache alignment?
-For a leaf, no additional SIMD_BVH_Node is created. The leaf bbox is already stored in the parent and the leaf data can
-    be encoded directly into the corresponding child integer.
-Use the sign of the child index to encode whether a node is a leaf or an inner node.
 
 Questions:
 Not sure why the split axes are needed.
@@ -67,43 +47,5 @@ SIMD triangle intersection -- is it worth the trouble?
      doesn't seem worth it right now, at least not at the level that I can get it to.
 
 
-Alternative layout:
-Data layout for tree nodes:
-struct SIMD_BVH_Node
-{
-    float bbox[2*4*3]; // 96 bytes
-    SIMD_BVH_Node* child[4] // 16 bytes
-    int fill; // 1 bytes
-    // Total: 125 bytes
-};
-
-SIMD triangle intersection test:
-For each ray, test against every triangle.
-Teapot was used. 480x480 at 1 sample
-If data is set up decently, speed up is significant though less than 2x.
-Release
-49.98 vectorall
-42.6 reference instead of vectorall
-41.02 pointers (WTF?)
-70.127 non-SIMD
-
-time spent in:
-     total 20s
-     SIMD
-     main 11.04s
-     calcTriangleIntersect4 9.27
-     
-     Non-SIMD
-     Total 30s
-     all in calcTriangleIntersect
-
-Debug
-254.47  SIMD 
-364.64  Non-SIMD
-199.331 for only intersection calc without shaderec bs ???
-
-
-Current:
-How to build the leafs?
-
-
+Fixing QBVH pruning problem:
+Modify rayIntersectAABB4 to return both near and far intersections

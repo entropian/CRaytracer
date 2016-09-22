@@ -5,14 +5,13 @@
 #include "../shapes/objecttype.h"
 #include "../shapes/shapes.h"
 #include "../shapes/instanced.h"
+#include "../aabb.h"
 #include <xmmintrin.h>
 #include "bvh.h"
 
 #define CACHE_ALIGN __declspec(align(16))
 
-// NOTES:
-// Instead of if statement, trying doing both cases?
-__m128 rayIntersectAABB4(const float bbox[24], const Ray ray)
+__m128 rayIntersectAABB4(__m128* less_than, const float bbox[24], const Ray ray)
 {
     // TODO: change it so that this is done once per ray    
     __m128 a = _mm_set1_ps(1.0f / ray.direction[0]);
@@ -73,8 +72,9 @@ __m128 rayIntersectAABB4(const float bbox[24], const Ray ray)
     __m128 epsilon_mask = _mm_cmpgt_ps(t1, epsilon);
     __m128 hit_mask = _mm_and_ps(comp_mask, epsilon_mask);
 
-    // Mix t0 and t1
+     // Mix t0 and t1
     epsilon_mask = _mm_cmpgt_ps(t0, epsilon);
+    *less_than = _mm_cmplt_ps(t0, epsilon);
     t0 = _mm_and_ps(t0, epsilon_mask);
     t1 = _mm_andnot_ps(epsilon_mask, t1);
     __m128 t = _mm_or_ps(t0, t1);
@@ -90,10 +90,10 @@ __m128 rayIntersectAABB4(const float bbox[24], const Ray ray)
 typedef _declspec(align(16)) struct BVHNode4_s
 {
     float bbox[2*3*4]; // 96 bytes
-    //void *child1, *child2, *child3, *child4;
-    void *child[4];
-    //char type1, type2, type3, type4; // 0 = inner node; 1 = leaf
-    char type[4];
+    void *child[4]; // 16 bytes
+    char type[4]; // 4 bytes
+    char axis0, axis1, axis2; // 3 bytes
+    // Total 119 bytes
 }BVHNode4;
 
 void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
@@ -119,7 +119,8 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     }else
     {
         axis_index = 2;
-    }              
+    }
+    pNode->axis0 = axis_index;
     int middle_split = partitionObjects(objects, num_obj, axis_index);
     
     tmp_aabb = calcBoundingVolume(objects, middle_split);
@@ -135,7 +136,8 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     }else
     {
         axis_index = 2;
-    }                  
+    }
+    pNode->axis1 = axis_index;
     int left_split = partitionObjects(objects, middle_split, axis_index);
 
     tmp_aabb = calcBoundingVolume(&(objects[left_split]), num_obj - middle_split);
@@ -151,27 +153,17 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     }else
     {
         axis_index = 2;
-    }                      
+    }
+    pNode->axis2 = axis_index;
     int right_split = partitionObjects(&(objects[middle_split]), num_obj - middle_split, axis_index);
     right_split += middle_split;
 
-    /*
-    char tabs[56];
-    int i; 
-    for(i = 0; i < depth; i++)
-    {
-        tabs[i] = '\t';
-    }
-    tabs[i] = '\0';
-    */
     int index, length;
 
     // First AABB
     index = 0;
     length = left_split;
     tmp_aabb = calcBoundingVolume(objects, left_split);
-    //fprintf(fp, "%s%f %f %f\n", tabs, tmp_aabb.min[0], tmp_aabb.min[1], tmp_aabb.min[2]);
-    //fprintf(fp, "%s%f %f %f\n", tabs, tmp_aabb.max[0], tmp_aabb.max[1], tmp_aabb.max[2]);
     
     int offset = 0;
     pNode->bbox[offset + 0] = tmp_aabb.min[0];
@@ -185,8 +177,7 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     index = left_split;
     length = middle_split - left_split;
     tmp_aabb = calcBoundingVolume(&(objects[left_split]), middle_split - left_split);
-    //fprintf(fp, "%s%f %f %f\n", tabs, tmp_aabb.min[0], tmp_aabb.min[1], tmp_aabb.min[2]);
-    //fprintf(fp, "%s%f %f %f\n", tabs, tmp_aabb.max[0], tmp_aabb.max[1], tmp_aabb.max[2]);    
+
     offset = 1;
     pNode->bbox[offset + 0] = tmp_aabb.min[0];
     pNode->bbox[offset + 4] = tmp_aabb.min[1];
@@ -199,8 +190,7 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     index = middle_split;
     length = right_split - middle_split;
     tmp_aabb = calcBoundingVolume(&(objects[middle_split]), right_split - middle_split);    
-    //fprintf(fp, "%s%f %f %f\n", tabs, tmp_aabb.min[0], tmp_aabb.min[1], tmp_aabb.min[2]);
-    //fprintf(fp, "%s%f %f %f\n", tabs, tmp_aabb.max[0], tmp_aabb.max[1], tmp_aabb.max[2]);
+
     offset = 2;
     pNode->bbox[offset + 0] = tmp_aabb.min[0];
     pNode->bbox[offset + 4] = tmp_aabb.min[1];
@@ -213,8 +203,7 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     index = right_split;
     length = num_obj - right_split;
     tmp_aabb = calcBoundingVolume(&(objects[right_split]), num_obj - right_split);
-    //fprintf(fp, "%s%f %f %f\n", tabs, tmp_aabb.min[0], tmp_aabb.min[1], tmp_aabb.min[2]);
-    //fprintf(fp, "%s%f %f %f\n", tabs, tmp_aabb.max[0], tmp_aabb.max[1], tmp_aabb.max[2]);
+
     offset = 3;
     pNode->bbox[offset + 0] = tmp_aabb.min[0];
     pNode->bbox[offset + 4] = tmp_aabb.min[1];
@@ -269,43 +258,70 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     }            
 }
 
-
-
-
 float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
 {
     CACHE_ALIGN float bbox_result[5] = {TMAX, TMAX, TMAX, TMAX, TMAX};
-    __m128 tmp = rayIntersectAABB4(tree->bbox, ray);
+    CACHE_ALIGN float less_than[4];
+    __m128* tmp_ptr = (__m128*)less_than;
+    __m128 tmp = rayIntersectAABB4(tmp_ptr, tree->bbox, ray);
     _mm_store_ps(bbox_result, tmp);
-
-    int indices[4] = {0, 1, 2, 3};
-    for(int i = 1; i < 4; i++)
+    int indices[4];
+    
+    if(ray.direction[tree->axis0] > 0.0f)
     {
-        float x = bbox_result[i];
-        int index = indices[i];
-        int j;
-        for(j = i - 1; j >= 0 && bbox_result[j] > x; j--)
+        if(ray.direction[tree->axis1] > 0.0f)
         {
-            bbox_result[j+1] = bbox_result[j];
-            indices[j+1] = indices[j];
+            indices[0] = 0;
+            indices[1] = 1;
+        }else
+        {
+            indices[0] = 1;
+            indices[1] = 0;
         }
-        bbox_result[j+1] = x;
-        indices[j+1] = index;
+        if(ray.direction[tree->axis2] > 0.0f)
+        {
+            indices[2] = 2;
+            indices[3] = 3;
+        }else
+        {
+            indices[2] = 3;
+            indices[3] = 2;
+        }
+    }else
+    {
+        if(ray.direction[tree->axis2] > 0.0f)
+        {
+            indices[0] = 2;
+            indices[1] = 3;
+        }else
+        {
+            indices[0] = 3;
+            indices[1] = 2;
+        }
+        if(ray.direction[tree->axis1] > 0.0f)
+        {
+            indices[2] = 0;
+            indices[3] = 1;
+        }else
+        {
+            indices[2] = 1;
+            indices[3] = 0;
+        }
     }
-
+   
     float min_t = TMAX;
     for(int i = 0; i < 4; i++)
     {        
-        if(bbox_result[i] < min_t)
+        char index = indices[i];
+        if(bbox_result[index] < min_t || (less_than[index] && bbox_result[index] < TMAX)) // key line?
         {
-            int index = indices[i];
             float t;
             ShadeRec tmp_sr;
             if(tree->type[index] == 0)
             {
                 t = BVH4IntersectTest(&tmp_sr, (BVHNode4*)(tree->child[index]), ray);
                 if(t < min_t)
-                {
+                {                    
                     min_t = t;
                     *sr = tmp_sr;
                 }                
@@ -330,31 +346,78 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
 }
 
 
-float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray)
+float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray, const float light_dist)
 {
     CACHE_ALIGN float bbox_result[5] = {TMAX, TMAX, TMAX, TMAX, TMAX};
-    __m128 tmp = rayIntersectAABB4(tree->bbox, ray);
+    CACHE_ALIGN float less_than[4];    
+    __m128* tmp_ptr = (__m128*)less_than;
+    __m128 tmp = rayIntersectAABB4(tmp_ptr, tree->bbox, ray);    
     _mm_store_ps(bbox_result, tmp);
-    for(int i = 0; i < 4; i++)
-    {        
-        if(bbox_result[i] < TMAX)
+    int indices[4];
+    
+    if(ray.direction[tree->axis0] > 0.0f)
+    {
+        if(ray.direction[tree->axis1] > 0.0f)
         {
-            float t;
-            if(tree->type[i] == 0)
+            indices[0] = 0;
+            indices[1] = 1;
+        }else
+        {
+            indices[0] = 1;
+            indices[1] = 0;
+        }
+        if(ray.direction[tree->axis2] > 0.0f)
+        {
+            indices[2] = 2;
+            indices[3] = 3;
+        }else
+        {
+            indices[2] = 3;
+            indices[3] = 2;
+        }
+    }else
+    {
+        if(ray.direction[tree->axis2] > 0.0f)
+        {
+            indices[0] = 2;
+            indices[1] = 3;
+        }else
+        {
+            indices[0] = 3;
+            indices[1] = 2;
+        }
+        if(ray.direction[tree->axis1] > 0.0f)
+        {
+            indices[2] = 0;
+            indices[3] = 1;
+        }else
+        {
+            indices[2] = 1;
+            indices[3] = 0;
+        }
+    }
+    
+    for(int i = 0; i < 4; i++)
+    {
+        char index = indices[i];
+        if(bbox_result[index] < light_dist || (less_than[index] && bbox_result[index] < TMAX)) // Key line?
+        {
+            float t = TMAX;
+            if(tree->type[index] == 0)
             {
-                t = BVH4ShadowIntersectTest((BVHNode4*)(tree->child[i]), ray);
-                if(t < TMAX)
+                t = BVH4ShadowIntersectTest((BVHNode4*)(tree->child[index]), ray, light_dist);
+                if(t < light_dist)
                 {
                     return t;
                 }                
             }else // child[i] is a leaf
             {
-                Object_t* obj_ptr = (Object_t*)(tree->child[i]);
-                for(int j = 0; j < tree->type[i]; j++)
+                Object_t* obj_ptr = (Object_t*)(tree->child[index]);
+                for(int j = 0; j < tree->type[index]; j++)
                 {
                     t = shadowRayIntersectObject(*obj_ptr, ray);
                     obj_ptr++;
-                    if(t < TMAX)
+                    if(t < light_dist)
                     {
                         return t;
                     }                    
@@ -365,3 +428,4 @@ float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray)
     }
     return TMAX;
 }
+

@@ -18,6 +18,7 @@ typedef struct ConfigParams_s
     unsigned int max_depth;
     TraceType trace_type;
     AccelType accel_type;
+    bool image_save;
     char file_name[128];
 }ConfigParams;
 
@@ -97,6 +98,16 @@ void parseConfigFile(ConfigParams* cp)
             }else
             {
                 cp->accel_type = NONE;
+            }
+        }else if(strcmp(buffer, "image_save") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            if(strcmp(buffer, "yes") == 0)
+            {
+                cp->image_save = true;
+            }else
+            {
+                cp->image_save = false;
             }
         }
     }
