@@ -5,8 +5,8 @@ image_width  480
 image_height 480
 num_samples  256
 num_sample_sets 83
-max_depth  4
+max_depth  2
 trace_type PATHTRACE
-accel_struct BVH4
+accel_struct GRID
 image_save no
 

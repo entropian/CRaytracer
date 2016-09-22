@@ -10,7 +10,7 @@
 #include "intersect.h"
 
 extern int MAX_DEPTH;
-#define SEPARATE_DIRECT_INDIRECT
+//#define SEPARATE_DIRECT_INDIRECT
 
 enum TraceType
 {
@@ -355,7 +355,7 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
             //maxToOne(radiance, radiance);                
         }else
         {
-            if(depth >= 0)
+            if(depth > 0)
             {
 #ifdef SEPARATE_DIRECT_INDIRECT
                 // Direct illumination
@@ -466,6 +466,9 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
                     }
                     vec3_add(radiance, radiance, reflected_illum);                    
                 }
+            }else
+            {
+                vec3_copy(radiance, sl->bg_color);
             }
         }
     }else

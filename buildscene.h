@@ -459,7 +459,7 @@ void initSceneLights(SceneLights* sl)
 
     
     // Point light
-
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
     intensity = 0.0f;
@@ -470,7 +470,7 @@ void initSceneLights(SceneLights* sl)
     sl->light_types[sl->num_lights] = POINTLIGHT;    
     (sl->num_lights)++;
 
-
+    */
 
     initAreaLights(sl);
     //initEnvLight(sl);
