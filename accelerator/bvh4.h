@@ -319,7 +319,11 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
     for(int i = 0; i < 4; i++)
     {        
         char index = indices[i];
+<<<<<<< HEAD
         if(bbox_result[index] < min_t || (less_than[index] && bbox_result[index] < TMAX))
+=======
+        if(bbox_result[index] < min_t || (less_than[index] && bbox_result[index] < TMAX)) // key line?
+>>>>>>> 4e9b9c8062f1b2e557427376eda04b5ca86400c9
         {
             float t;
             ShadeRec tmp_sr;
@@ -406,7 +410,11 @@ float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray, const float l
     for(int i = 0; i < 4; i++)
     {
         char index = indices[i];
+<<<<<<< HEAD
         if(bbox_result[index] < light_dist || (less_than[index] && bbox_result[index] < TMAX))
+=======
+        if(bbox_result[index] < light_dist || (less_than[index] && bbox_result[index] < TMAX)) // Key line?
+>>>>>>> 4e9b9c8062f1b2e557427376eda04b5ca86400c9
         {
             float t = TMAX;
             if(tree->type[index] == 0)
