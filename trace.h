@@ -10,6 +10,7 @@
 #include "intersect.h"
 
 extern int MAX_DEPTH;
+#define SEPARATE_DIRECT_INDIRECT
 
 enum TraceType
 {
@@ -340,6 +341,7 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
     {    
         if(min_sr.mat->mat_type == EMISSIVE)
         {
+#ifdef SEPARATE_DIRECT_INDIRECT
             if(depth == MAX_DEPTH - 1)
             {
                 vec3_copy(radiance, BLACK);
@@ -347,11 +349,15 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
             {
                 vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke);
             }
+#else
+            vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke);
+#endif
             //maxToOne(radiance, radiance);                
         }else
         {
             if(depth >= 0)
             {
+#ifdef SEPARATE_DIRECT_INDIRECT
                 // Direct illumination
                 if(min_sr.mat->mat_type & (MATTE | PHONG) && depth == MAX_DEPTH)
                 {
@@ -374,7 +380,7 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
                         }
                     }
                 }
-
+#endif
                 if(min_sr.mat->mat_type == MATTE)
                 {
                     vec3 new_sample;

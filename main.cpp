@@ -26,7 +26,6 @@
 #include "sampling.h"
 #include "camera.h"
 #include "lights.h"
-//#include "sceneobj.h"
 #include "scene/scene.h"
 #include "shading.h"
 #include "buildscene.h"
@@ -35,9 +34,11 @@
 #include "config.h"
 #include "texture.h"
 #include "noise.h"
+#include "imagefile.h"
 
 #define SHOW_PROGRESS 1
 #define PROG
+#define CORNELL_BOX
 
 extern double g_traversal_time;
 
@@ -123,12 +124,14 @@ int main()
     Camera camera;
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
-    
+
+#ifdef CORNELL_BOX    
+    vec3 position = {278.0f, 273.0f, 800.0f};
+    vec3 look_point = {278.0f, 273.0f, 0.0f};
+#else
     vec3 position = {0.0f, 2.0f, 5.0f};
     vec3 look_point = {0.0f, 0.0f, 0.0f};
-    // Cornell box camera coordinates
-    //vec3 position = {278.0f, 273.0f, 800.0f};
-    //vec3 look_point = {278.0f, 273.0f, 0.0f};
+#endif
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
 
@@ -249,8 +252,13 @@ int main()
     printf("%f seconds.\n", sec);
 
     displayImage(window, viewport, image, frame_res_width, frame_res_height);
+    printf("Traversal time = %f\n", g_traversal_time);
 
-    printf("Traversal time = %f\n", g_traversal_time); 
+    if(params.image_save)
+    {
+        PPM_write("output.ppm", image, num_pixels * 3, params.image_width, params.image_height);
+        EXIT = true;
+    }
 
     // Clean up
     freeSamples2D(&unit_square_samples);

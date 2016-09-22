@@ -16,7 +16,7 @@ int PPM_write(const char *file_name, const unsigned char *image, const int image
 
 	// Header
 	fprintf(fp, "P6\n");
-	fprintf(fp, "512 512\n");
+	fprintf(fp, "%d %d\n", width, height);
 	fprintf(fp, "255\n");
 	
 	fwrite(image, sizeof(char), image_size, fp);

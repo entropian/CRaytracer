@@ -1,4 +1,4 @@
-scene_file test_scene2.txt
+scene_file cornell_box.txt
 window_width  960
 window_height  960
 image_width  480
@@ -8,3 +8,5 @@ num_sample_sets 83
 max_depth  4
 trace_type PATHTRACE
 accel_struct BVH4
+image_save no
+
