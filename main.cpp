@@ -124,8 +124,9 @@ int main()
     // Photon map
     const int num_photons = 10000;
     Photonmap photon_map;
-    initPhotonmap(&photon_map, num_photons);
+    Photonmap_init(&photon_map, num_photons);
     int photon_count = emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
+    Photonmap_balance(&photon_map);
 
     // Camera
     Camera camera;

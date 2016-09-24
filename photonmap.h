@@ -31,7 +31,7 @@ typedef struct Photonmap_s
     AABB bbox;
 }Photonmap;
 
-void initPhotonmap(Photonmap* photon_map, const int max_photons)
+void Photonmap_init(Photonmap* photon_map, const int max_photons)
 {
     photon_map->stored_photons = 0;
     photon_map->prev_scale = 1;
@@ -158,4 +158,147 @@ int emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights
     }
     photon_map->stored_photons = photon_count;
     return photon_count;
+}
+
+#define swap(ph, a, b) {Photon *ph2 = ph[a]; ph[a] = ph[b]; ph[b] = ph2;}
+
+void medianSplit(Photon **p, const int start, const int end, const int median, const int axis)
+{
+    int left = start;
+    int right = end;
+    while(right > left)
+    {
+        const float v = p[right]->position[axis];
+        int i = left - 1;
+        int j = right;
+        for(;;)
+        {
+            while(p[++i]->position[axis] < v);
+            while(p[--j]->position[axis] > v&& j > left);
+            if(i >= j)
+                break;
+            swap(p, i, j);
+        }
+
+        swap(p, i, right);
+        if(i >= median)
+        {
+            right = i - 1;
+        }
+        if(i <= median)
+        {
+            left = i + 1;
+        }
+    }
+}
+
+void balanceSegment(Photonmap *photon_map,
+                    Photon **pbal, Photon **porg, const int index, const int start, const int end)
+{
+    int median = 1;
+    while((4*median) <= (end - start + 1))
+    {
+        median += median;
+    }
+    if((3*median) <= (end - start + 1))
+    {
+        median += median;
+        median += start - 1;
+    }else
+    {
+        median = end - median + 1;
+    }
+
+    int axis = 2;
+    float x_extent = photon_map->bbox.max[0] - photon_map->bbox.min[0];
+    float y_extent = photon_map->bbox.max[1] - photon_map->bbox.min[1];
+    float z_extent = photon_map->bbox.max[2] - photon_map->bbox.min[2];
+
+    if(x_extent > y_extent && x_extent > z_extent)
+    {
+        axis = 0;
+    }else if(y_extent > z_extent)
+    {
+        axis = 1;
+    }
+
+    medianSplit(porg, start, end, median, axis);
+
+    pbal[index] = porg[median];
+    pbal[index]->plane = axis;
+
+    if(median > start)
+    {
+        if(start < median - 1)
+        {
+            const float tmp = photon_map->bbox.max[axis];
+            photon_map->bbox.max[axis] = pbal[index]->position[axis];
+            balanceSegment(photon_map, pbal, porg, 2*index, start, median-1);
+            photon_map->bbox.max[axis] = tmp;            
+        }else
+        {
+            pbal[2*index] = porg[start];
+        }
+    }
+
+    if(median < end)
+    {
+        if(median+1 < end)
+        {
+            const float tmp = photon_map->bbox.min[axis];
+            photon_map->bbox.min[axis] = pbal[index]->position[axis];
+            balanceSegment(photon_map, pbal, porg, 2*index+1, median+1, end);
+            photon_map->bbox.min[axis] = tmp;                        
+        }else
+        {
+            pbal[2*index+1] = porg[end];
+        }
+    }
+}
+
+void Photonmap_balance(Photonmap* photon_map)
+{
+    if(photon_map->stored_photons > 1)
+    {
+        Photon* photons = photon_map->photons;
+        Photon** pa1 = (Photon**)malloc(sizeof(Photon*) * (photon_map->stored_photons+1));
+        Photon** pa2 = (Photon**)malloc(sizeof(Photon*) * (photon_map->stored_photons+1));
+
+        for(int i = 0; i <= photon_map->stored_photons; i++)
+        {
+            pa2[i] = &(photons[i]);
+        }
+        balanceSegment(photon_map, pa1, pa2, 1, 1, photon_map->stored_photons);
+        free(pa2);
+
+        int d, j = 1, foo = 1;
+        Photon foo_photon = photons[j];
+
+        for(int i = 1; i <= photon_map->stored_photons; i++)
+        {
+            d = pa1[j] - photons;
+            pa1[j] = NULL;
+            if(d != foo)
+            {
+                photons[j] = photons[d];
+            }else
+            {
+                photons[j] = foo_photon;
+                if(i < photon_map->stored_photons)
+                {
+                    for(; foo <= photon_map->stored_photons; foo++)
+                    {
+                        if(pa1[foo])
+                            break;
+                    }
+                    foo_photon = photons[foo];
+                    j = foo;
+                }
+                continue;
+            }
+            j = d;
+        }
+        free(pa1);
+    }
+    photon_map->half_stored_photons = photon_map->stored_photons / 2 - 1;
 }
