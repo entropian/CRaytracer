@@ -7,6 +7,6 @@ num_samples  256
 num_sample_sets 83
 max_depth  2
 trace_type PATHTRACE
-accel_struct GRID
+accel_struct BVH
 image_save no
 

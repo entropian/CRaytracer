@@ -35,6 +35,7 @@
 #include "texture.h"
 #include "noise.h"
 #include "imagefile.h"
+#include "photonmap.h"
 
 #define SHOW_PROGRESS 1
 #define PROG
@@ -120,6 +121,12 @@ int main()
     Scene scene = Scene_create();
     initScene(&scene, params.file_name, params.accel_type);
 
+    // Photon map
+    const int num_photons = 10000;
+    Photonmap photon_map;
+    initPhotonmap(&photon_map, num_photons);
+    int photon_count = emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
+
     // Camera
     Camera camera;
     initPinholeCameraDefault(&camera);
@@ -167,7 +174,28 @@ int main()
             
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
-
+            ShadeRec sr;
+            float t = intersectTest(&sr, &(scene.objects), ray);
+            if(t < TMAX)
+            {
+                float min_dist2 = TMAX;
+                vec3 photon_power = {0.0f, 0.0f, 0.0f};
+                for(int j = 0; j < photon_count; j++)
+                {
+                    Photon* cur_photon = &(photon_map.photons[j]);
+                    vec3 displacement;
+                    vec3_sub(displacement, cur_photon->position, sr.hit_point);
+                    float dist2 = vec3_dot(displacement, displacement);
+                    if(dist2 < min_dist2)
+                    {
+                        min_dist2 = dist2;
+                        vec3_copy(photon_power, cur_photon->power);
+                        vec3_scale(photon_power, photon_power, 1.0f/(float)sqrt(dist2));
+                    }
+                }
+                vec3_copy(color, photon_power);                
+            }
+            /*
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
             //getInterleavedSample3D(h_sample, &h_samples);
@@ -176,6 +204,7 @@ int main()
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
+            */
 
             // NEW
             color_buffer[i*3] += color[0];
@@ -266,6 +295,7 @@ int main()
     freeSamples3D(&h_samples);
     Scene_destroy(&scene);
     Camera_destroy(&camera);
+    Photonmap_destroy(&photon_map);
 
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;
