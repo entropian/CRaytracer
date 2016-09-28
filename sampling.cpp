@@ -14,11 +14,13 @@ const Samples3D Samples3D_default = {0, 0, NULL};
  */
 static int NUM_SAMPLES = 0;
 static int NUM_SAMPLE_SETS = 0;
+static int TOTAL_SAMPLES = 0;
 
 void setNumSamplesAndSets(const int num_samples, const int num_sets)
 {
     NUM_SAMPLES = num_samples;
     NUM_SAMPLE_SETS = num_sets;
+    TOTAL_SAMPLES = NUM_SAMPLES * NUM_SAMPLE_SETS;
 }
 
 void setInterleaved(bool interleaved)
@@ -84,12 +86,12 @@ int calcInterleavedSampleIndex(const int sample_index, const int set_index)
 
 void getSample2D(vec2 r, const Samples2D* samples, const int sample_index)
 {
-    vec2_copy(r, samples->samples[sample_index]);
+    vec2_copy(r, samples->samples[sample_index % TOTAL_SAMPLES]);
 }
 
 void getSample3D(vec3 r, const Samples3D* samples, const int sample_index)
 {
-    vec3_copy(r, samples->samples[sample_index]);
+    vec3_copy(r, samples->samples[sample_index % TOTAL_SAMPLES]);
 }
 
 void shuffleSamples(Samples2D* samples)

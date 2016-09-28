@@ -278,7 +278,7 @@ float BVHIntersectTest(ShadeRec* sr, const SceneObjects* so, const BVHNode* tree
         {
             t1 = BVHIntersectTest(&sr1, so, tree->left, ray);
         }
-        if(rayIntersectAABB(&(tree->right->aabb), ray) < t1)
+        if(rayIntersectAABB(&(tree->right->aabb), ray) < TMAX)
         {
             t2 = BVHIntersectTest(&sr2, so, tree->right, ray);
         }

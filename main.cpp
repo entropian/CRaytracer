@@ -122,11 +122,13 @@ int main()
     initScene(&scene, params.file_name, params.accel_type);
 
     // Photon map
+    /*
     const int num_photons = 10000;
     Photonmap photon_map;
     Photonmap_init(&photon_map, num_photons);
     int photon_count = emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
     Photonmap_balance(&photon_map);
+    */
 
     // Camera
     Camera camera;
@@ -175,6 +177,7 @@ int main()
             
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
+            /*
             ShadeRec sr;
             float t = intersectTest(&sr, &(scene.objects), ray);
             if(t < TMAX)
@@ -196,7 +199,8 @@ int main()
                 }
                 vec3_copy(color, photon_power);                
             }
-            /*
+            */
+
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
             //getInterleavedSample3D(h_sample, &h_samples);
@@ -205,7 +209,7 @@ int main()
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
-            */
+
 
             // NEW
             color_buffer[i*3] += color[0];
@@ -296,7 +300,7 @@ int main()
     freeSamples3D(&h_samples);
     Scene_destroy(&scene);
     Camera_destroy(&camera);
-    Photonmap_destroy(&photon_map);
+    //Photonmap_destroy(&photon_map);
 
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;
