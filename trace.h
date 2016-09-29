@@ -10,7 +10,7 @@
 #include "intersect.h"
 
 extern int MAX_DEPTH;
-//#define SEPARATE_DIRECT_INDIRECT
+#define SEPARATE_DIRECT_INDIRECT
 
 enum TraceType
 {

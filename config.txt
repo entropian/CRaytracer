@@ -3,9 +3,9 @@ window_width  960
 window_height  960
 image_width  960
 image_height 960
-num_samples  1024
+num_samples  16
 num_sample_sets 83
-max_depth  5
+max_depth  10
 trace_type PATHTRACE
 accel_struct BVH4
 image_save no

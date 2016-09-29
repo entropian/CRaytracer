@@ -122,13 +122,11 @@ int main()
     initScene(&scene, params.file_name, params.accel_type);
 
     // Photon map
-    /*
     const int num_photons = 10000;
     Photonmap photon_map;
     Photonmap_init(&photon_map, num_photons);
-    int photon_count = emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
+    emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
     Photonmap_balance(&photon_map);
-    */
 
     // Camera
     Camera camera;
@@ -155,6 +153,12 @@ int main()
     float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*, const int);
     trace = getTraceFunc(params.trace_type);
 
+    int nphotons = 1;
+    NearestPhotons np;
+    np.dist2 = (float*)malloc(sizeof(float) * (nphotons + 1));
+    np.index = (Photon**)malloc(sizeof(Photon*)*(nphotons+1));
+    float max_dist = 10;
+
     double start_time, end_time;
     start_time = glfwGetTime(); 
 
@@ -177,18 +181,44 @@ int main()
             
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
-            /*
+
             ShadeRec sr;
             float t = intersectTest(&sr, &(scene.objects), ray);
             if(t < TMAX)
             {
+                np.pos[0] = sr.hit_point[0];
+                np.pos[1] = sr.hit_point[1];
+                np.pos[2] = sr.hit_point[2];
+                np.max = nphotons;
+                np.found = 0;
+                np.got_heap = 0;
+                np.dist2[0] = max_dist * max_dist;
+
+                locatePhotons(&photon_map, &np, 1);
+                if(np.found > 0)
+                {
+                    Photon* cur_photon = np.index[1];
+                    vec3 displacement;
+                    vec3_sub(displacement, cur_photon->pos, sr.hit_point);
+                    float dist2 = vec3_dot(displacement, displacement);
+                    if(dist2 < min_dist2)
+                    {
+                        min_dist2 = dist2;
+                        vec3_copy(photon_power, cur_photon->power);
+                        vec3_scale(photon_power, photon_power, 1.0f/(float)sqrt(dist2));
+                    }                    
+                    
+                }                
+
+                /*
+
                 float min_dist2 = TMAX;
                 vec3 photon_power = {0.0f, 0.0f, 0.0f};
-                for(int j = 0; j < photon_count; j++)
+                for(int j = 0; j < photon_map.stored_photons; j++)
                 {
-                    Photon* cur_photon = &(photon_map.photons[j]);
+                    Photon* cur_photon = &(photon_map.photons[j+1]);
                     vec3 displacement;
-                    vec3_sub(displacement, cur_photon->position, sr.hit_point);
+                    vec3_sub(displacement, cur_photon->pos, sr.hit_point);
                     float dist2 = vec3_dot(displacement, displacement);
                     if(dist2 < min_dist2)
                     {
@@ -197,10 +227,11 @@ int main()
                         vec3_scale(photon_power, photon_power, 1.0f/(float)sqrt(dist2));
                     }
                 }
+                */
                 vec3_copy(color, photon_power);                
             }
-            */
 
+            /*
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
             //getInterleavedSample3D(h_sample, &h_samples);
@@ -209,7 +240,7 @@ int main()
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
-
+            */
 
             // NEW
             color_buffer[i*3] += color[0];
@@ -300,8 +331,10 @@ int main()
     freeSamples3D(&h_samples);
     Scene_destroy(&scene);
     Camera_destroy(&camera);
-    //Photonmap_destroy(&photon_map);
-
+    Photonmap_destroy(&photon_map);
+    free(np.index);
+    free(np.dist2);
+    
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;
     double current_time, last_draw_time = 0.0;

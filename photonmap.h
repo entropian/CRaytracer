@@ -6,12 +6,14 @@
 #include "objloader/dbuffer.h"
 #include "aabb.h"
 #include "shapes/shapes.h"
+#include "sampling.h"
+#include "util/math.h"
 
 extern float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray);
 
 typedef struct Photon_s
 {
-    vec3 position;
+    vec3 pos;
     short plane;
     unsigned char theta, phi;
     vec3 power;
@@ -36,7 +38,7 @@ void Photonmap_init(Photonmap* photon_map, const int max_photons)
     photon_map->stored_photons = 0;
     photon_map->prev_scale = 1;
     photon_map->max_photons = max_photons;
-    photon_map->photons = (Photon*)malloc(sizeof(Photon) * max_photons);
+    photon_map->photons = (Photon*)malloc(sizeof(Photon) * (max_photons + 1));
     if(!photon_map->photons)
     {
         fprintf(stderr, "Not enough memory initializing photon map.\n");
@@ -66,7 +68,7 @@ void Photonmap_destroy(Photonmap* photon_map)
     photon_map->half_stored_photons = 0;
 }
 
-int emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)
+void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)
 {    
     int point_light_count = 0;
     for(int i = 0; i < sl->num_lights; i++)
@@ -79,7 +81,7 @@ int emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights
     if(point_light_count == 0)
     {
         fprintf(stderr, "No point light in scene.\n");
-        return 0;
+        return;
     }
     
     int photons_per_light = photon_map->max_photons / point_light_count;
@@ -98,66 +100,115 @@ int emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights
         sample_count++;
     }
 
-    int photon_count = 0;
+    const int max_bounce = 2;
+    int stored_photons = 0;
     for(int i = 0; i < sl->num_lights; i++)
     {
         if(sl->light_types[i] == POINTLIGHT)
         {
+            int sample_index = 0, photon_count = 0;
             PointLight* point_light = (PointLight*)(sl->light_ptrs[i]);
             vec3 light_power, photon_power;
             vec3_scale(light_power, point_light->color, point_light->intensity);
             vec3_scale(photon_power, light_power, 1.0f/(float)photons_per_light);
-            for(int j = 0; j < photons_per_light; j++)
+            Ray ray;            
+            bool reflected = false;
+            int bounce_count = 0, sphere_sample_index = 0;
+            // TODO: fix below. Emitted photons and stored photons don't match up due to bounces.
+            // NOTE: How do bounced photons relate to photon power overall?
+            while(photon_count < (photons_per_light) && stored_photons < photon_map->max_photons)
             {
-                Ray ray;
-                vec3_copy(ray.origin, point_light->point);
-                vec3_copy(ray.direction, sphere_samples[j]);
-
-                // NOTE: limiting photon emission to one bounce for now
+                // Contruct new primary ray if last ray wasn't reflected or max bounce exeeded
+                if(!reflected || bounce_count > max_bounce)
+                {
+                    vec3_copy(ray.origin, point_light->point);
+                    vec3_copy(ray.direction, sphere_samples[sphere_sample_index++ % photons_per_light]);
+                    bounce_count = 0;
+                }
+                
                 ShadeRec sr;
                 float t = intersectTest(&sr, so, ray);
                 if(t < TMAX)
                 {
-                    Photon* cur_photon = &(photon_map->photons[photon_count]);
-                    vec3_copy(cur_photon->position, sr.hit_point);
-                    int theta = int(acos(sr.wo[2]) * (256.0/PI));
-                    if(theta > 255)
+                    reflected = true;
+                    bounce_count++;
+                    // Store photon if hit surface is a diffuse surface
+                    if(sr.mat->mat_type == MATTE)
                     {
-                        cur_photon->theta = 255;
-                    }else
-                    {
-                        cur_photon->theta = (unsigned char)theta;
-                    }
-                    int phi = int(atan2(sr.wo[1], sr.wo[0]) * (256.0 / (2.0f * PI)));
-                    if(phi > 255)
-                    {
-                        cur_photon->phi = 255;
-                    }else if(phi < 0)
-                    {
-                        cur_photon->phi = (unsigned char)(phi + 256);
-                    }else
-                    {
-                        cur_photon->phi = (unsigned char)phi;
-                    }
-                    vec3_copy(cur_photon->power, photon_power);
-                    for(int k = 0; k < 3; k++)
-                    {
-                        if(cur_photon->position[k] < photon_map->bbox.min[k])
+                        stored_photons++;                        
+                        Photon* cur_photon = &(photon_map->photons[stored_photons]);
+                        vec3_copy(cur_photon->pos, sr.hit_point);
+                        int theta = int(acos(sr.wo[2]) * (256.0/PI));
+                        if(theta > 255)
                         {
-                            photon_map->bbox.min[k] = cur_photon->position[k];
-                        }
-                        if(cur_photon->position[k] > photon_map->bbox.max[k])
+                            cur_photon->theta = 255;
+                        }else
                         {
-                            photon_map->bbox.max[k] = cur_photon->position[k];
+                            cur_photon->theta = (unsigned char)theta;
                         }
+                        int phi = int(atan2(sr.wo[1], sr.wo[0]) * (256.0 / (2.0f * PI)));
+                        if(phi > 255)
+                        {
+                            cur_photon->phi = 255;
+                        }else if(phi < 0)
+                        {
+                            cur_photon->phi = (unsigned char)(phi + 256);
+                        }else
+                        {
+                            cur_photon->phi = (unsigned char)phi;
+                        }
+                        // TODO: this is wrong
+                        vec3_copy(cur_photon->power, photon_power);
+                        for(int k = 0; k < 3; k++)
+                        {
+                            if(cur_photon->pos[k] < photon_map->bbox.min[k])
+                            {
+                                photon_map->bbox.min[k] = cur_photon->pos[k];
+                            }
+                            if(cur_photon->pos[k] > photon_map->bbox.max[k])
+                            {
+                                photon_map->bbox.max[k] = cur_photon->pos[k];
+                            }
+                        }
+                        photon_count++;
                     }
-                    photon_count++;
-                }
+
+                    float rand_float = (float)rand() / (float)RAND_MAX; // Random float for Russian roulette
+                    vec3 sample, ref_ray_dir;
+                    // If random float is less than or equal to the corresponding reflectance coefficient,
+                    // then cast a new ray
+                    // TODO: Russian roulette should account for color
+                    switch(sr.mat->mat_type)
+                    {                        
+                    case MATTE:
+                    {
+                        if(rand_float > sr.mat->kd){continue;}
+                        getSample3D(sample, sr.mat->h_samples, sample_index++);
+                        getVec3InLocalBasis(ref_ray_dir, sample, sr.normal);                        
+                    } break;
+                    case REFLECTIVE:                    
+                    case PHONG:
+                    {
+                        if(rand_float > sr.mat->ks){continue;}                        
+                        vec3 reflect_dir;
+                        calcReflectRayDir(reflect_dir, sr.normal, ray.direction);
+                        getVec3InLocalBasis(ref_ray_dir, sample, reflect_dir);                        
+                    } break;
+                    case TRANSPARENT:
+                        break;
+                    }
+                    vec3_copy(ray.origin, sr.hit_point);
+                    vec3_copy(ray.direction, ref_ray_dir);
+                }else // Ray hits nothing
+                {
+                    reflected = false;
+                    bounce_count = 0;
+                 }
             }
         }
     }
-    photon_map->stored_photons = photon_count;
-    return photon_count;
+    photon_map->stored_photons = stored_photons;
+    free(sphere_samples);
 }
 
 #define swap(ph, a, b) {Photon *ph2 = ph[a]; ph[a] = ph[b]; ph[b] = ph2;}
@@ -168,13 +219,15 @@ void medianSplit(Photon **p, const int start, const int end, const int median, c
     int right = end;
     while(right > left)
     {
-        const float v = p[right]->position[axis];
+        const float v = p[right]->pos[axis];
         int i = left - 1;
         int j = right;
         for(;;)
         {
-            while(p[++i]->position[axis] < v);
-            while(p[--j]->position[axis] > v&& j > left);
+            while(p[++i]->pos[axis] < v)
+                ;
+            while(p[--j]->pos[axis] > v && j > left)
+                ;
             if(i >= j)
                 break;
             swap(p, i, j);
@@ -232,7 +285,7 @@ void balanceSegment(Photonmap *photon_map,
         if(start < median - 1)
         {
             const float tmp = photon_map->bbox.max[axis];
-            photon_map->bbox.max[axis] = pbal[index]->position[axis];
+            photon_map->bbox.max[axis] = pbal[index]->pos[axis];
             balanceSegment(photon_map, pbal, porg, 2*index, start, median-1);
             photon_map->bbox.max[axis] = tmp;            
         }else
@@ -246,7 +299,7 @@ void balanceSegment(Photonmap *photon_map,
         if(median+1 < end)
         {
             const float tmp = photon_map->bbox.min[axis];
-            photon_map->bbox.min[axis] = pbal[index]->position[axis];
+            photon_map->bbox.min[axis] = pbal[index]->pos[axis];
             balanceSegment(photon_map, pbal, porg, 2*index+1, median+1, end);
             photon_map->bbox.min[axis] = tmp;                        
         }else
@@ -301,4 +354,117 @@ void Photonmap_balance(Photonmap* photon_map)
         free(pa1);
     }
     photon_map->half_stored_photons = photon_map->stored_photons / 2 - 1;
+}
+
+typedef struct NearestPhotons_s
+{
+    int max;
+    int found;
+    int got_heap;
+    float pos[3];
+    float *dist2;
+    Photon **index;
+}NearestPhotons;
+
+void locatePhotons(Photonmap* photon_map, NearestPhotons *const np, const int index) 
+{
+    Photon* photons = photon_map->photons;
+    Photon *p = &(photons[index]);
+    float dist1;
+
+    if(index < photon_map->half_stored_photons)
+    {
+        dist1 = np->pos[p->plane] - p->pos[p->plane];
+        if(dist1 > 0.0f) // If dist1 is positive, search right plane
+        {
+            locatePhotons(photon_map, np, 2*index+1);
+            if(dist1*dist1 < np->dist2[0])
+            {
+                locatePhotons(photon_map, np, 2*index);
+            }
+        }else  // If dist1 is negative, search left first
+        {
+            locatePhotons(photon_map, np, 2*index);
+            if(dist1*dist1 < np->dist2[0])
+            {
+                locatePhotons(photon_map, np, 2*index+1);
+            }
+        }
+    }
+
+    // Compute squared sitance between current photon and np->pos
+    dist1 = p->pos[0] - np->pos[0];
+    float dist2 = dist1*dist1;
+    dist1 = p->pos[1] - np->pos[1];
+    dist2 += dist1*dist1;
+    dist1 = p->pos[2] - np->pos[2];
+    dist2 += dist1*dist1;
+
+    if(dist2 < np->dist2[0])
+    {
+        // We found a photon :) Insert it in the candidate list
+        if(np->found < np->max)
+        {
+            // heap is not full; use array
+            (np->found)++;
+            np->dist2[np->found] = dist2;
+            np->index[np->found] = p;            
+        }else
+        {
+            int j, parent;
+            if(np->got_heap == 0)
+            {
+                // Build heap
+                float dst2;
+                Photon *phot;
+                int half_found = np->found >> 1;
+                for(int k = half_found; k >= 1; k--)
+                {
+                    parent = k;
+                    phot = np->index[k];
+                    dst2 = np->dist2[k];
+                    while(parent <= half_found)
+                    {
+                        j = parent + parent;
+                        if(j < np->found && np->dist2[j]< np->dist2[j+1])
+                        {
+                            j++;
+                        }
+                        if(dst2 >= np->dist2[j])
+                        {
+                            break;
+                        }
+                        np->dist2[parent] = np->dist2[j];
+                        np->index[parent] = np->index[j];
+                        parent = j;
+                    }
+                    np->dist2[parent] = dist2;
+                    np->index[parent] = phot;
+                }
+                np->got_heap = 1;
+            }
+            // Insert new photon into max heap
+            // Delete largest element, insert new, and reorder the heap
+            parent = 1;
+            j = 2;
+            while(j <= np->found)
+            {
+                if(j < np->found && np->dist2[j] < np->dist2[j+1])
+                {
+                    j++;
+                }
+                if(dist2 > np->dist2[j])
+                {
+                    break;
+                }
+                np->dist2[parent] = np->dist2[j];
+                np->index[parent] = np->index[j];
+                parent = j;
+                j += j;
+            }
+            np->index[parent] = p;
+            np->dist2[parent] = dist2;
+            np->dist2[0] = np->dist2[1];
+        }
+    }
 }
