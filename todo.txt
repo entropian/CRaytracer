@@ -1,6 +1,4 @@
-Actually, shadow is fundamentally broken.
-Issue with QBVH shadow
-Fix cornell box lighting weirdness
+Fix Russian roulette in photon emission.
 calcCameraRay is slow
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
@@ -21,7 +19,6 @@ Update the clean up section.
 
 
 SSE BVH:
-SIMD bbox intersection test -- seems like it works! 
 Try converting BVH to an array based representation?
 Look into stack based traversal
 
@@ -47,5 +44,3 @@ SIMD triangle intersection -- is it worth the trouble?
      doesn't seem worth it right now, at least not at the level that I can get it to.
 
 
-Fixing QBVH pruning problem:
-Modify rayIntersectAABB4 to return both near and far intersections

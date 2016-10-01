@@ -100,7 +100,6 @@ int main()
     setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 
                                                                          // sample struct that follows
 
-
 #ifdef PROG
     setInterleaved(true);
     unsigned char* set_buffer = (unsigned char*)malloc(sizeof(unsigned char) * num_pixels);
@@ -122,7 +121,8 @@ int main()
     initScene(&scene, params.file_name, params.accel_type);
 
     // Photon map
-    const int num_photons = 10000;
+    const int nphotons = 20;    
+    const int num_photons = 20000;
     Photonmap photon_map;
     Photonmap_init(&photon_map, num_photons);
     emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
@@ -153,11 +153,7 @@ int main()
     float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*, const int);
     trace = getTraceFunc(params.trace_type);
 
-    int nphotons = 1;
-    NearestPhotons np;
-    np.dist2 = (float*)malloc(sizeof(float) * (nphotons + 1));
-    np.index = (Photon**)malloc(sizeof(Photon*)*(nphotons+1));
-    float max_dist = 10;
+
 
     double start_time, end_time;
     start_time = glfwGetTime(); 
@@ -167,14 +163,11 @@ int main()
 #ifdef PROG
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
-        //getSamplesArray(sample_array, &unit_square_samples, p);
         for(int i = 0; i < num_pixels; i++)
         {
             int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
             vec3 color = {0.0f, 0.0f, 0.0f};
-            // NOTE: put the code below into a function
             vec2 sample, imageplane_coord;
-            //getInterleavedSample2D(sample, &unit_square_samples);
             getSample2D(sample, &unit_square_samples, sample_index);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
@@ -182,53 +175,16 @@ int main()
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
 
+            // Photon mapping test
             ShadeRec sr;
             float t = intersectTest(&sr, &(scene.objects), ray);
             if(t < TMAX)
             {
-                np.pos[0] = sr.hit_point[0];
-                np.pos[1] = sr.hit_point[1];
-                np.pos[2] = sr.hit_point[2];
-                np.max = nphotons;
-                np.found = 0;
-                np.got_heap = 0;
-                np.dist2[0] = max_dist * max_dist;
-
-                locatePhotons(&photon_map, &np, 1);
-                if(np.found > 0)
-                {
-                    Photon* cur_photon = np.index[1];
-                    vec3 displacement;
-                    vec3_sub(displacement, cur_photon->pos, sr.hit_point);
-                    float dist2 = vec3_dot(displacement, displacement);
-                    if(dist2 < min_dist2)
-                    {
-                        min_dist2 = dist2;
-                        vec3_copy(photon_power, cur_photon->power);
-                        vec3_scale(photon_power, photon_power, 1.0f/(float)sqrt(dist2));
-                    }                    
-                    
-                }                
-
-                /*
-
-                float min_dist2 = TMAX;
-                vec3 photon_power = {0.0f, 0.0f, 0.0f};
-                for(int j = 0; j < photon_map.stored_photons; j++)
-                {
-                    Photon* cur_photon = &(photon_map.photons[j+1]);
-                    vec3 displacement;
-                    vec3_sub(displacement, cur_photon->pos, sr.hit_point);
-                    float dist2 = vec3_dot(displacement, displacement);
-                    if(dist2 < min_dist2)
-                    {
-                        min_dist2 = dist2;
-                        vec3_copy(photon_power, cur_photon->power);
-                        vec3_scale(photon_power, photon_power, 1.0f/(float)sqrt(dist2));
-                    }
-                }
-                */
-                vec3_copy(color, photon_power);                
+                vec3 irrad;
+                irradEstimate(irrad, &photon_map, sr.hit_point, sr.normal, max_dist, nphotons);
+                vec3 f;
+                vec3_scale(f , sr.mat->cd, sr.mat->kd * 1.0f/(float)PI);
+                vec3_mult(color, irrad, f);
             }
 
             /*
@@ -332,8 +288,6 @@ int main()
     Scene_destroy(&scene);
     Camera_destroy(&camera);
     Photonmap_destroy(&photon_map);
-    free(np.index);
-    free(np.dist2);
     
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;

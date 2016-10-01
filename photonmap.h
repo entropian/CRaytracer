@@ -10,6 +10,7 @@
 #include "util/math.h"
 
 extern float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray);
+static const int MAX_NPHOTONS = 100;
 
 typedef struct Photon_s
 {
@@ -100,17 +101,19 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
         sample_count++;
     }
 
-    const int max_bounce = 2;
+    const int max_bounce = 3;
     int stored_photons = 0;
     for(int i = 0; i < sl->num_lights; i++)
     {
         if(sl->light_types[i] == POINTLIGHT)
         {
-            int sample_index = 0, photon_count = 0;
+            int sample_index = 0, photon_count = 0, emitted = 0;
+            int last_stored = stored_photons;
             PointLight* point_light = (PointLight*)(sl->light_ptrs[i]);
             vec3 light_power, photon_power;
             vec3_scale(light_power, point_light->color, point_light->intensity);
             vec3_scale(photon_power, light_power, 1.0f/(float)photons_per_light);
+            //vec3_scale(photon_power, point_light->color, point_light->intensity);
             Ray ray;            
             bool reflected = false;
             int bounce_count = 0, sphere_sample_index = 0;
@@ -124,6 +127,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                     vec3_copy(ray.origin, point_light->point);
                     vec3_copy(ray.direction, sphere_samples[sphere_sample_index++ % photons_per_light]);
                     bounce_count = 0;
+                    emitted++;
                 }
                 
                 ShadeRec sr;
@@ -204,6 +208,10 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                     reflected = false;
                     bounce_count = 0;
                  }
+            }            
+            for(int k = last_stored; k < stored_photons; k++)
+            {
+                //vec3_scale(photon_map->photons[k].power, photon_map->photons[k].power, 1.0f/emitted);
             }
         }
     }
@@ -366,7 +374,7 @@ typedef struct NearestPhotons_s
     Photon **index;
 }NearestPhotons;
 
-void locatePhotons(Photonmap* photon_map, NearestPhotons *const np, const int index) 
+void locatePhotons(NearestPhotons *const np, const Photonmap* photon_map, const int index) 
 {
     Photon* photons = photon_map->photons;
     Photon *p = &(photons[index]);
@@ -377,22 +385,22 @@ void locatePhotons(Photonmap* photon_map, NearestPhotons *const np, const int in
         dist1 = np->pos[p->plane] - p->pos[p->plane];
         if(dist1 > 0.0f) // If dist1 is positive, search right plane
         {
-            locatePhotons(photon_map, np, 2*index+1);
+            locatePhotons(np, photon_map, 2*index+1);
             if(dist1*dist1 < np->dist2[0])
             {
-                locatePhotons(photon_map, np, 2*index);
+                locatePhotons(np, photon_map, 2*index);
             }
         }else  // If dist1 is negative, search left first
         {
-            locatePhotons(photon_map, np, 2*index);
+            locatePhotons(np, photon_map, 2*index);
             if(dist1*dist1 < np->dist2[0])
             {
-                locatePhotons(photon_map, np, 2*index+1);
+                locatePhotons(np, photon_map, 2*index+1);
             }
         }
     }
 
-    // Compute squared sitance between current photon and np->pos
+    // Compute squared distance between current photon and np->pos
     dist1 = p->pos[0] - np->pos[0];
     float dist2 = dist1*dist1;
     dist1 = p->pos[1] - np->pos[1];
@@ -406,7 +414,11 @@ void locatePhotons(Photonmap* photon_map, NearestPhotons *const np, const int in
         if(np->found < np->max)
         {
             // heap is not full; use array
-            (np->found)++;
+            if(np->max == 1) 
+            {
+                np->dist2[0] = dist2;
+            }
+            (np->found)++;    
             np->dist2[np->found] = dist2;
             np->index[np->found] = p;            
         }else
@@ -420,13 +432,13 @@ void locatePhotons(Photonmap* photon_map, NearestPhotons *const np, const int in
                 int half_found = np->found >> 1;
                 for(int k = half_found; k >= 1; k--)
                 {
-                    parent = k;
+                    parent = k; 
                     phot = np->index[k];
                     dst2 = np->dist2[k];
                     while(parent <= half_found)
                     {
                         j = parent + parent;
-                        if(j < np->found && np->dist2[j]< np->dist2[j+1])
+                        if(j < np->found && np->dist2[j] < np->dist2[j+1])
                         {
                             j++;
                         }
@@ -438,7 +450,7 @@ void locatePhotons(Photonmap* photon_map, NearestPhotons *const np, const int in
                         np->index[parent] = np->index[j];
                         parent = j;
                     }
-                    np->dist2[parent] = dist2;
+                    np->dist2[parent] = dst2;
                     np->index[parent] = phot;
                 }
                 np->got_heap = 1;
@@ -465,6 +477,62 @@ void locatePhotons(Photonmap* photon_map, NearestPhotons *const np, const int in
             np->index[parent] = p;
             np->dist2[parent] = dist2;
             np->dist2[0] = np->dist2[1];
+
         }
     }
+}
+
+void photonDir(vec3 dir, const Photonmap *photon_map, const Photon *p)
+{
+    dir[0] = photon_map->sintheta[p->theta] * photon_map->cosphi[p->phi];
+    dir[1] = photon_map->sintheta[p->theta] * photon_map->sinphi[p->phi];
+    dir[2] = photon_map->costheta[p->theta];
+}
+
+void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, const vec3 normal,
+                   const float max_dist, const int nphotons)
+{
+    if(nphotons > MAX_NPHOTONS)
+    {
+        fprintf(stderr, "nphotons exceeds MAX_NPHOTONS.\n");
+        return;
+    }
+    irrad[0] = irrad[1] = irrad[2] = 0.0f;
+
+    NearestPhotons np;
+    vec3_copy(np.pos, pos);
+    float dist2[MAX_NPHOTONS];
+    Photon* index[MAX_NPHOTONS];
+    np.dist2 = dist2;
+    np.index = index;
+    np.max = nphotons;
+    np.found = 0;
+    np.got_heap = 0;
+    np.dist2[0] = max_dist * max_dist;
+
+    locatePhotons(&np, photon_map, 1);
+
+    if(np.found < 8)
+    {
+        return;
+    }
+
+    vec3 pdir;
+
+    // sum irradiance from all photons
+    for(int i = 1; i <= np.found; i++)
+    {
+        const Photon *p = np.index[i];
+        // the photon_dir call and following can be omitted for speed
+        // if the scene does not have any thin surfaces
+        photonDir(pdir, photon_map, p);
+        if(vec3_dot(pdir, normal) > 0.0f)
+        {
+            vec3_add(irrad, irrad, p->power);
+        }
+    }
+
+    const float tmp = (1.0f / PI) / (np.dist2[0]);
+    //const float tmp = (1.0f) / (sqrt(np.dist2[0]));
+    vec3_scale(irrad, irrad, tmp);
 }

@@ -461,7 +461,7 @@ void initSceneLights(SceneLights* sl)
     // Point light
     if(sl->num_lights == MAX_LIGHTS){return;}
     PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
-    intensity = 10000.0f;
+    intensity = 1000000.0f;
     vec3 point = {500.0f, 225.0f, -290.0f};
     assignPointLight(point_light_ptr, intensity, WHITE, point);
     sl->shadow[sl->num_lights] = true;    
