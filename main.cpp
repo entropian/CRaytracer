@@ -121,8 +121,9 @@ int main()
     initScene(&scene, params.file_name, params.accel_type);
 
     // Photon map
-    const int nphotons = 20;    
-    const int num_photons = 20000;
+    const int nphotons = 100;    
+    const int num_photons = 50000;
+    const float max_dist = 200;
     Photonmap photon_map;
     Photonmap_init(&photon_map, num_photons);
     emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
@@ -182,9 +183,17 @@ int main()
             {
                 vec3 irrad;
                 irradEstimate(irrad, &photon_map, sr.hit_point, sr.normal, max_dist, nphotons);
+
                 vec3 f;
                 vec3_scale(f , sr.mat->cd, sr.mat->kd * 1.0f/(float)PI);
                 vec3_mult(color, irrad, f);
+
+                if(color[1] >= 1.0f && p > 0)
+                {
+                    printf("here\n");
+                }
+
+                //vec3_copy(color, irrad);
             }
 
             /*

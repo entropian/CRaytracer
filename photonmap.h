@@ -10,7 +10,7 @@
 #include "util/math.h"
 
 extern float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray);
-static const int MAX_NPHOTONS = 100;
+static const int MAX_NPHOTONS = 200;
 
 typedef struct Photon_s
 {
@@ -69,6 +69,53 @@ void Photonmap_destroy(Photonmap* photon_map)
     photon_map->half_stored_photons = 0;
 }
 
+bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, const Photonmap *photon_map,
+    const int sample_index)
+{
+    float rand_float = (float)rand() / (float)RAND_MAX; // Random float for Russian roulette
+    vec3 sample, ref_ray_dir;
+    // If random float is less than or equal to the corresponding reflectance coefficient,
+    // then cast a new ray
+    switch(sr->mat->mat_type)
+    {                        
+    case MATTE:
+    {
+        float reflectance_avg = (sr->mat->cd[0] + sr->mat->cd[1] + sr->mat->cd[2]) / 3.0f;                        
+        if(rand_float > reflectance_avg){return false;}
+        //getSample3D(sample, sr->mat->h_samples, sample_index++);
+        getSample3D(sample, sr->mat->h_samples, sample_index);
+        getVec3InLocalBasis(ref_ray_dir, sample, sr->normal);
+        photon_power[0] *= sr->mat->cd[0] / reflectance_avg;
+        photon_power[1] *= sr->mat->cd[1] / reflectance_avg;
+        photon_power[2] *= sr->mat->cd[2] / reflectance_avg;                        
+    } break;
+    case REFLECTIVE:                    
+    {
+        float reflectance_avg = (sr->mat->cr[0] + sr->mat->cr[1] + sr->mat->cr[2]) / 3.0f;                 
+        if(rand_float > reflectance_avg){return false;}                        
+        vec3 reflect_dir;
+        calcReflectRayDir(reflect_dir, sr->normal, ray->direction);
+        getVec3InLocalBasis(ref_ray_dir, sample, reflect_dir);
+        photon_power[0] *= sr->mat->cr[0] / reflectance_avg;
+        photon_power[1] *= sr->mat->cr[1] / reflectance_avg;
+        photon_power[2] *= sr->mat->cr[2] / reflectance_avg;                                                
+    } break;
+    case TRANSPARENT:
+        break;
+    }
+    vec3_copy(ray->origin, sr->hit_point);
+    vec3_copy(ray->direction, ref_ray_dir);
+    return true;
+}
+
+void getPointLightPhoton(Ray *ray, vec3 photon_power, const PointLight *point_light,
+                         const vec3* sphere_samples, const int sample_index, const int photons_per_light)
+{
+    vec3_scale(photon_power, point_light->color, point_light->intensity);    
+    vec3_copy(ray->origin, point_light->point);
+    vec3_copy(ray->direction, sphere_samples[sample_index % photons_per_light]);
+}
+
 void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)
 {    
     int point_light_count = 0;
@@ -101,7 +148,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
         sample_count++;
     }
 
-    const int max_bounce = 3;
+    const int max_bounce = 5;
     int stored_photons = 0;
     for(int i = 0; i < sl->num_lights; i++)
     {
@@ -110,10 +157,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             int sample_index = 0, photon_count = 0, emitted = 0;
             int last_stored = stored_photons;
             PointLight* point_light = (PointLight*)(sl->light_ptrs[i]);
-            vec3 light_power, photon_power;
-            vec3_scale(light_power, point_light->color, point_light->intensity);
-            vec3_scale(photon_power, light_power, 1.0f/(float)photons_per_light);
-            //vec3_scale(photon_power, point_light->color, point_light->intensity);
+            vec3 photon_power = {0.0f, 0.0f, 0.0f};
             Ray ray;            
             bool reflected = false;
             int bounce_count = 0, sphere_sample_index = 0;
@@ -124,8 +168,11 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                 // Contruct new primary ray if last ray wasn't reflected or max bounce exeeded
                 if(!reflected || bounce_count > max_bounce)
                 {
-                    vec3_copy(ray.origin, point_light->point);
-                    vec3_copy(ray.direction, sphere_samples[sphere_sample_index++ % photons_per_light]);
+                    getPointLightPhoton(&ray, photon_power, point_light,
+                                        sphere_samples, sphere_sample_index, photons_per_light);
+
+                    //vec3_scale(photon_power, photon_power, 1.0f / photons_per_light * 4);
+                    sphere_sample_index++;
                     bounce_count = 0;
                     emitted++;
                 }
@@ -161,7 +208,6 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                         {
                             cur_photon->phi = (unsigned char)phi;
                         }
-                        // TODO: this is wrong
                         vec3_copy(cur_photon->power, photon_power);
                         for(int k = 0; k < 3; k++)
                         {
@@ -176,33 +222,10 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                         }
                         photon_count++;
                     }
-
-                    float rand_float = (float)rand() / (float)RAND_MAX; // Random float for Russian roulette
-                    vec3 sample, ref_ray_dir;
-                    // If random float is less than or equal to the corresponding reflectance coefficient,
-                    // then cast a new ray
-                    // TODO: Russian roulette should account for color
-                    switch(sr.mat->mat_type)
-                    {                        
-                    case MATTE:
+                    if(calcNewRayAndPhotonPower(&ray, photon_power, &sr, photon_map, sample_index))
                     {
-                        if(rand_float > sr.mat->kd){continue;}
-                        getSample3D(sample, sr.mat->h_samples, sample_index++);
-                        getVec3InLocalBasis(ref_ray_dir, sample, sr.normal);                        
-                    } break;
-                    case REFLECTIVE:                    
-                    case PHONG:
-                    {
-                        if(rand_float > sr.mat->ks){continue;}                        
-                        vec3 reflect_dir;
-                        calcReflectRayDir(reflect_dir, sr.normal, ray.direction);
-                        getVec3InLocalBasis(ref_ray_dir, sample, reflect_dir);                        
-                    } break;
-                    case TRANSPARENT:
-                        break;
+                        sample_index++;
                     }
-                    vec3_copy(ray.origin, sr.hit_point);
-                    vec3_copy(ray.direction, ref_ray_dir);
                 }else // Ray hits nothing
                 {
                     reflected = false;
@@ -211,7 +234,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             }            
             for(int k = last_stored; k < stored_photons; k++)
             {
-                //vec3_scale(photon_map->photons[k].power, photon_map->photons[k].power, 1.0f/emitted);
+                vec3_scale(photon_map->photons[k].power, photon_map->photons[k].power, 1.0f/emitted);
             }
         }
     }
@@ -489,6 +512,10 @@ void photonDir(vec3 dir, const Photonmap *photon_map, const Photon *p)
     dir[2] = photon_map->costheta[p->theta];
 }
 
+
+static float dist2[MAX_NPHOTONS];
+static Photon* index[MAX_NPHOTONS];
+
 void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, const vec3 normal,
                    const float max_dist, const int nphotons)
 {
@@ -501,8 +528,8 @@ void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, cons
 
     NearestPhotons np;
     vec3_copy(np.pos, pos);
-    float dist2[MAX_NPHOTONS];
-    Photon* index[MAX_NPHOTONS];
+    //float dist2[MAX_NPHOTONS];
+    //Photon* index[MAX_NPHOTONS];
     np.dist2 = dist2;
     np.index = index;
     np.max = nphotons;
