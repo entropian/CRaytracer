@@ -44,3 +44,34 @@ SIMD triangle intersection -- is it worth the trouble?
      doesn't seem worth it right now, at least not at the level that I can get it to.
 
 
+Changing
+            for(int k = last_stored; k <= stored_photons; k++)
+to
+            for(int k = 0; k <= photon_map->max_photons + 1; k++)
+gets rid of the bright spot, so the problem must be with photon_map->photons[max_photons + 1]?
+that should exceed the size of the array, so I don't know wtf is going on yet.
+The above is probably actually irrelevant.
+The bright spots are fixed it seems. Changing the light's location doesn't change the bright spot's location
+Try changing the number of samples
+
+irradiance is usually low like .7 1.4 .48
+in the bright spot, irradiance was about 8, 8, 8
+
+with nphoton = 20, in irradianceEstimate, I found a photon with power 98, 10, 11
+which shouldn't be, because every photon starts with power 40, 40, 40, and it should be non-increasing with every bounce.
+Actually, photon power does increase based on survival probability.
+Given that the bright spot is a circle and there is only one bright spot, there's probably a single rogue photon with
+      super high power.
+
+The rogue photon, what do we know?
+    Same y and z coordinate.
+    x coordinate oscillates
+    at the upper edge of the box
+
+Changing the number of photons from 50000 to 40000 didn't do anything.
+Changing y coord from 490 to 400 doesn't changed the location of the bright spot
+Seems to not happen in debug?
+Turning off optimization in release actually produced two bright spots consistently
+Turning off all optimizations in release seem to give a white bright spot in the middle.
+
+Also, inspect reflected and bounce_count mroe closely.

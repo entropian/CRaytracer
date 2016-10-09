@@ -10,7 +10,11 @@
 #include "util/math.h"
 
 extern float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray);
-static const int MAX_NPHOTONS = 200;
+static const int MAX_NPHOTONS = 201;
+vec3 max_power = {0.0f, 0.0f, 0.0f};
+float max_component = 0.0f;
+vec3 max_pos = {0.0f, 0.0f, 0.0f};
+int max_bounces = 0;
 
 typedef struct Photon_s
 {
@@ -72,6 +76,7 @@ void Photonmap_destroy(Photonmap* photon_map)
 bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, const Photonmap *photon_map,
     const int sample_index)
 {
+
     float rand_float = (float)rand() / (float)RAND_MAX; // Random float for Russian roulette
     vec3 sample, ref_ray_dir;
     // If random float is less than or equal to the corresponding reflectance coefficient,
@@ -109,12 +114,26 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, c
 }
 
 void getPointLightPhoton(Ray *ray, vec3 photon_power, const PointLight *point_light,
-                         const vec3* sphere_samples, const int sample_index, const int photons_per_light)
+                         const vec3* sphere_samples, const int sample_index)
 {
     vec3_scale(photon_power, point_light->color, point_light->intensity);    
     vec3_copy(ray->origin, point_light->point);
-    vec3_copy(ray->direction, sphere_samples[sample_index % photons_per_light]);
+    vec3_copy(ray->direction, sphere_samples[sample_index]);
 }
+
+/*
+void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light,
+                        const vec3* sphere_samples, const int sphere_sample_index,
+                        const h_samples, const int h_sample_index)
+{
+    vec3 hemipshere_sample, light_normal, point_on_light;
+    vec2 unit_square_sample;
+    
+    getSample3D(hemisphere_sample, h_samples, h_sample_index);    
+    getAreaLightNormal(light_normal, area_light, ORIGIN);
+    getVec3InLocalBasis(ray.direction, hemisphere_sample, light_normal);
+}
+*/
 
 void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)
 {    
@@ -124,7 +143,10 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
         if(sl->light_types[i] == POINTLIGHT)
         {
             point_light_count++;
-        }
+        }else if(sl->light_types[i] == AREALIGHT)
+        {
+            // TODO
+        }        
     }
     if(point_light_count == 0)
     {
@@ -163,26 +185,24 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             int bounce_count = 0, sphere_sample_index = 0;
             // TODO: fix below. Emitted photons and stored photons don't match up due to bounces.
             // NOTE: How do bounced photons relate to photon power overall?
-            while(photon_count < (photons_per_light) && stored_photons < photon_map->max_photons)
+            while(photon_count < photons_per_light && stored_photons <= photon_map->max_photons)
             {
                 // Contruct new primary ray if last ray wasn't reflected or max bounce exeeded
                 if(!reflected || bounce_count > max_bounce)
                 {
                     getPointLightPhoton(&ray, photon_power, point_light,
-                                        sphere_samples, sphere_sample_index, photons_per_light);
-
-                    //vec3_scale(photon_power, photon_power, 1.0f / photons_per_light * 4);
-                    sphere_sample_index++;
+                                        sphere_samples, sphere_sample_index);
+                    vec3_scale(photon_power, photon_power, 1.0f / photons_per_light);
+                    sphere_sample_index = (sphere_sample_index + 1) % photons_per_light;
                     bounce_count = 0;
                     emitted++;
                 }
-                
+
                 ShadeRec sr;
                 float t = intersectTest(&sr, so, ray);
                 if(t < TMAX)
                 {
-                    reflected = true;
-                    bounce_count++;
+
                     // Store photon if hit surface is a diffuse surface
                     if(sr.mat->mat_type == MATTE)
                     {
@@ -197,7 +217,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                         {
                             cur_photon->theta = (unsigned char)theta;
                         }
-                        int phi = int(atan2(sr.wo[1], sr.wo[0]) * (256.0 / (2.0f * PI)));
+                        int phi = (int)(atan2(sr.wo[1], sr.wo[0]) * (256.0 / (2.0f * PI)));
                         if(phi > 255)
                         {
                             cur_photon->phi = 255;
@@ -224,17 +244,22 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                     }
                     if(calcNewRayAndPhotonPower(&ray, photon_power, &sr, photon_map, sample_index))
                     {
+                        reflected = true;
+                        bounce_count++;                                            
                         sample_index++;
+                    }else
+                    {
+                        reflected = false;
                     }
                 }else // Ray hits nothing
                 {
                     reflected = false;
-                    bounce_count = 0;
-                 }
+                }
             }            
-            for(int k = last_stored; k < stored_photons; k++)
+            //for(int k = last_stored; k <= stored_photons; k++)
+            for(int k = 0; k <= photon_map->max_photons + 2; k++)
             {
-                vec3_scale(photon_map->photons[k].power, photon_map->photons[k].power, 1.0f/emitted);
+                //vec3_scale(photon_map->photons[k].power, photon_map->photons[k].power, 1.0f/emitted);
             }
         }
     }
@@ -560,6 +585,5 @@ void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, cons
     }
 
     const float tmp = (1.0f / PI) / (np.dist2[0]);
-    //const float tmp = (1.0f) / (sqrt(np.dist2[0]));
     vec3_scale(irrad, irrad, tmp);
 }
