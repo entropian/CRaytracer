@@ -10,7 +10,7 @@
 #include "util/math.h"
 
 extern float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray);
-static const int MAX_NPHOTONS = 201;
+static const int MAX_NPHOTONS = 202;
 vec3 max_power = {0.0f, 0.0f, 0.0f};
 float max_component = 0.0f;
 vec3 max_pos = {0.0f, 0.0f, 0.0f};
@@ -106,7 +106,10 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, c
         photon_power[2] *= sr->mat->cr[2] / reflectance_avg;                                                
     } break;
     case TRANSPARENT:
-        break;
+        // TODO
+        return false;
+    case EMISSIVE:
+        return false;
     }
     vec3_copy(ray->origin, sr->hit_point);
     vec3_copy(ray->direction, ref_ray_dir);
