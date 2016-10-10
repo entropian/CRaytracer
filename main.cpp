@@ -121,11 +121,12 @@ int main()
     initScene(&scene, params.file_name, params.accel_type);
 
     // Photon map
-    const int nphotons = 200;    
+    const int nphotons = 200;
+    const int max_bounce = 5;
     const int num_photons = 40000;
     const float max_dist = 200;
     Photonmap photon_map;
-    Photonmap_init(&photon_map, num_photons);
+    Photonmap_init(&photon_map, num_photons, max_bounce);
     emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
     Photonmap_balance(&photon_map);
 
