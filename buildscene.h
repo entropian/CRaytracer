@@ -336,8 +336,10 @@ void initAreaLights(SceneLights* sl)
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
-    area_light_ptr->intensity = 55.0f;
+    //area_light_ptr->intensity = 55.0f;
     //area_light_ptr->intensity = 20.0f;
+    // Photon map intensity
+    area_light_ptr->intensity = 2000000.0f;    
     vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
@@ -459,18 +461,20 @@ void initSceneLights(SceneLights* sl)
 
     
     // Point light
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
     intensity = 1000000.0f;
-    //vec3 point = {500.0f, 225.0f, -290.0f};
-    vec3 point = {250.0f, 490.0f, -290.0f};
+    vec3 point = {500.0f, 225.0f, -290.0f};
+    //vec3 point = {250.0f, 490.0f, -290.0f};
     //vec3 point = {250.0f, 490.0f, -490.0f};
     assignPointLight(point_light_ptr, intensity, WHITE, point);
     sl->shadow[sl->num_lights] = true;    
     sl->light_ptrs[sl->num_lights] = point_light_ptr;
     sl->light_types[sl->num_lights] = POINTLIGHT;    
     (sl->num_lights)++;
-
+    */
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
     intensity = 1000000.0f;
@@ -482,7 +486,7 @@ void initSceneLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = point_light_ptr;
     sl->light_types[sl->num_lights] = POINTLIGHT;    
     (sl->num_lights)++;    
-
+    */
 
     initAreaLights(sl);
     //initEnvLight(sl);

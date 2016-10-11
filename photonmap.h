@@ -96,7 +96,7 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, c
     const int sample_index)
 {
 
-    float rand_float = (float)rand() / (float)RAND_MAX; // Random float for Russian roulette
+    float rand_float = (float)rand() / (float)RAND_MAX;
     vec3 sample, ref_ray_dir;
     // If random float is less than or equal to the corresponding reflectance coefficient,
     // then cast a new ray
@@ -106,7 +106,6 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, c
     {
         float reflectance_avg = (sr->mat->cd[0] + sr->mat->cd[1] + sr->mat->cd[2]) / 3.0f;                        
         if(rand_float > reflectance_avg){return false;}
-        //getSample3D(sample, sr->mat->h_samples, sample_index++);
         getSample3D(sample, sr->mat->h_samples, sample_index);
         getVec3InLocalBasis(ref_ray_dir, sample, sr->normal);
         photon_power[0] *= sr->mat->cd[0] / reflectance_avg;
@@ -125,7 +124,8 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, c
         photon_power[2] *= sr->mat->cr[2] / reflectance_avg;                                                
     } break;
     case TRANSPARENT:
-        break;
+        //TODO
+        return false;
     case EMISSIVE:
         return false;
     }
@@ -142,19 +142,29 @@ void getPointLightPhoton(Ray *ray, vec3 photon_power, const PointLight *point_li
     vec3_copy(ray->direction, sphere_samples[sample_index]);
 }
 
-/*
+
 void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light,
-                        const vec3* sphere_samples, const int sphere_sample_index,
-                        const h_samples, const int h_sample_index)
+                        const Samples3D *h_samples, const int sample_index)
 {
-    vec3 hemipshere_sample, light_normal, point_on_light;
-    vec2 unit_square_sample;
+    vec3 h_sample, light_normal, point_on_light;
     
-    getSample3D(hemisphere_sample, h_samples, h_sample_index);    
+    getSample3D(h_sample, h_samples, sample_index);    
     getAreaLightNormal(light_normal, area_light, ORIGIN);
-    getVec3InLocalBasis(ray.direction, hemisphere_sample, light_normal);
+    getVec3InLocalBasis(ray->direction, h_sample, light_normal);
+
+    vec2 unit_square_sample;
+    getSample2D(unit_square_sample, area_light->samples2D, sample_index);
+    vec3 displacement;
+    Rectangle* rect = (Rectangle*)(area_light->obj_ptr);
+    vec3_scale(displacement, rect->width, unit_square_sample[0]);
+    vec3_add(point_on_light, rect->point, displacement);
+    vec3_scale(displacement, rect->height, unit_square_sample[1]);
+    vec3_add(point_on_light, point_on_light, displacement);            
+    vec3_copy(ray->origin, point_on_light);
+
+    vec3_scale(photon_power, area_light->color, area_light->intensity); 
 }
-*/
+
 
 void storePhoton(Photon* photon, Photonmap *photon_map, const vec3 photon_power, const ShadeRec *sr)
 {
@@ -201,26 +211,42 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
         if(sl->light_types[i] == POINTLIGHT)
         {
             light_count++;
+        }else if(sl->light_types[i] == AREALIGHT)
+        {
+            AreaLight *area_light = (AreaLight*)(sl->light_ptrs[i]);
+            if(area_light->obj_type == RECTANGLE)
+            {
+                light_count++;
+            }
         }
-    }
-    
+    }    
     int photons_per_light = photon_map->max_photons / light_count;
 
     vec3* sphere_samples = (vec3*)malloc(sizeof(vec3) * photons_per_light);
     calcSphereSamples(sphere_samples, photons_per_light);
+    
+    Samples2D unit_square_samples = getDefaultSamples2D();
+    Samples2D disk_samples = getDefaultSamples2D();
+    Samples3D h_samples = getDefaultSamples3D();
+    genMultijitteredSamples(&unit_square_samples);
+    mapSamplesToDisk(&disk_samples, &unit_square_samples);
+    mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
+    freeSamples2D(&unit_square_samples);
+    freeSamples2D(&disk_samples);    
 
     const int max_bounce = photon_map->max_bounce;
     int stored_photons = 0;
-    int sphere_sample_index = 0;
-    int sample_index = 0;
+    unsigned int sphere_sample_index = 0;
+    unsigned int sample_index = 0;
     for(int i = 0; i < sl->num_lights; i++)
     {
-        PointLight *point_light = NULL;
-        if(sl->light_types[i] == POINTLIGHT)
+        void* light_ptr = sl->light_ptrs[i];
+        LightType light_type = sl->light_types[i];        
+        if(light_type != POINTLIGHT && light_type != AREALIGHT)
         {
-            point_light = (PointLight*)(sl->light_ptrs[i]);
+            light_ptr = NULL;
         }
-        if(!point_light){continue;}
+        if(!light_ptr){continue;}
 
         int bounce_count = 0;
         int emitted = 0;
@@ -228,14 +254,32 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
         Ray ray;
         vec3 photon_power = {0.0f, 0.0f, 0.0f};
         int last_stored = stored_photons + 1;
+        int h_sample_index = 0;
         while(stored_photons - last_stored < photons_per_light)
         {
             if(!reflected || bounce_count == max_bounce)
             {
-                vec3_copy(ray.origin, point_light->point);
-                vec3_copy(ray.direction, sphere_samples[sphere_sample_index]);
-                sphere_sample_index = (sphere_sample_index + 1) % photons_per_light;
-                vec3_scale(photon_power, point_light->color, point_light->intensity);
+                switch(light_type)
+                {
+                case POINTLIGHT:
+                    getPointLightPhoton(&ray, photon_power, (PointLight*)light_ptr,  sphere_samples, sphere_sample_index);
+                    sphere_sample_index = (sphere_sample_index + 1) % photons_per_light;
+                    break;
+                case AREALIGHT:
+                    AreaLight *area_light = (AreaLight*)light_ptr;
+                    if(area_light->obj_type == RECTANGLE)
+                    {
+                        getRectLightPhoton(&ray, photon_power, area_light, &h_samples, sample_index++);
+                    }else if(area_light->obj_type == SPHERE)
+                    {
+
+                    }else
+                    {
+                        fprintf(stderr, "Wrong light geometry type.\n");
+                        return;
+                    }
+                    break;
+                }
                 bounce_count = 0;
                 emitted++;
             }
@@ -245,7 +289,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             {
                 if(sr.mat->mat_type == MATTE)
                 {
-                    // Store photon
+                    // Store photon if surface is matte
                     stored_photons++;
                     Photon *cur_photon = &(photons[stored_photons]);
                     storePhoton(cur_photon, photon_map, photon_power, &sr);
@@ -272,6 +316,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
     }
     photon_map->stored_photons = stored_photons;
     free(sphere_samples);
+    freeSamples3D(&h_samples);
 }
 
 #define swap(ph, a, b) {Photon *ph2 = ph[a]; ph[a] = ph[b]; ph[b] = ph2;}
@@ -543,7 +588,6 @@ void photonDir(vec3 dir, const Photonmap *photon_map, const Photon *p)
     dir[1] = photon_map->sintheta[p->theta] * photon_map->sinphi[p->phi];
     dir[2] = photon_map->costheta[p->theta];
 }
-
 
 void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, const vec3 normal,
                    const float max_dist, const int nphotons)
