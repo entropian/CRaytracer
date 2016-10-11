@@ -165,6 +165,22 @@ void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light
     vec3_scale(photon_power, area_light->color, area_light->intensity); 
 }
 
+void getSphereLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light, const Samples3D *h_samples,
+                          const int sample_index, const vec3 *sphere_samples, const int s_sample_index)
+{
+    Sphere *sphere = (Sphere*)(area_light->obj_ptr);    
+    vec3 normal, displacement;
+    vec3_copy(normal, sphere_samples[s_sample_index]);
+    vec3_scale(displacement, normal, sphere->radius);
+    vec3_add(ray->origin, displacement, sphere->center);
+    
+    vec3 h_sample;
+    getSample3D(h_sample, h_samples, sample_index);
+    getVec3InLocalBasis(ray->direction, h_sample, normal);
+
+    vec3_scale(photon_power, area_light->color, area_light->intensity);     
+}
+
 
 void storePhoton(Photon* photon, Photonmap *photon_map, const vec3 photon_power, const ShadeRec *sr)
 {
@@ -214,10 +230,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
         }else if(sl->light_types[i] == AREALIGHT)
         {
             AreaLight *area_light = (AreaLight*)(sl->light_ptrs[i]);
-            if(area_light->obj_type == RECTANGLE)
-            {
-                light_count++;
-            }
+            light_count++;
         }
     }    
     int photons_per_light = photon_map->max_photons / light_count;
@@ -272,7 +285,9 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                         getRectLightPhoton(&ray, photon_power, area_light, &h_samples, sample_index++);
                     }else if(area_light->obj_type == SPHERE)
                     {
-
+                        getSphereLightPhoton(&ray, photon_power, area_light, &h_samples, sample_index++,
+                                             sphere_samples, sphere_sample_index);
+                        sphere_sample_index = (sphere_sample_index + 1) % photons_per_light;                        
                     }else
                     {
                         fprintf(stderr, "Wrong light geometry type.\n");

@@ -182,12 +182,18 @@ int main()
             float t = intersectTest(&sr, &(scene.objects), ray);
             if(t < TMAX)
             {
-                vec3 irrad;
-                irradEstimate(irrad, &photon_map, sr.hit_point, sr.normal, max_dist, nphotons);
+                if(sr.mat->mat_type == EMISSIVE)
+                {
+                    vec3_scale(color, sr.mat->ce, sr.mat->ke/1.0f);
+                }else
+                {
+                    vec3 irrad;
+                    irradEstimate(irrad, &photon_map, sr.hit_point, sr.normal, max_dist, nphotons);
 
-                vec3 f;
-                vec3_scale(f , sr.mat->cd, sr.mat->kd * 1.0f/(float)PI);
-                vec3_mult(color, irrad, f);
+                    vec3 f;
+                    vec3_scale(f , sr.mat->cd, sr.mat->kd * 1.0f/(float)PI);
+                    vec3_mult(color, irrad, f);
+                }
             }
 
             /*

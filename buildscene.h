@@ -343,7 +343,6 @@ void initAreaLights(SceneLights* sl)
     vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
-#ifdef CORNELL_BOX
     // Rectangle
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
@@ -358,12 +357,12 @@ void initAreaLights(SceneLights* sl)
     float width = sqrt(vec3_dot(rect->width, rect->width));
     float height = sqrt(vec3_dot(rect->height, rect->height));        
     
-    Samples2D* samples = (Samples2D*)malloc(sizeof(Samples2D));
-    samples->samples = NULL;
-    genMultijitteredSamples(samples);
+    Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
+    unit_square_samples->samples = NULL;
+    genMultijitteredSamples(unit_square_samples);
 
     area_light_ptr->pdf = 1.0f/(width * height);
-    area_light_ptr->samples2D = samples;
+    area_light_ptr->samples2D = unit_square_samples;
     area_light_ptr->samples3D = NULL;
     area_light_ptr->obj_ptr = rect;
     area_light_ptr->obj_type = RECTANGLE;
@@ -371,35 +370,43 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-#else
+
+
     // Sphere
+    AreaLight* sphere_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
+    sphere_light_ptr->intensity = 2000000.0f;    
+    vec3_assign(sphere_light_ptr->color, 1.0f, 0.85f, 0.5f);
+    vec3_assign(sphere_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
+    
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
     //vec3_assign(sphere->center, -0.9f, 5.0f, -3.1f);
-    vec3_assign(sphere->center, -0.9f, 5.0f, -1.0f);
-    sphere->radius = 1.5f;
+    //vec3_assign(sphere->center, -0.9f, 5.0f, -1.0f);
+    // Photon map location
+    vec3_assign(sphere->center, 500.0f, 225.0f, -290.0f);    
+    sphere->radius = 20.0f;
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;
     sphere->phi = (float)PI;
     // TODO: fix the material pointer situation
     sphere->mat = (Material*)malloc(sizeof(Material));
-    vec3_copy(sphere->mat->ce, area_light_ptr->color);    
-    sphere->mat->ke = area_light_ptr->intensity;    
+    vec3_copy(sphere->mat->ce, sphere_light_ptr->color);    
+    sphere->mat->ke = sphere_light_ptr->intensity;    
     sphere->mat->mat_type = EMISSIVE;
 
-    Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+    Samples3D* h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
 
 
-    area_light_ptr->pdf = 1.0f / (4.0f * (float)PI * sphere->radius * sphere->radius);
-    area_light_ptr->samples2D = NULL;
-    area_light_ptr->samples3D = samples;
-    area_light_ptr->obj_ptr = sphere;
-    area_light_ptr->obj_type = SPHERE;
+    sphere_light_ptr->pdf = 1.0f / (4.0f * (float)PI * sphere->radius * sphere->radius);
+    sphere_light_ptr->samples2D = NULL;
+    sphere_light_ptr->samples3D = h_samples;
+    sphere_light_ptr->obj_ptr = sphere;
+    sphere_light_ptr->obj_type = SPHERE;
     sl->shadow[sl->num_lights] = true;    
-    sl->light_ptrs[sl->num_lights] = area_light_ptr;
+    sl->light_ptrs[sl->num_lights] = sphere_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-#endif
+
 }
 
 void initEnvLight(SceneLights* sl)
