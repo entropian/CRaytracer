@@ -9,6 +9,8 @@
 #include "sampling.h"
 #include "util/math.h"
 
+float calcFresnelReflectance(const ShadeRec*);
+float calcTransmitDir(vec3, const ShadeRec*);
 extern float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray);
 static const int MAX_NPHOTONS = 202;
 vec3 max_power = {0.0f, 0.0f, 0.0f};
@@ -92,14 +94,12 @@ void calcSphereSamples(vec3* sphere_samples, const int num_samples)
     }
 }
 
-bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, const Photonmap *photon_map,
-    const int sample_index)
+bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const float t, const ShadeRec *sr, const Photonmap *photon_map,
+                              const int sample_index)
 {
 
     float rand_float = (float)rand() / (float)RAND_MAX;
     vec3 sample, ref_ray_dir;
-    // If random float is less than or equal to the corresponding reflectance coefficient,
-    // then cast a new ray
     switch(sr->mat->mat_type)
     {                        
     case MATTE:
@@ -124,8 +124,37 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const ShadeRec *sr, c
         photon_power[2] *= sr->mat->cr[2] / reflectance_avg;                                                
     } break;
     case TRANSPARENT:
-        //TODO
-        return false;
+    {
+        if(!totalInternalReflection(sr))
+        {
+            float kr = calcFresnelReflectance(sr);
+            vec3 transmit_dir;
+            calcTransmitDir(transmit_dir, sr);
+            float ndotwo = vec3_dot(sr->normal, sr->wo);
+            vec3 color_filter_ref, color_filter_trans;
+            if(ndotwo > 0.0f)
+            {
+                vec3_pow(color_filter_ref, sr->mat->cf_out, t);
+                vec3_pow(color_filter_trans, sr->mat->cf_in, t);
+            }else
+            {
+                vec3_pow(color_filter_ref, sr->mat->cf_in, t);
+                vec3_pow(color_filter_trans, sr->mat->cf_out, t);
+            }
+            if(rand_float <= kr)
+            {
+                calcReflectRayDir(ref_ray_dir, sr->normal, ray->direction);
+                vec3_mult(photon_power, photon_power, color_filter_ref);
+            }else
+            {
+                vec3_copy(ref_ray_dir, transmit_dir);
+                vec3_mult(photon_power, photon_power, color_filter_trans);
+            }
+        }else
+        {
+            calcReflectRayDir(ref_ray_dir, sr->normal, ray->direction);
+        }
+    } break;
     case EMISSIVE:
         return false;
     }
@@ -310,7 +339,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                     storePhoton(cur_photon, photon_map, photon_power, &sr);
                 }
                 // Reflect photon
-                if(calcNewRayAndPhotonPower(&ray, photon_power, &sr, photon_map, sample_index))
+                if(calcNewRayAndPhotonPower(&ray, photon_power, t, &sr, photon_map, sample_index))
                 {
                     reflected = true;
                     bounce_count++;

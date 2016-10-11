@@ -333,6 +333,7 @@ void initAreaLights(SceneLights* sl)
 {
 
     // Area light
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
@@ -370,11 +371,11 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-
+    */
 
     // Sphere
     AreaLight* sphere_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-    sphere_light_ptr->intensity = 2000000.0f;    
+    sphere_light_ptr->intensity = 1000000.0f;    
     vec3_assign(sphere_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(sphere_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
     
