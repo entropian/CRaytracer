@@ -20,6 +20,7 @@
 #include "shading.h"
 #include "objloader/objloader.h"
 #include "mesh.h"
+#include "bsphere.h"
 
 #define CORNELL_BOX
 
@@ -502,17 +503,9 @@ void initSceneLights(SceneLights* sl)
     initBackgroundColor(sl);
 }
 
-void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
+void buildSceneAccel(Scene *scene)
 {
-    // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
-    initSceneLights(&(scene->lights));    
-    initSceneObjects(scene, scenefile);
-    SceneObjects* so = &(scene->objects);
-    mvNonGridObjToStart(so);
-    printf("num_obj %d\n", so->num_obj);
-    printf("non grid obj %d\n", so->num_non_grid_obj);
-
-    so->accel = accel_type;
+    SceneObjects* so = &(scene->objects);    
     double start, end;    
     if(so->accel == GRID)
     {
@@ -542,4 +535,19 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
         printf("BVH4 build time: %f sec\n", end - start);
         so->accel_ptr = tree;
     }
+}
+
+void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
+{
+    // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
+    initSceneLights(&(scene->lights));    
+    initSceneObjects(scene, scenefile);
+    SceneObjects* so = &(scene->objects);
+    mvNonGridObjToStart(so);
+    printf("num_obj %d\n", so->num_obj);
+    printf("non bounded obj %d\n", so->num_non_grid_obj);
+
+    // NOTE: taken out to main so that projection map can be built before the
+    // mesh triangles are scrambled.
+    //buildSceneAccel(scene);
 }

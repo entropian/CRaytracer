@@ -18,3 +18,5 @@ float rayIntersectObject(ShadeRec* sr, const Object_t obj, const Ray ray);
 float shadowRayIntersectObject(const Object_t obj, const Ray ray);
 bool isGridObjType(const Object_t obj);
 void getObjectAABB(AABB* aabb, const Object_t obj);
+Material* getObjectMatPtr(const Object_t obj);
+bool calcBoundingSphere(vec3 center, float *radius, const Object_t obj);

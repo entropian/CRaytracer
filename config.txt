@@ -1,4 +1,4 @@
-scene_file cornell_box.txt
+scene_file test_scene2.txt
 window_width  960
 window_height  960
 image_width  960

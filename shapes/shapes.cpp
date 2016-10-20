@@ -303,3 +303,102 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
     }
 }
 
+Material* getObjectMatPtr(const Object_t obj)
+{
+    Material *mat = NULL;
+    switch(obj.type)
+    {
+    case SPHERE:
+        mat = ((Sphere*)(obj.ptr))->mat;
+        break;
+    case RECTANGLE:
+        mat = ((Rectangle*)(obj.ptr))->mat;
+        break;
+    case AABOX:
+        mat = ((AABox*)(obj.ptr))->mat;
+        break;
+    case TRIANGLE:
+        mat = ((Triangle*)(obj.ptr))->mat;
+        break;
+    case GENERICOPENCYLINDER:
+        mat = ((GenericOpenCylinder*)(obj.ptr))->mat;        
+        break;
+    case DISK:
+        mat = ((Disk*)(obj.ptr))->mat;
+        break;
+    case GENERICTORUS:
+        mat = ((GenericTorus*)(obj.ptr))->mat;
+        break;
+    case FLAT_TRIANGLE:
+        mat = ((FlatTriangle*)(obj.ptr))->mat;
+        break;
+    case SMOOTH_TRIANGLE:
+        mat = ((SmoothTriangle*)(obj.ptr))->mat;        
+        break;
+    case INSTANCED:
+        mat = ((InstancedShape*)(obj.ptr))->mat;        
+        break;
+        // TODO: compound objects
+    }
+    return mat;
+}
+
+
+bool calcBoundingSphere(vec3 center, float *radius, const Object_t obj)
+{    
+    switch(obj.type)
+    {
+    case SPHERE:
+    {
+        Sphere *sphere = (Sphere*)(obj.ptr);
+        *radius = sphere->radius + K_EPSILON;
+        vec3_copy(center, sphere->center);
+        return true;
+    } break;
+    case RECTANGLE:
+    {
+        Rectangle *rect = (Rectangle*)(obj.ptr);
+        vec3 displacement, tmp;
+        vec3_scale(displacement, rect->width, 0.5f);
+        vec3_scale(tmp, rect->height, 0.5f);
+        vec3_add(displacement, displacement, tmp);
+        vec3_add(center, rect->point, displacement);
+        *radius = vec3_length(displacement) + K_EPSILON;
+        return true;
+    } break;
+    case AABOX:
+        // TODO
+        break;
+    case GENERICOPENCYLINDER:        
+    case TRIANGLE:
+    case FLAT_TRIANGLE:
+    case SMOOTH_TRIANGLE:
+    case INSTANCED:
+    case COMPOUND:        
+    {
+        AABB aabb;
+        getObjectAABB(&aabb, obj);
+        vec3 cross_vec;
+        vec3_sub(cross_vec, aabb.max, aabb.min);
+        vec3_scale(cross_vec, cross_vec, 0.5f);
+        vec3_add(center, aabb.min, cross_vec);
+        *radius = vec3_length(cross_vec) + K_EPSILON;
+        return true;
+    } break;
+    case DISK:
+    {
+        Disk *disk = (Disk*)(obj.ptr);
+        vec3_copy(center, disk->center);
+        *radius = disk->radius + K_EPSILON;
+        return true;
+    } break;
+    case GENERICTORUS:
+    {
+        GenericTorus *gt = (GenericTorus*)(obj.ptr);
+        vec3_assign(center, 0.0f, 0.0f, 0.0f);
+        *radius = gt->swept_radius + gt->tube_radius;
+        return true;
+    } break;
+    }
+    return false;
+}
