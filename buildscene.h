@@ -470,19 +470,19 @@ void initSceneLights(SceneLights* sl)
 
     
     // Point light
-    /*
+
     if(sl->num_lights == MAX_LIGHTS){return;}
     PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
     intensity = 1000000.0f;
-    vec3 point = {500.0f, 225.0f, -290.0f};
-    //vec3 point = {250.0f, 490.0f, -290.0f};
-    //vec3 point = {250.0f, 490.0f, -490.0f};
+    //vec3 point = {500.0f, 225.0f, -290.0f};
+    vec3 point = {450.0f, 225.0f, -225.0f};
     assignPointLight(point_light_ptr, intensity, WHITE, point);
+    point_light_ptr->proj_map = NULL;
     sl->shadow[sl->num_lights] = true;    
     sl->light_ptrs[sl->num_lights] = point_light_ptr;
     sl->light_types[sl->num_lights] = POINTLIGHT;    
     (sl->num_lights)++;
-    */
+
     /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
@@ -497,7 +497,7 @@ void initSceneLights(SceneLights* sl)
     (sl->num_lights)++;    
     */
 
-    initAreaLights(sl);
+    //initAreaLights(sl);
     //initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);

@@ -346,6 +346,13 @@ void freeSceneLights(SceneLights* sl)
                     freeSamples3D(env_light_ptr->samples3D);
                     env_light_ptr->samples3D = NULL;
                 }
+            }else if(sl->light_types[i] = POINTLIGHT)
+            {
+                PointLight *point_light = (PointLight*)(sl->light_ptrs[i]);
+                if(point_light->proj_map)
+                {
+                    free(point_light->proj_map);
+                }
             }
             free(sl->light_ptrs[i]);
             sl->light_ptrs[i] = NULL;

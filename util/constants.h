@@ -47,3 +47,7 @@ const float TMAX = FLT_MAX;
 const float HUGEVALUE = 1.0E10;
 const float K_FLAT_AABB = 0.001f;
 
+const int MAX_BOUNDING_SPHERES = 100;
+const int THETA_ROW = 26;
+const int PHI_COLUMN = 52;
+

@@ -25,6 +25,8 @@ typedef struct PointLight_s
     float intensity;
     vec3 color;
     vec3 point;
+    char *proj_map;
+    float proj_coverage;
 }PointLight;
 
 typedef struct AreaLight_s
