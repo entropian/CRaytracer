@@ -93,7 +93,7 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
     }
 }
 
-void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr)
+void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr, const vec3 hit_point)
 {
     switch(light_type)
     {
@@ -103,7 +103,15 @@ void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr)
     } break;
     case POINTLIGHT:
     {
-        vec3_scale(r, ((PointLight*)light_ptr)->color, ((PointLight*)light_ptr)->intensity);
+        PointLight *point_light = (PointLight*)light_ptr;
+        vec3_scale(r, point_light->color, point_light->intensity);
+        if(point_light->dist_atten)
+        {
+            vec3 dist;
+            vec3_sub(dist, point_light->point, hit_point);
+            float length = vec3_length(dist);
+            vec3_scale(r, r, 1.0f / (length*length));
+        }
     } break;
     case ENVLIGHT:
     {

@@ -161,7 +161,7 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const float t, const 
 
 void getPointLightPhoton(Ray *ray, vec3 photon_power, const PointLight *point_light)
 {
-    vec3_scale(photon_power, point_light->color, point_light->intensity);    
+    vec3_scale(photon_power, point_light->color, point_light->flux);    
     vec3_copy(ray->origin, point_light->point);
     calcSphereSample(ray->direction);
 }
@@ -454,6 +454,7 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
                     getPointLightCausticPhoton(&ray, photon_power, (PointLight*)light_ptr);
                     break;
                 case AREALIGHT:
+                    // TODO 
                     AreaLight *area_light = (AreaLight*)light_ptr;
                     if(area_light->obj_type == RECTANGLE)
                     {

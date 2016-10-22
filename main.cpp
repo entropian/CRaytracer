@@ -149,14 +149,14 @@ int main()
     // Photon map
     const int nphotons = 200;
     const int max_bounce = 5;
-    const int num_photons = 20000;
+    const int num_photons = 40000;
     const float max_dist = 200;
     Photonmap photon_map;
     Photonmap_init(&photon_map, num_photons, max_bounce);
     double start_time, end_time;
     start_time = glfwGetTime();         
-    //emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
-    emitCaustics(&photon_map, &(scene.objects), &(scene.lights));
+    emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
+    //emitCaustics(&photon_map, &(scene.objects), &(scene.lights));
     end_time = glfwGetTime();
     double seconds = end_time - start_time;
     printf("Caustics %f seconds.\n", seconds);    

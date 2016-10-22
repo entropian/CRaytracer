@@ -440,7 +440,8 @@ void initBackgroundColor(SceneLights* sl)
 {
     if(sl->env_light != NULL)
     {
-        getIncRadiance(sl->bg_color, ENVLIGHT, sl->env_light);
+        vec3 place_holder; // NOTE: just there to fill out the function parameters. Actual value doesn't matter.
+        getIncRadiance(sl->bg_color, ENVLIGHT, sl->env_light, place_holder);
     }else
     {
         vec3_copy(sl->bg_color, BLACK);
@@ -473,7 +474,10 @@ void initSceneLights(SceneLights* sl)
 
     if(sl->num_lights == MAX_LIGHTS){return;}
     PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
-    intensity = 1000000.0f;
+    point_light_ptr->dist_atten = true;
+    //intensity = 1000000.0f;
+    intensity = 100000.0f;
+    point_light_ptr->flux = intensity * 4.0f * PI;
     //vec3 point = {500.0f, 225.0f, -290.0f};
     vec3 point = {450.0f, 225.0f, -225.0f};
     assignPointLight(point_light_ptr, intensity, WHITE, point);
@@ -486,6 +490,7 @@ void initSceneLights(SceneLights* sl)
     /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
+    point_light_ptr->dist_atten = false;    
     intensity = 1000000.0f;
     vec3_assign(point, 500.0f, 225.0f, -290.0f);
     //vec3 point = {250.0f, 490.0f, -290.0f};

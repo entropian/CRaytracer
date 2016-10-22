@@ -120,7 +120,7 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, c
     {
         vec3_negate(light_normal, light_normal);
     }    
-    getIncRadiance(inc_radiance, AREALIGHT, area_light_ptr);    
+    getIncRadiance(inc_radiance, AREALIGHT, area_light_ptr, sr->hit_point);    
 
     // Geometry term                                    
     float geo_term = vec3_dot(light_normal, neg_wi) * ndotwi /
@@ -154,7 +154,7 @@ void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, co
 {
     vec3 f, inc_radiance_cos, tmp;
     diffuseBRDF(f, sr);
-    getIncRadiance(tmp, ENVLIGHT, env_light_ptr);
+    getIncRadiance(tmp, ENVLIGHT, env_light_ptr, sr->hit_point);
     vec3_scale(inc_radiance_cos, tmp, ndotwi);
     diffuseShading(radiance, inc_radiance_cos, sr);
     float pdf = ndotwi / (float)PI;
@@ -201,7 +201,7 @@ void directIllumShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
         // Diffuse component
         // kd*cd/PI * inc_radiance_cos
         vec3 inc_radiance_cos, tmp;
-        getIncRadiance(tmp, light_type, light_ptr);
+        getIncRadiance(tmp, light_type, light_ptr, sr->hit_point);
         vec3_scale(inc_radiance_cos, tmp, ndotwi);
         diffuseShading(radiance, inc_radiance_cos,  sr);
 
