@@ -151,21 +151,21 @@ int main()
 
     // Photon map
     //const int nphotons = 1500;
-    const int nphotons = 500;
+    const int nphotons = 1000;
     const int num_photons = 1000000;
     const int max_bounce = 10;
     
-    const float max_dist = 2;
+    const float max_dist = 50;
     Photonmap photon_map;
     Photonmap_init(&photon_map, num_photons, max_bounce);
     double start_time, end_time;
     start_time = glfwGetTime();         
-    emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
+    //emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
     //emitCaustics(&photon_map, &(scene.objects), &(scene.lights));
     end_time = glfwGetTime();
     double seconds = end_time - start_time;
     printf("Caustics %f seconds.\n", seconds);    
-    Photonmap_balance(&photon_map);
+    //Photonmap_balance(&photon_map);
 
     // Camera
     Camera camera;
@@ -223,7 +223,7 @@ int main()
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
-
+            /*
             // Photon mapping test
             if(p % 50 == 0)
             {
@@ -249,6 +249,7 @@ int main()
                 pm_buffer[i*3 + 1] = pm_color[1];
                 pm_buffer[i*3 + 2] = pm_color[2];
             }
+            */
             //vec3_add(color, color, pm_color);
             //vec3_copy(color, pm_color);
 
@@ -257,9 +258,11 @@ int main()
             color_buffer[i*3 + 1] += color[1];
             color_buffer[i*3 + 2] += color[2];
             // Adding photon map component
+            /*
             color_buffer[i*3] += pm_buffer[i*3];
             color_buffer[i*3 + 1] += pm_buffer[i*3 + 1];
             color_buffer[i*3 + 2] += pm_buffer[i*3 + 2];
+            */
             vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
             vec3_scale(color, color, 1/(float)(p+1));
             maxToOne(color, color);            

@@ -1,4 +1,5 @@
-Added fall off to point light. Consider how fall off should be applied elsewhere.
+Try final gather
+Try path tracing with photon map for importance sampling
 Edges are jaggy in photon map visualization. Filter?
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance

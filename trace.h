@@ -169,8 +169,12 @@ float calcFresnelReflectance(const ShadeRec* sr)
         vec3_negate(n, n);
         eta = 1.0f / eta;
     }
-    float tmp = 1.0f - (1.0f - cos_theta_i * cos_theta_i) / (eta * eta); // Negative at times
-     float cos_theta_t = (float)sqrt(tmp);
+    float tmp = 1.0f - (1.0f - cos_theta_i * cos_theta_i) / (eta * eta);
+    if(tmp < 0.0f)
+    {
+        return 1.0f;
+    }
+    float cos_theta_t = (float)sqrt(tmp);
     float r_parallel = (eta * cos_theta_i - cos_theta_t) / (eta * cos_theta_i + cos_theta_t);
     float r_perpendicular = (cos_theta_i - eta * cos_theta_t) / (cos_theta_i + eta * cos_theta_t);
     float fresnel_reflectance = 0.5f * (r_parallel * r_parallel + r_perpendicular * r_perpendicular);
@@ -413,31 +417,41 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
 
                 if(min_sr.mat->mat_type == TRANSPARENT)
                 {
-                    float reflect_t;
-                    vec3 reflected_illum;
-                    reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl, sample_index);
+                    float reflect_t = TMAX;
+                    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};                     
                     float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
-                    if(!totalInternalReflection(&min_sr))
+                    float kr = calcFresnelReflectance(&min_sr);
+                    //if(!totalInternalReflection(&min_sr))
+                    if(kr < 1.0f)
                     {
-                        vec3 transmit_dir = {0, 0, 0};
-                        float eta = calcTransmitDir(transmit_dir, &min_sr);
-                        float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
-                        float kr = calcFresnelReflectance(&min_sr);
-                        float kt = 1.0f - kr;
-                        
-                        vec3 btdf;
-                        vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
-                        Ray transmitted_ray;
-                        vec3_copy(transmitted_ray.origin, min_sr.hit_point);
-                        vec3_copy(transmitted_ray.direction, transmit_dir);
 
-                        float transmit_t;
+                        float transmit_t = TMAX;
                         vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-                        transmit_t = pathTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
-                        vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
-                        vec3_mult(transmitted_illum, transmitted_illum, btdf);
-                        // Scaling reflection since there's no total internal reflection
-                        vec3_scale(reflected_illum, reflected_illum, kr);
+
+                        float rand_float = (float)rand() / (float)RAND_MAX;
+                        if(rand_float <= kr)
+                        {
+                            reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl, sample_index);
+                        }else // Transmission
+                        {
+                            vec3 transmit_dir = {0, 0, 0};
+                            float eta = calcTransmitDir(transmit_dir, &min_sr);
+                            float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
+                            float kt = 1.0f - kr;
+
+                            vec3 btdf;
+                            //vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
+                            vec3_scale(btdf, WHITE, 1.0f / (eta*eta) / ndotwt);
+                            Ray transmitted_ray;
+                            vec3_copy(transmitted_ray.origin, min_sr.hit_point);
+                            vec3_copy(transmitted_ray.direction, transmit_dir);
+
+
+                            transmit_t = pathTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
+                            vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
+                            vec3_mult(transmitted_illum, transmitted_illum, btdf);                            
+                        }                             
+
 
                         vec3 color_filter_ref, color_filter_trans;
                         if(ndotwo > 0.0f)
@@ -454,6 +468,8 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
                         vec3_add(radiance, radiance, transmitted_illum);                        
                     }else
                     {
+                        vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+                        reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl, sample_index);
                         vec3 color_filter;                    
                         if(ndotwo > 0.0f)
                         {
