@@ -3,10 +3,10 @@ window_width  960
 window_height  960
 image_width  960
 image_height 960
-num_samples  64
+num_samples  4900
 num_sample_sets 83
 max_depth  10
-trace_type RAYCAST
+trace_type WHITTED
 accel_struct BVH4
 image_save no
 

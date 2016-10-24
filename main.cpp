@@ -128,7 +128,7 @@ int main()
     buildProjMap(&(scene.lights), bsphere_centers, bsphere_radii, num_bsphere);
 
     SceneLights *sl = &(scene.lights);
-    PointLight *point_light = NULL;
+    PointLight *point_light = NULL;    
     for(int i = 0; i < sl->num_lights; i++)
     {
         if(sl->light_types[i] == POINTLIGHT)
@@ -137,20 +137,25 @@ int main()
         }
     }
 
-    for(int i = 0; i < THETA_ROW; i++)
+    if(point_light)
     {
-        for(int j = 0; j < PHI_COLUMN; j++)
-        { 
-            printf("%d ", point_light->proj_map[i*PHI_COLUMN + j]);
+        for(int i = 0; i < THETA_ROW; i++)
+        {
+            for(int j = 0; j < PHI_COLUMN; j++)
+            { 
+                printf("%d ", point_light->proj_map[i*PHI_COLUMN + j]);
+            }
+            printf("\n");
         }
-        printf("\n");
-    }    
+    }
 
     // Photon map
-    const int nphotons = 200;
-    const int max_bounce = 5;
-    const int num_photons = 40000;
-    const float max_dist = 200;
+    //const int nphotons = 1500;
+    const int nphotons = 500;
+    const int num_photons = 1000000;
+    const int max_bounce = 10;
+    
+    const float max_dist = 2;
     Photonmap photon_map;
     Photonmap_init(&photon_map, num_photons, max_bounce);
     double start_time, end_time;
@@ -187,11 +192,10 @@ int main()
     float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*, const int);
     trace = getTraceFunc(params.trace_type);
 
-
+    float* pm_buffer = (float*)calloc(num_pixels * 3, sizeof(float));    
 
     //double start_time, end_time;
     start_time = glfwGetTime(); 
-
     int prev_percent = 0;
 //#if 0
 #ifdef PROG
@@ -209,27 +213,9 @@ int main()
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
 
-            // Photon mapping test
-            ShadeRec sr;
-            float t = intersectTest(&sr, &(scene.objects), ray);
-            if(t < TMAX)
-            {
-                if(sr.mat->mat_type == EMISSIVE)
-                {
-                    vec3_scale(color, sr.mat->ce, sr.mat->ke/1.0f);
-                }else
-                {
-                    vec3 irrad;
-                    irradEstimate(irrad, &photon_map, sr.hit_point, sr.normal, max_dist, nphotons);
 
-                    vec3 f;
-                    vec3_scale(f , sr.mat->cd, sr.mat->kd * 1.0f/(float)PI);
-                    vec3_mult(color, irrad, f);
-                }
-            }
-
-            /*
             // Hemisphere sample for ambient occlusion
+
             vec3 h_sample;
             //getInterleavedSample3D(h_sample, &h_samples);
             getSample3D(h_sample, &h_samples, sample_index);            
@@ -237,12 +223,43 @@ int main()
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
-            */
+
+            // Photon mapping test
+            if(p % 50 == 0)
+            {
+                vec3 pm_color = {0.0f, 0.0f, 0.0f};
+                ShadeRec sr;
+                float t = intersectTest(&sr, &(scene.objects), ray);
+                if(t < TMAX)
+                {
+                    if(sr.mat->mat_type == EMISSIVE)
+                    {
+                        vec3_scale(color, sr.mat->ce, sr.mat->ke/1.0f);
+                    }else
+                    {
+                        vec3 irrad;
+                        irradEstimate(irrad, &photon_map, sr.hit_point, sr.normal, max_dist, nphotons);
+
+                        vec3 f;
+                        vec3_scale(f, sr.mat->cd, sr.mat->kd * 1.0f/(float)PI);
+                        vec3_mult(pm_color, irrad, f);
+                    }
+                }
+                pm_buffer[i*3] = pm_color[0];
+                pm_buffer[i*3 + 1] = pm_color[1];
+                pm_buffer[i*3 + 2] = pm_color[2];
+            }
+            //vec3_add(color, color, pm_color);
+            //vec3_copy(color, pm_color);
 
             // NEW
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];
             color_buffer[i*3 + 2] += color[2];
+            // Adding photon map component
+            color_buffer[i*3] += pm_buffer[i*3];
+            color_buffer[i*3 + 1] += pm_buffer[i*3 + 1];
+            color_buffer[i*3 + 2] += pm_buffer[i*3 + 2];
             vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
             vec3_scale(color, color, 1/(float)(p+1));
             maxToOne(color, color);            

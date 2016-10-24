@@ -12,7 +12,7 @@
 float calcFresnelReflectance(const ShadeRec*);
 float calcTransmitDir(vec3, const ShadeRec*);
 extern float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray);
-static const int MAX_NPHOTONS = 202;
+static const int MAX_NPHOTONS = 1502;
 vec3 max_power = {0.0f, 0.0f, 0.0f};
 float max_component = 0.0f;
 vec3 max_pos = {0.0f, 0.0f, 0.0f};
@@ -232,7 +232,7 @@ void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light
     vec3_add(point_on_light, point_on_light, displacement);            
     vec3_copy(ray->origin, point_on_light);
 
-    vec3_scale(photon_power, area_light->color, area_light->intensity); 
+    vec3_scale(photon_power, area_light->color, area_light->flux); 
 }
 
 void getSphereLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light, const Samples3D *h_samples,
@@ -366,7 +366,8 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             float t = intersectTest(&sr, so, ray);
             if(t < TMAX)
             {
-                if(sr.mat->mat_type == MATTE)
+                if(sr.mat->mat_type == MATTE
+                   && bounce_count != 0) // Excluding first bounce so the photon map is only for indirection illum
                 {
                     // Store photon if surface is matte
                     stored_photons++;

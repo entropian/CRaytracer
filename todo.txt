@@ -1,9 +1,7 @@
-Edges are jaggy.
-calcCameraRay is slow
+Added fall off to point light. Consider how fall off should be applied elsewhere.
+Edges are jaggy in photon map visualization. Filter?
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
-Gotta rethink global variables.
-After removing normals and tangent in smooth triangle, memory usage increases slightly over time during rendering.
 Figure out how to load san miguel.
 Optimize mesh loading
 Try different number of primitives in each BVH node

@@ -334,14 +334,15 @@ void initAreaLights(SceneLights* sl)
 {
 
     // Area light
-    /*
+
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
+    area_light_ptr->dist_atten = true;
     // Cornell rectangle light intensity
-    //area_light_ptr->intensity = 55.0f;
+    area_light_ptr->intensity = 55.0f;
     //area_light_ptr->intensity = 20.0f;
     // Photon map intensity
-    area_light_ptr->intensity = 2000000.0f;    
+    //area_light_ptr->intensity = 100.0f;    
     vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
@@ -357,7 +358,9 @@ void initAreaLights(SceneLights* sl)
     rect->mat->ke = area_light_ptr->intensity;    
     rect->mat->mat_type = EMISSIVE;
     float width = sqrt(vec3_dot(rect->width, rect->width));
-    float height = sqrt(vec3_dot(rect->height, rect->height));        
+    float height = sqrt(vec3_dot(rect->height, rect->height));
+
+    area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
     
     Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
     unit_square_samples->samples = NULL;
@@ -372,8 +375,8 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-    */
 
+    /*
     // Sphere
     AreaLight* sphere_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     sphere_light_ptr->intensity = 1000000.0f;    
@@ -408,7 +411,7 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = sphere_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-
+    */
 }
 
 void initEnvLight(SceneLights* sl)
@@ -471,7 +474,7 @@ void initSceneLights(SceneLights* sl)
 
     
     // Point light
-
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
     point_light_ptr->dist_atten = true;
@@ -486,7 +489,7 @@ void initSceneLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = point_light_ptr;
     sl->light_types[sl->num_lights] = POINTLIGHT;    
     (sl->num_lights)++;
-
+    */
     /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
@@ -502,7 +505,7 @@ void initSceneLights(SceneLights* sl)
     (sl->num_lights)++;    
     */
 
-    //initAreaLights(sl);
+    initAreaLights(sl);
     //initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
@@ -548,6 +551,7 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
     initSceneLights(&(scene->lights));    
     initSceneObjects(scene, scenefile);
     SceneObjects* so = &(scene->objects);
+    so->accel = accel_type;
     mvNonGridObjToStart(so);
     printf("num_obj %d\n", so->num_obj);
     printf("non bounded obj %d\n", so->num_non_grid_obj);
