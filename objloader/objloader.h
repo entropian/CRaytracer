@@ -439,7 +439,6 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
         stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);        
         DBuffer_push(obj_shapes, shape);
     }
-    printf("num shapes %d\n", DBuffer_size(obj_shapes));
 #if 0
     OBJShape* obj_shape = (OBJShape*)(obj_shapes.data);
     for(int i = 0; i < DBuffer_size(obj_shapes); i++)

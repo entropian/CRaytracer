@@ -107,6 +107,7 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, c
     vec3_sub(displacement, sr->hit_point, area_light_ptr->sample_point);
     vec3_negate(neg_wi, light_dir);
     getAreaLightNormal(light_normal, area_light_ptr, sr->hit_point);
+    // TODO: Fix this
     /*
     if(vec3_dot(neg_wi, light_normal) > 0.0f)
     {

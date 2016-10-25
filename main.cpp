@@ -150,22 +150,19 @@ int main()
     }
 
     // Photon map
-    //const int nphotons = 1500;
-    const int nphotons = 1000;
+    const int nphotons = 1500;
     const int num_photons = 1000000;
+    const int num_caustic_photons = 500000;    
     const int max_bounce = 10;
-    
-    const float max_dist = 50;
-    Photonmap photon_map;
+    const float max_dist = 10;
+    const float caustic_max_dist = 5;
+    Photonmap photon_map, caustic_map;
     Photonmap_init(&photon_map, num_photons, max_bounce);
-    double start_time, end_time;
-    start_time = glfwGetTime();         
-    //emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
-    //emitCaustics(&photon_map, &(scene.objects), &(scene.lights));
-    end_time = glfwGetTime();
-    double seconds = end_time - start_time;
-    printf("Caustics %f seconds.\n", seconds);    
-    //Photonmap_balance(&photon_map);
+    Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
+    emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
+    emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
+    Photonmap_balance(&photon_map);
+    Photonmap_balance(&caustic_map);    
 
     // Camera
     Camera camera;
@@ -192,9 +189,7 @@ int main()
     float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*, const int);
     trace = getTraceFunc(params.trace_type);
 
-    float* pm_buffer = (float*)calloc(num_pixels * 3, sizeof(float));    
-
-    //double start_time, end_time;
+    double start_time, end_time;
     start_time = glfwGetTime(); 
     int prev_percent = 0;
 //#if 0
@@ -213,56 +208,55 @@ int main()
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
 
-
             // Hemisphere sample for ambient occlusion
-
             vec3 h_sample;
-            //getInterleavedSample3D(h_sample, &h_samples);
             getSample3D(h_sample, &h_samples, sample_index);            
 
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
-            /*
-            // Photon mapping test
-            if(p % 50 == 0)
-            {
-                vec3 pm_color = {0.0f, 0.0f, 0.0f};
-                ShadeRec sr;
-                float t = intersectTest(&sr, &(scene.objects), ray);
-                if(t < TMAX)
+
+            // Photon map            
+            vec3 pm_color = {0.0f, 0.0f, 0.0f};
+            ShadeRec sr;
+            float t = intersectTest(&sr, &(scene.objects), ray);
+            if(t < TMAX)
+            {            
+                if(sr.mat->mat_type == DIFFUSE)
                 {
-                    if(sr.mat->mat_type == EMISSIVE)
-                    {
-                        vec3_scale(color, sr.mat->ce, sr.mat->ke/1.0f);
-                    }else
+                    Ray new_ray;
+                    vec3_copy(new_ray.origin, sr.hit_point);
+                    getVec3InLocalBasis(new_ray.direction, h_sample, sr.normal);
+                    ShadeRec new_sr;                    
+                    t = intersectTest(&new_sr, &(scene.objects), new_ray);
+                    vec3 f;                    
+                    if(t < TMAX)
                     {
                         vec3 irrad;
-                        irradEstimate(irrad, &photon_map, sr.hit_point, sr.normal, max_dist, nphotons);
+                        irradEstimate(irrad, &photon_map, new_sr.hit_point, new_sr.normal, max_dist, nphotons);
 
-                        vec3 f;
-                        vec3_scale(f, sr.mat->cd, sr.mat->kd * 1.0f/(float)PI);
+                        vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
                         vec3_mult(pm_color, irrad, f);
+
+                        // Incoming radiance from secondary point * cosine theta
+                        vec3_scale(f, sr.mat->cd, sr.mat->kd * vec3_dot(sr.normal, new_ray.direction));
+                        vec3_mult(pm_color, pm_color, f);
                     }
-                }
-                pm_buffer[i*3] = pm_color[0];
-                pm_buffer[i*3 + 1] = pm_color[1];
-                pm_buffer[i*3 + 2] = pm_color[2];
-            }
-            */
-            //vec3_add(color, color, pm_color);
-            //vec3_copy(color, pm_color);
+
+                    vec3 caustic_irrad, caustic_rad;
+                    irradEstimate(caustic_irrad, &caustic_map, sr.hit_point, sr.normal, caustic_max_dist, nphotons);
+                    vec3_scale(f, sr.mat->cd, sr.mat->kd); // NOTE: divide by PI?
+                    vec3_mult(caustic_rad, caustic_irrad, f);
+                    vec3_add(pm_color, pm_color, caustic_rad);
+                }                
+            }            
+
+            vec3_add(color, color, pm_color);
 
             // NEW
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];
             color_buffer[i*3 + 2] += color[2];
-            // Adding photon map component
-            /*
-            color_buffer[i*3] += pm_buffer[i*3];
-            color_buffer[i*3 + 1] += pm_buffer[i*3 + 1];
-            color_buffer[i*3 + 2] += pm_buffer[i*3 + 2];
-            */
             vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
             vec3_scale(color, color, 1/(float)(p+1));
             maxToOne(color, color);            
@@ -349,6 +343,7 @@ int main()
     Scene_destroy(&scene);
     Camera_destroy(&camera);
     Photonmap_destroy(&photon_map);
+    Photonmap_destroy(&caustic_map);
     
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;

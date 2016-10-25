@@ -422,64 +422,47 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
                     float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
                     float kr = calcFresnelReflectance(&min_sr);
                     //if(!totalInternalReflection(&min_sr))
-                    if(kr < 1.0f)
+
+                    float transmit_t = TMAX;
+                    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
+
+                    float rand_float = (float)rand() / (float)RAND_MAX;
+                    if(rand_float <= kr) // Reflection
                     {
+                        reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl, sample_index);
+                    }else // Transmission
+                    {
+                        vec3 transmit_dir = {0, 0, 0};
+                        float eta = calcTransmitDir(transmit_dir, &min_sr);
+                        float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
+                        float kt = 1.0f - kr;
 
-                        float transmit_t = TMAX;
-                        vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-
-                        float rand_float = (float)rand() / (float)RAND_MAX;
-                        if(rand_float <= kr)
-                        {
-                            reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl, sample_index);
-                        }else // Transmission
-                        {
-                            vec3 transmit_dir = {0, 0, 0};
-                            float eta = calcTransmitDir(transmit_dir, &min_sr);
-                            float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
-                            float kt = 1.0f - kr;
-
-                            vec3 btdf;
-                            //vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
-                            vec3_scale(btdf, WHITE, 1.0f / (eta*eta) / ndotwt);
-                            Ray transmitted_ray;
-                            vec3_copy(transmitted_ray.origin, min_sr.hit_point);
-                            vec3_copy(transmitted_ray.direction, transmit_dir);
+                        vec3 btdf;
+                        //vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
+                        vec3_scale(btdf, WHITE, 1.0f / (eta*eta) / ndotwt);
+                        Ray transmitted_ray;
+                        vec3_copy(transmitted_ray.origin, min_sr.hit_point);
+                        vec3_copy(transmitted_ray.direction, transmit_dir);
 
 
-                            transmit_t = pathTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
-                            vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
-                            vec3_mult(transmitted_illum, transmitted_illum, btdf);                            
-                        }                             
+                        transmit_t = pathTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
+                        vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
+                        vec3_mult(transmitted_illum, transmitted_illum, btdf);                            
+                    }                             
 
-
-                        vec3 color_filter_ref, color_filter_trans;
-                        if(ndotwo > 0.0f)
-                        {
-                            vec3_pow(color_filter_ref, min_sr.mat->cf_out, reflect_t);
-                            vec3_pow(color_filter_trans, min_sr.mat->cf_in, transmit_t);
-                        }else
-                        {
-                            vec3_pow(color_filter_ref, min_sr.mat->cf_in, reflect_t);
-                            vec3_pow(color_filter_trans, min_sr.mat->cf_out, transmit_t);
-                        }
-                        vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
-                        vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
-                        vec3_add(radiance, radiance, transmitted_illum);                        
+                    vec3 color_filter_ref, color_filter_trans;
+                    if(ndotwo > 0.0f)
+                    {
+                        vec3_pow(color_filter_ref, min_sr.mat->cf_out, reflect_t);
+                        vec3_pow(color_filter_trans, min_sr.mat->cf_in, transmit_t);
                     }else
                     {
-                        vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                        reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, h_sample, depth, so, sl, sample_index);
-                        vec3 color_filter;                    
-                        if(ndotwo > 0.0f)
-                        {
-                            vec3_pow(color_filter, min_sr.mat->cf_out, reflect_t);
-                        }else
-                        {
-                            vec3_pow(color_filter, min_sr.mat->cf_in, reflect_t);
-                        }
-                        vec3_mult(reflected_illum, reflected_illum, color_filter);                    
+                        vec3_pow(color_filter_ref, min_sr.mat->cf_in, reflect_t);
+                        vec3_pow(color_filter_trans, min_sr.mat->cf_out, transmit_t);
                     }
+                    vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
+                    vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
+                    vec3_add(radiance, radiance, transmitted_illum);                        
                     vec3_add(radiance, radiance, reflected_illum);                    
                 }
             }else

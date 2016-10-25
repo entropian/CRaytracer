@@ -1,3 +1,4 @@
+#include <GLFW/glfw3.h>
 #include <stdlib.h>
 #include <math.h>
 #include "util/vec.h"
@@ -8,6 +9,8 @@
 #include "shapes/shapes.h"
 #include "sampling.h"
 #include "util/math.h"
+
+#define SHOW_TIME 
 
 float calcFresnelReflectance(const ShadeRec*);
 float calcTransmitDir(vec3, const ShadeRec*);
@@ -214,7 +217,7 @@ void getPointLightCausticPhoton(Ray *ray, vec3 photon_power, const PointLight *p
 }
 
 void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light,
-                        const Samples3D *h_samples, const int sample_index)
+                        const Samples3D *h_samples, const unsigned int sample_index)
 {
     vec3 h_sample, light_normal, point_on_light;
     
@@ -236,7 +239,7 @@ void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light
 }
 
 void getSphereLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light, const Samples3D *h_samples,
-                          const int sample_index)
+                          const unsigned int sample_index)
 {
     Sphere *sphere = (Sphere*)(area_light->obj_ptr);    
     vec3 normal, displacement;
@@ -251,6 +254,22 @@ void getSphereLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_lig
     vec3_scale(photon_power, area_light->color, area_light->intensity);     
 }
 
+void getAreaLightPhoton(Ray *ray, vec3 photon_power, AreaLight *area_light, Samples3D *h_samples, unsigned int *sample_index)
+{
+    if(area_light->obj_type == RECTANGLE)
+    {
+        getRectLightPhoton(ray, photon_power, area_light, h_samples, *sample_index);
+        (*sample_index)++;
+    }else if(area_light->obj_type == SPHERE)
+    {
+        getSphereLightPhoton(ray, photon_power, area_light, h_samples, *sample_index);
+        (*sample_index)++;        
+    }else
+    {
+        fprintf(stderr, "Wrong light geometry type.\n");
+        return;
+    }
+}
 
 void storePhoton(Photon* photon, Photonmap *photon_map, const vec3 photon_power, const ShadeRec *sr)
 {
@@ -288,9 +307,8 @@ void storePhoton(Photon* photon, Photonmap *photon_map, const vec3 photon_power,
     }                
 }
 
-void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)
-{    
-    Photon *photons = photon_map->photons;
+int countLight(const SceneLights *sl)
+{
     int light_count = 0;
     for(int i = 0; i < sl->num_lights; i++)
     {
@@ -302,18 +320,22 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             AreaLight *area_light = (AreaLight*)(sl->light_ptrs[i]);
             light_count++;
         }
-    }    
+    }
+    return light_count;
+}
+
+void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)
+{
+#ifdef SHOW_TIME
+    double start_time, end_time;
+    start_time = glfwGetTime();
+#endif
+    Photon *photons = photon_map->photons;
+    int light_count = countLight(sl);
     int photons_per_light = photon_map->max_photons / light_count;
 
-    Samples2D unit_square_samples = getDefaultSamples2D();
-    Samples2D disk_samples = getDefaultSamples2D();
-    Samples3D h_samples = getDefaultSamples3D();
-    genMultijitteredSamples(&unit_square_samples);
-    mapSamplesToDisk(&disk_samples, &unit_square_samples);
-    mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
-    freeSamples2D(&unit_square_samples);
-    freeSamples2D(&disk_samples);    
-
+    Samples3D *h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+    
     const int max_bounce = photon_map->max_bounce;
     int stored_photons = 0;
     unsigned int sample_index = 0;
@@ -342,21 +364,9 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                 {
                 case POINTLIGHT:
                     getPointLightPhoton(&ray, photon_power, (PointLight*)light_ptr);
-                    //getPointLightCausticPhoton(&ray, photon_power, (PointLight*)light_ptr);
                     break;
-                case AREALIGHT:
-                    AreaLight *area_light = (AreaLight*)light_ptr;
-                    if(area_light->obj_type == RECTANGLE)
-                    {
-                        getRectLightPhoton(&ray, photon_power, area_light, &h_samples, sample_index++);
-                    }else if(area_light->obj_type == SPHERE)
-                    {
-                        getSphereLightPhoton(&ray, photon_power, area_light, &h_samples, sample_index++);
-                    }else
-                    {
-                        fprintf(stderr, "Wrong light geometry type.\n");
-                        return;
-                    }
+                case AREALIGHT:                    
+                    getAreaLightPhoton(&ray, photon_power, (AreaLight*)light_ptr, h_samples, &sample_index);
                     break;
                 }
                 bounce_count = 0;
@@ -366,8 +376,11 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             float t = intersectTest(&sr, so, ray);
             if(t < TMAX)
             {
+                /*
                 if(sr.mat->mat_type == MATTE
                    && bounce_count != 0) // Excluding first bounce so the photon map is only for indirection illum
+                */
+                if(sr.mat->mat_type == MATTE)                
                 {
                     // Store photon if surface is matte
                     stored_photons++;
@@ -395,34 +408,25 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
         }
     }
     photon_map->stored_photons = stored_photons;
-    freeSamples3D(&h_samples);
+    freeSamples3D(h_samples);
+#ifdef SHOW_TIME
+    end_time = glfwGetTime();
+    double seconds = end_time - start_time;
+    printf("Photon emission %f seconds.\n", seconds);        
+#endif    
 }
 
 void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)    
 {
+#ifdef SHOW_TIME
+    double start_time, end_time;
+    start_time = glfwGetTime();
+#endif    
     Photon *photons = photon_map->photons;
-    int light_count = 0;
-    for(int i = 0; i < sl->num_lights; i++)
-    {
-        if(sl->light_types[i] == POINTLIGHT)
-        {
-            light_count++;
-        }else if(sl->light_types[i] == AREALIGHT)
-        {
-            AreaLight *area_light = (AreaLight*)(sl->light_ptrs[i]);
-            light_count++;
-        }
-    }    
+    int light_count = countLight(sl);
     int photons_per_light = photon_map->max_photons / light_count;
 
-    Samples2D unit_square_samples = getDefaultSamples2D();
-    Samples2D disk_samples = getDefaultSamples2D();
-    Samples3D h_samples = getDefaultSamples3D();
-    genMultijitteredSamples(&unit_square_samples);
-    mapSamplesToDisk(&disk_samples, &unit_square_samples);
-    mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
-    freeSamples2D(&unit_square_samples);
-    freeSamples2D(&disk_samples);    
+    Samples3D *h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
 
     const int max_bounce = photon_map->max_bounce;
     int stored_photons = 0;
@@ -451,23 +455,11 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
                 switch(light_type)
                 {
                 case POINTLIGHT:
-                    //getPointLightPhoton(&ray, photon_power, (PointLight*)light_ptr);
                     getPointLightCausticPhoton(&ray, photon_power, (PointLight*)light_ptr);
                     break;
                 case AREALIGHT:
                     // TODO 
-                    AreaLight *area_light = (AreaLight*)light_ptr;
-                    if(area_light->obj_type == RECTANGLE)
-                    {
-                        getRectLightPhoton(&ray, photon_power, area_light, &h_samples, sample_index++);
-                    }else if(area_light->obj_type == SPHERE)
-                    {
-                        getSphereLightPhoton(&ray, photon_power, area_light, &h_samples, sample_index++);
-                    }else
-                    {
-                        fprintf(stderr, "Wrong light geometry type.\n");
-                        return;
-                    }
+                    getAreaLightPhoton(&ray, photon_power, (AreaLight*)light_ptr, h_samples, &sample_index);                    
                     break;
                 }
                 bounce_count = 0;
@@ -479,7 +471,7 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
             {
                 if(sr.mat->mat_type == MATTE && reflected)
                 {
-                    // Store photon if surface is matte
+                    // Store photon if surface is diffuse
                     stored_photons++;
                     Photon *cur_photon = &(photons[stored_photons]);
                     storePhoton(cur_photon, photon_map, photon_power, &sr);
@@ -507,7 +499,12 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
         }
     }
     photon_map->stored_photons = stored_photons;
-    freeSamples3D(&h_samples);
+    freeSamples3D(h_samples);
+#ifdef SHOW_TIME
+    end_time = glfwGetTime();
+    double seconds = end_time - start_time;
+    printf("Caustic emission %f seconds.\n", seconds);        
+#endif        
 }
 
 #define swap(ph, a, b) {Photon *ph2 = ph[a]; ph[a] = ph[b]; ph[b] = ph2;}
