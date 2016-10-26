@@ -226,7 +226,7 @@ void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light
     getVec3InLocalBasis(ray->direction, h_sample, light_normal);
 
     vec2 unit_square_sample;
-    getSample2D(unit_square_sample, area_light->samples2D, sample_index);
+    getSample2D(unit_square_sample, area_light->samples2D, sample_index + (rand() % 100));
     vec3 displacement;
     Rectangle* rect = (Rectangle*)(area_light->obj_ptr);
     vec3_scale(displacement, rect->width, unit_square_sample[0]);
@@ -823,3 +823,4 @@ void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, cons
     const float tmp = (float)(1.0 / PI) / (np.dist2[0]);
     vec3_scale(irrad, irrad, tmp);
 }
+

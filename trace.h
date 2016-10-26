@@ -208,6 +208,7 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
         {
             ambientShading(radiance, sl->amb_light, h_sample, so, &min_sr);
             // Direct illumination
+
             for(int i = 0; i < sl->num_lights; i++)
             {
                 vec3 light_dir;
@@ -223,6 +224,7 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     }
                 }
             }
+
             // Indirect illumination
             if(depth > 0 && (min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == TRANSPARENT))
             {
@@ -438,8 +440,7 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
                         float kt = 1.0f - kr;
 
                         vec3 btdf;
-                        //vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
-                        vec3_scale(btdf, WHITE, 1.0f / (eta*eta) / ndotwt);
+                        vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
                         Ray transmitted_ray;
                         vec3_copy(transmitted_ray.origin, min_sr.hit_point);
                         vec3_copy(transmitted_ray.direction, transmit_dir);

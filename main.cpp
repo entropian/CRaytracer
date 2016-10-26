@@ -94,7 +94,7 @@ int main()
 
     float* color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
 
-    LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
+    //LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
     
     // Samples
     setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 
@@ -152,15 +152,15 @@ int main()
     // Photon map
     const int nphotons = 1500;
     const int num_photons = 1000000;
-    const int num_caustic_photons = 500000;    
-    const int max_bounce = 10;
+    const int num_caustic_photons = 2000000;    
+    const int max_bounce = 5;
     const float max_dist = 10;
-    const float caustic_max_dist = 5;
+    const float caustic_max_dist = 0.6;
     Photonmap photon_map, caustic_map;
     Photonmap_init(&photon_map, num_photons, max_bounce);
     Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
-    emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
-    emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
+    //emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
+    //emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
     Photonmap_balance(&photon_map);
     Photonmap_balance(&caustic_map);    
 
@@ -215,7 +215,7 @@ int main()
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
-
+            /*
             // Photon map            
             vec3 pm_color = {0.0f, 0.0f, 0.0f};
             ShadeRec sr;
@@ -245,14 +245,14 @@ int main()
 
                     vec3 caustic_irrad, caustic_rad;
                     irradEstimate(caustic_irrad, &caustic_map, sr.hit_point, sr.normal, caustic_max_dist, nphotons);
-                    vec3_scale(f, sr.mat->cd, sr.mat->kd); // NOTE: divide by PI?
+                    vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
                     vec3_mult(caustic_rad, caustic_irrad, f);
                     vec3_add(pm_color, pm_color, caustic_rad);
                 }                
             }            
 
             vec3_add(color, color, pm_color);
-
+            */
             // NEW
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];
