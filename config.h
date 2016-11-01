@@ -7,6 +7,16 @@
 #include "scene/scenedata.h"
 #include "trace.h"
 
+typedef struct PhotonmapConfig_s
+{
+    int num_photons;
+    int num_caustic_photons;
+    int photon_depth;
+    int num_estimate;    
+    float photon_radius;
+    float caustic_radius;
+}PhotonmapConfig;
+
 typedef struct ConfigParams_s
 {    
     unsigned int window_width;
@@ -19,6 +29,8 @@ typedef struct ConfigParams_s
     TraceType trace_type;
     AccelType accel_type;
     bool image_save;
+    bool photon_map;
+    PhotonmapConfig pm_config;
     char file_name[128];
 }ConfigParams;
 
@@ -101,15 +113,44 @@ void parseConfigFile(ConfigParams* cp)
             }
         }else if(strcmp(buffer, "image_save") == 0)
         {
+            cp->image_save = false;
             getNextTokenInFile(buffer, fp);
             if(strcmp(buffer, "yes") == 0)
             {
                 cp->image_save = true;
-            }else
-            {
-                cp->image_save = false;
             }
-        }
+        }else if(strcmp(buffer, "photon_map") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            if(strcmp(buffer, "yes") == 0)
+            {
+                cp->photon_map = true;
+            }
+        }else if(strcmp(buffer, "num_photons") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.num_photons = atoi(buffer);
+        }else if(strcmp(buffer, "num_caustic_photons") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.num_caustic_photons = atoi(buffer);
+        }else if(strcmp(buffer, "photon_depth") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.photon_depth = atoi(buffer);
+        }else if(strcmp(buffer, "photon_radius") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.photon_radius = atof(buffer);
+        }else if(strcmp(buffer, "caustic_radius") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.caustic_radius = atof(buffer);
+        }else if(strcmp(buffer, "num_estimate") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.num_estimate = atoi(buffer);
+        }        
     }
     fclose(fp);
 }

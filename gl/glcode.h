@@ -131,7 +131,7 @@ GLFWwindow* initWindow(unsigned int width, unsigned int height)
     if(glewInit() != GLEW_OK)
     {
         fprintf(stderr, "Failed to initialize GLEW\n");
-        //return -1;
+        return NULL;
     }
     return window;
 }

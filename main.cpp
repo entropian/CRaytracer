@@ -1,15 +1,3 @@
-/*
-  Things that can be swapped:
-  camera --  perspective vs orthographic
-  objects -- implicit surfaces vs explicit surfaces
-
-  Features to consider:
-  being able to scale the camera and viewplane 
-
-  TODO:
-  gamma correction
-  consider how variables should be grouped into objects?
-*/
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -150,19 +138,26 @@ int main()
     }
 
     // Photon map
-    const int nphotons = 1500;
-    const int num_photons = 1000000;
-    const int num_caustic_photons = 2000000;    
-    const int max_bounce = 5;
-    const float max_dist = 10;
-    const float caustic_max_dist = 0.6;
-    Photonmap photon_map, caustic_map;
-    Photonmap_init(&photon_map, num_photons, max_bounce);
-    Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
-    //emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
-    //emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
-    Photonmap_balance(&photon_map);
-    Photonmap_balance(&caustic_map);    
+
+    const int num_photons = params.pm_config.num_photons;
+    const int max_bounce = params.pm_config.photon_depth;
+    const int num_caustic_photons = params.pm_config.num_caustic_photons;
+    Photonmap photon_map, caustic_map;    
+    bool photon_map_status = false;
+    if(params.photon_map && params.trace_type == WHITTED)
+    {
+        photon_map_status = true;
+        Photonmap_init(&photon_map, num_photons, max_bounce);
+        Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
+        emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
+        emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
+        Photonmap_balance(&photon_map);
+        Photonmap_balance(&caustic_map);            
+    }
+    PhotonQueryVars query_vars;    
+    query_vars.nphotons = params.pm_config.num_estimate;
+    query_vars.photon_radius = params.pm_config.photon_radius;
+    query_vars.caustic_radius = params.pm_config.caustic_radius;    
 
     // Camera
     Camera camera;
@@ -215,44 +210,15 @@ int main()
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
-            /*
-            // Photon map            
-            vec3 pm_color = {0.0f, 0.0f, 0.0f};
-            ShadeRec sr;
-            float t = intersectTest(&sr, &(scene.objects), ray);
-            if(t < TMAX)
-            {            
-                if(sr.mat->mat_type == DIFFUSE)
-                {
-                    Ray new_ray;
-                    vec3_copy(new_ray.origin, sr.hit_point);
-                    getVec3InLocalBasis(new_ray.direction, h_sample, sr.normal);
-                    ShadeRec new_sr;                    
-                    t = intersectTest(&new_sr, &(scene.objects), new_ray);
-                    vec3 f;                    
-                    if(t < TMAX)
-                    {
-                        vec3 irrad;
-                        irradEstimate(irrad, &photon_map, new_sr.hit_point, new_sr.normal, max_dist, nphotons);
 
-                        vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
-                        vec3_mult(pm_color, irrad, f);
+            // Photon map
+            if(photon_map_status)
+            {
+				vec3 pm_color = {0.0f, 0.0f, 0.0f};
+                calcPhotonmapComponent(pm_color, h_sample, query_vars, &photon_map, &caustic_map, &(scene.objects), ray);
+                vec3_add(color, color, pm_color);
+            }
 
-                        // Incoming radiance from secondary point * cosine theta
-                        vec3_scale(f, sr.mat->cd, sr.mat->kd * vec3_dot(sr.normal, new_ray.direction));
-                        vec3_mult(pm_color, pm_color, f);
-                    }
-
-                    vec3 caustic_irrad, caustic_rad;
-                    irradEstimate(caustic_irrad, &caustic_map, sr.hit_point, sr.normal, caustic_max_dist, nphotons);
-                    vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
-                    vec3_mult(caustic_rad, caustic_irrad, f);
-                    vec3_add(pm_color, pm_color, caustic_rad);
-                }                
-            }            
-
-            vec3_add(color, color, pm_color);
-            */
             // NEW
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];
@@ -297,7 +263,6 @@ int main()
 
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
-            //getNextSample3D(h_sample, &h_samples);
             getSample3D(h_sample, &h_samples, sample_index);
 
             vec3 radiance;

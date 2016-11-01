@@ -16,10 +16,6 @@ float calcFresnelReflectance(const ShadeRec*);
 float calcTransmitDir(vec3, const ShadeRec*);
 extern float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray);
 static const int MAX_NPHOTONS = 1502;
-vec3 max_power = {0.0f, 0.0f, 0.0f};
-float max_component = 0.0f;
-vec3 max_pos = {0.0f, 0.0f, 0.0f};
-int max_bounces = 0;
 
 typedef struct Photon_s
 {
@@ -43,6 +39,15 @@ typedef struct Photonmap_s
     float sinphi[256];
     AABB bbox;
 }Photonmap;
+
+typedef struct PhotonQueryVars_s
+{
+    int num_photons;
+    int num_caustic_photons;
+    int nphotons;
+    float photon_radius;
+    float caustic_radius;
+}PhotonQueryVars;
 
 void Photonmap_init(Photonmap* photon_map, const int max_photons, const int max_bounce)
 {
@@ -824,3 +829,43 @@ void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, cons
     vec3_scale(irrad, irrad, tmp);
 }
 
+void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVars query_vars,
+                            const Photonmap *photon_map, const Photonmap *caustic_map,
+                            const SceneObjects *so, const Ray ray)
+{
+    vec3 pm_color = {0.0f, 0.0f, 0.0f};
+    ShadeRec sr;
+    float t = intersectTest(&sr, so, ray);
+    if(t < TMAX)
+    {            
+        if(sr.mat->mat_type == DIFFUSE)
+        {
+            Ray new_ray;
+            vec3_copy(new_ray.origin, sr.hit_point);
+            getVec3InLocalBasis(new_ray.direction, h_sample, sr.normal);
+            ShadeRec new_sr;                    
+            t = intersectTest(&new_sr, so, new_ray);
+            vec3 f;                    
+            if(t < TMAX)
+            {
+                vec3 irrad;
+                irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
+                              query_vars.photon_radius, query_vars.nphotons);
+
+                vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
+                vec3_mult(pm_color, irrad, f);
+
+                // Incoming radiance from secondary point * cosine theta
+                vec3_scale(f, sr.mat->cd, sr.mat->kd * vec3_dot(sr.normal, new_ray.direction));
+                vec3_mult(pm_color, pm_color, f);
+            }
+
+            vec3 caustic_irrad, caustic_rad;
+            irradEstimate(caustic_irrad, caustic_map, sr.hit_point, sr.normal,
+                          query_vars.caustic_radius, query_vars.nphotons);
+            vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
+            vec3_mult(caustic_rad, caustic_irrad, f);
+            vec3_add(color, pm_color, caustic_rad);
+        }                
+    }                
+}
