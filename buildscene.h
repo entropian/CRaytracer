@@ -310,7 +310,7 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     {
                         calcTangentVec(&mesh);
                     }
-                    //calcTangentVec(&mesh);                    
+                    //calcTangentVec(&mesh);
                     Scene_addMesh(scene, &mesh);
                 }
                 if(shapes){free(shapes);}
@@ -320,13 +320,13 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                 }
             }else
             {
-                Object_t obj;                    
+                Object_t obj;
                 if(parsePrimitive(&obj, fp, scene, buffer))
                 {
                     Scene_addObject(scene, &obj);
                 }
             }
-        }   
+        }
     }
 }
 
@@ -334,15 +334,13 @@ void initAreaLights(SceneLights* sl)
 {
 
     // Area light
-
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-    area_light_ptr->dist_atten = true;
     // Cornell rectangle light intensity
     area_light_ptr->intensity = 55.0f;
     //area_light_ptr->intensity = 20.0f;
     // Photon map intensity
-    //area_light_ptr->intensity = 100.0f;    
+    //area_light_ptr->intensity = 100.0f;
     vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
@@ -352,16 +350,16 @@ void initAreaLights(SceneLights* sl)
     rect->shadow = false;
     vec3_assign(rect->point, 213.0f, 547.0f, -227.0f);
     vec3_assign(rect->width, 130.0f, 0.0f, 0.0f);
-    vec3_assign(rect->height, 0.0f, 0.0f, -105.0f);    
+    vec3_assign(rect->height, 0.0f, 0.0f, -105.0f);
     vec3_copy(rect->normal, DOWN);
     vec3_copy(rect->mat->ce, area_light_ptr->color);
-    rect->mat->ke = area_light_ptr->intensity;    
+    rect->mat->ke = area_light_ptr->intensity;
     rect->mat->mat_type = EMISSIVE;
     float width = sqrt(vec3_dot(rect->width, rect->width));
     float height = sqrt(vec3_dot(rect->height, rect->height));
 
     area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
-    
+
     Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
     unit_square_samples->samples = NULL;
     genMultijitteredSamples(unit_square_samples);
@@ -371,7 +369,40 @@ void initAreaLights(SceneLights* sl)
     area_light_ptr->samples3D = NULL;
     area_light_ptr->obj_ptr = rect;
     area_light_ptr->obj_type = RECTANGLE;
-    sl->shadow[sl->num_lights] = true;    
+    sl->shadow[sl->num_lights] = true;
+    sl->light_ptrs[sl->num_lights] = area_light_ptr;
+    sl->light_types[sl->num_lights] = AREALIGHT;
+    (sl->num_lights)++;
+
+
+    // Area light 2
+    if(sl->num_lights == MAX_LIGHTS){return;}    
+    area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
+    area_light_ptr->intensity = 55.0f;
+    vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
+    vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
+
+    // Rectangle
+    rect = (Rectangle*)malloc(sizeof(Rectangle));
+    rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
+    rect->shadow = false;
+    vec3_assign(rect->point, 50.0f, 260.0f, -600.0f);
+    vec3_assign(rect->width, 200.0f, 0.0f, 0.0f);
+    vec3_assign(rect->height, 0.0f, 150.0f, 0.0f);
+    vec3_copy(rect->normal, BACKWARD);
+    vec3_copy(rect->mat->ce, area_light_ptr->color);
+    rect->mat->ke = area_light_ptr->intensity;
+    rect->mat->mat_type = EMISSIVE;
+    width = sqrt(vec3_dot(rect->width, rect->width));
+    height = sqrt(vec3_dot(rect->height, rect->height));
+    area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
+
+    area_light_ptr->pdf = 1.0f/(width * height);
+    area_light_ptr->samples2D = unit_square_samples;
+    area_light_ptr->samples3D = NULL;
+    area_light_ptr->obj_ptr = rect;
+    area_light_ptr->obj_type = RECTANGLE;
+    sl->shadow[sl->num_lights] = true;
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
@@ -379,24 +410,24 @@ void initAreaLights(SceneLights* sl)
     /*
     // Sphere
     AreaLight* sphere_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-    sphere_light_ptr->intensity = 1000000.0f;    
+    sphere_light_ptr->intensity = 1000000.0f;
     vec3_assign(sphere_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(sphere_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
-    
+
     Sphere* sphere = (Sphere*)malloc(sizeof(Sphere));
     sphere->shadow = false;
     //vec3_assign(sphere->center, -0.9f, 5.0f, -3.1f);
     //vec3_assign(sphere->center, -0.9f, 5.0f, -1.0f);
     // Photon map location
-    vec3_assign(sphere->center, 500.0f, 225.0f, -290.0f);    
+    vec3_assign(sphere->center, 500.0f, 225.0f, -290.0f);
     sphere->radius = 20.0f;
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;
     sphere->phi = (float)PI;
     // TODO: fix the material pointer situation
     sphere->mat = (Material*)malloc(sizeof(Material));
-    vec3_copy(sphere->mat->ce, sphere_light_ptr->color);    
-    sphere->mat->ke = sphere_light_ptr->intensity;    
+    vec3_copy(sphere->mat->ce, sphere_light_ptr->color);
+    sphere->mat->ke = sphere_light_ptr->intensity;
     sphere->mat->mat_type = EMISSIVE;
 
     Samples3D* h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
@@ -407,7 +438,7 @@ void initAreaLights(SceneLights* sl)
     sphere_light_ptr->samples3D = h_samples;
     sphere_light_ptr->obj_ptr = sphere;
     sphere_light_ptr->obj_type = SPHERE;
-    sl->shadow[sl->num_lights] = true;    
+    sl->shadow[sl->num_lights] = true;
     sl->light_ptrs[sl->num_lights] = sphere_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;

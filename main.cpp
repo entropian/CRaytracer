@@ -37,7 +37,7 @@ int MAX_DEPTH = 0;
 
 vec3 cam_position = {0.0f, 0.0f, 0.0f};
 
-// TODO: 
+// TODO:
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if(action == GLFW_PRESS)
@@ -68,13 +68,13 @@ int main()
     ConfigParams params;
     parseConfigFile(&params);
     MAX_DEPTH = params.max_depth;
-    
+
     GLFWwindow* window = initWindow(params.window_width, params.window_height);
     glfwSetKeyCallback(window, keyCallback);
-    
+
     GlViewport viewport;
     initViewport(&viewport);
-    
+
     unsigned char *image;
     int frame_res_width = params.image_width, frame_res_height = params.image_height;
     int num_pixels = frame_res_width * frame_res_height;
@@ -83,10 +83,10 @@ int main()
     float* color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
 
     //LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
-    
+
     // Samples
-    setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets for every 
-                                                                         // sample struct that follows
+    setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets
+                                                                         // for every sample struct that follows
 
 #ifdef PROG
     setInterleaved(true);
@@ -94,9 +94,9 @@ int main()
     for(unsigned int i = 0; i < num_pixels; i++)
     {
         set_buffer[i] = (unsigned char)(rand() % params.num_sample_sets);
-    }    
+    }
 #endif
-    srand((unsigned int)time(NULL));    
+    srand((unsigned int)time(NULL));
     Samples2D unit_square_samples = getDefaultSamples2D();
     Samples2D disk_samples = getDefaultSamples2D();
     Samples3D h_samples = getDefaultSamples3D();
@@ -115,34 +115,11 @@ int main()
 
     buildProjMap(&(scene.lights), bsphere_centers, bsphere_radii, num_bsphere);
 
-    SceneLights *sl = &(scene.lights);
-    PointLight *point_light = NULL;    
-    for(int i = 0; i < sl->num_lights; i++)
-    {
-        if(sl->light_types[i] == POINTLIGHT)
-        {
-            point_light = (PointLight*)(sl->light_ptrs[i]);
-        }
-    }
-
-    if(point_light)
-    {
-        for(int i = 0; i < THETA_ROW; i++)
-        {
-            for(int j = 0; j < PHI_COLUMN; j++)
-            { 
-                printf("%d ", point_light->proj_map[i*PHI_COLUMN + j]);
-            }
-            printf("\n");
-        }
-    }
-
     // Photon map
-
     const int num_photons = params.pm_config.num_photons;
     const int max_bounce = params.pm_config.photon_depth;
     const int num_caustic_photons = params.pm_config.num_caustic_photons;
-    Photonmap photon_map, caustic_map;    
+    Photonmap photon_map, caustic_map;
     bool photon_map_status = false;
     if(params.photon_map && params.trace_type == WHITTED)
     {
@@ -152,19 +129,19 @@ int main()
         emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
         emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
         Photonmap_balance(&photon_map);
-        Photonmap_balance(&caustic_map);            
+        Photonmap_balance(&caustic_map);
     }
-    PhotonQueryVars query_vars;    
+    PhotonQueryVars query_vars;
     query_vars.nphotons = params.pm_config.num_estimate;
     query_vars.photon_radius = params.pm_config.photon_radius;
-    query_vars.caustic_radius = params.pm_config.caustic_radius;    
+    query_vars.caustic_radius = params.pm_config.caustic_radius;
 
     // Camera
     Camera camera;
     initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
 
-#ifdef CORNELL_BOX    
+#ifdef CORNELL_BOX
     vec3 position = {278.0f, 273.0f, 800.0f};
     vec3 look_point = {278.0f, 273.0f, 0.0f};
 #else
@@ -177,7 +154,7 @@ int main()
     // TODO: throw these in a struct for camera scaling
     float fov = 70.0f / 180.0f * PI;
     float frame_length = 2.0f * (sin(fov/2.0f) * camera.focal_pt_dist);
-    float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);    
+    float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);
     float pixel_length = frame_length/(float)(frame_res_width);
 
     // Set trace function
@@ -185,7 +162,7 @@ int main()
     trace = getTraceFunc(params.trace_type);
 
     double start_time, end_time;
-    start_time = glfwGetTime(); 
+    start_time = glfwGetTime();
     int prev_percent = 0;
 //#if 0
 #ifdef PROG
@@ -199,41 +176,62 @@ int main()
             getSample2D(sample, &unit_square_samples, sample_index);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
-            
+
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
 
             // Hemisphere sample for ambient occlusion
             vec3 h_sample;
-            getSample3D(h_sample, &h_samples, sample_index);            
+            getSample3D(h_sample, &h_samples, sample_index);
 
-            vec3 radiance;
-            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
-            vec3_add(color, color, radiance);
+            ShadeRec sr;
+            float t0 = intersectTest(&sr, &(scene.objects), ray);
+            if(t0 < TMAX)
+            {
+                if(sr.mat->mat_type == EMISSIVE)
+                {
+                    vec3_scale(color, sr.mat->ce, sr.mat->ke);
+                    maxToOne(color, color);
+                }else if(sr.mat->mat_type == PARTICIPATING)
+                {
+                    vec3 radiance = {0.0f, 0.0f, 0.0f};
+                    Ray new_ray = ray;
+                    vec3_copy(new_ray.origin, sr.hit_point);
+                    raymarch(radiance, new_ray, h_sample, &(scene.objects), &(scene.lights), sample_index);
+                    vec3_copy(color, radiance);
+                }
+            }
+
+
+            /*
+              vec3 radiance;
+              trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
+              vec3_add(color, color, radiance);
 
             // Photon map
             if(photon_map_status)
             {
 				vec3 pm_color = {0.0f, 0.0f, 0.0f};
-                calcPhotonmapComponent(pm_color, h_sample, query_vars, &photon_map, &caustic_map, &(scene.objects), ray);
+                calcPhotonmapComponent(pm_color, h_sample, query_vars, &photon_map,
+                                       &caustic_map, &(scene.objects), ray);
                 vec3_add(color, color, pm_color);
             }
-
+            */
             // NEW
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];
             color_buffer[i*3 + 2] += color[2];
             vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
             vec3_scale(color, color, 1/(float)(p+1));
-            maxToOne(color, color);            
+            maxToOne(color, color);
 
             image[i*3] = (char)(color[0] * 255.0f);
             image[i*3 + 1] = (char)(color[1] * 255.0f);
-            image[i*3 + 2] = (char)(color[2] * 255.0f);            
-        }        
+            image[i*3 + 2] = (char)(color[2] * 255.0f);
+        }
         if(SHOW_PROGRESS)
         {
-            displayImage(window, viewport, image, frame_res_width, frame_res_height);                
+            displayImage(window, viewport, image, frame_res_width, frame_res_height);
             //int cur_percent = (int)((float)i / (float)(num_pixels) * 100.0f);
             int cur_percent = (int)((float)p / (float)(params.num_samples) * 100.0f);
             if(cur_percent > prev_percent)
@@ -257,7 +255,7 @@ int main()
             getSample2D(sample, &unit_square_samples, sample_index);
             imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
             imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
-            
+
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
 
@@ -268,7 +266,7 @@ int main()
             vec3 radiance;
             trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
             vec3_add(color, color, radiance);
-        }        
+        }
         vec3_scale(color, color, 1.0f/params.num_samples);
         maxToOne(color, color);
         image[i*3] = (char)(color[0] * 255.0f);
@@ -282,12 +280,12 @@ int main()
             {
                 prev_percent = cur_percent;
                 printf("%d%%\n", cur_percent);
-                displayImage(window, viewport, image, frame_res_width, frame_res_height);                
+                displayImage(window, viewport, image, frame_res_width, frame_res_height);
             }
         }
     }
 #endif
-//#endif 
+//#endif
     end_time = glfwGetTime();
     double sec = end_time - start_time;
     printf("%f seconds.\n", sec);
@@ -309,7 +307,7 @@ int main()
     Camera_destroy(&camera);
     Photonmap_destroy(&photon_map);
     Photonmap_destroy(&caustic_map);
-    
+
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;
     double current_time, last_draw_time = 0.0;
@@ -323,6 +321,6 @@ int main()
         }
         glfwPollEvents();
     }
-    free(image);    
+    free(image);
     return 0;
 }

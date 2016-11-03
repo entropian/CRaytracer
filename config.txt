@@ -1,4 +1,4 @@
-scene_file cornell_dragon.txt
+scene_file pm_test.txt
 window_width  960
 window_height  960
 image_width  480
@@ -6,9 +6,9 @@ image_height 480
 num_samples  4900
 num_sample_sets 83
 max_depth  5
-trace_type WHITTED
+trace_type RAYCAST
 accel_struct BVH4
-photon_map yes
+photon_map no
 num_photons 1000000
 num_caustic_photons 2000000
 num_estimate 1500

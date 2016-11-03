@@ -9,7 +9,7 @@ MatType getMatTypeFromString(const char* str)
         return MATTE;
     }else if(strcmp(str, "PHONG") == 0)
     {
-        return PHONG;        
+        return PHONG;
     }else if(strcmp(str, "REFLECTIVE") == 0)
     {
         return REFLECTIVE;
@@ -19,10 +19,13 @@ MatType getMatTypeFromString(const char* str)
     }else if(strcmp(str, "EMISSIVE") == 0)
     {
         return EMISSIVE;
+    }else if(strcmp(str, "PARTICIPATING") == 0)
+    {
+        return PARTICIPATING;
     }else
     {
         return INVALID_MAT_TYPE;
-    }            
+    }
 }
 
 void printMaterial(const Material* mat)
@@ -33,7 +36,7 @@ void printMaterial(const Material* mat)
     printVec3WithText("cs", mat->cs);
     printf("ior_in %f, ior_out %f\n", mat->ior_in, mat->ior_out);
     printVec3WithText("cf_in", mat->cf_in);
-    printVec3WithText("cf_out", mat->cf_out);    
+    printVec3WithText("cf_out", mat->cf_out);
 }
 
 void initDefaultMatteMat(Material* mat, const vec3 color)
@@ -46,7 +49,7 @@ void initDefaultMatteMat(Material* mat, const vec3 color)
     mat->shadow = true;
     mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
     mat->tex_flags = NO_TEXTURE;
-}       
+}
 
 void initDefaultPhongMat(Material* mat, const vec3 color)
 {

@@ -51,3 +51,4 @@ const int MAX_BOUNDING_SPHERES = 100;
 const int THETA_ROW = 26;
 const int PHI_COLUMN = 52;
 
+const double K_E = 2.718281828459045;

@@ -40,7 +40,7 @@ traceFunc getTraceFunc(const TraceType trace_type)
         func = &pathTrace;
         break;
     default:
-        func = &raycast;        
+        func = &raycast;
     }
     return func;
 }
@@ -52,7 +52,7 @@ float raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray,
     float min_t = TMAX;
     ShadeRec min_sr;
     min_t = intersectTest(&min_sr, so, ray);
-            
+
     // Shading
     if(min_t < TMAX)
     {
@@ -448,8 +448,8 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
 
                         transmit_t = pathTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
                         vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
-                        vec3_mult(transmitted_illum, transmitted_illum, btdf);                            
-                    }                             
+                        vec3_mult(transmitted_illum, transmitted_illum, btdf);
+                    }
 
                     vec3 color_filter_ref, color_filter_trans;
                     if(ndotwo > 0.0f)
@@ -463,8 +463,8 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
                     }
                     vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
                     vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
-                    vec3_add(radiance, radiance, transmitted_illum);                        
-                    vec3_add(radiance, radiance, reflected_illum);                    
+                    vec3_add(radiance, radiance, transmitted_illum);
+                    vec3_add(radiance, radiance, reflected_illum);
                 }
             }else
             {
@@ -476,4 +476,56 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
         vec3_copy(radiance, sl->bg_color);
     }
     return min_t;
+}
+
+void raymarch(vec3 radiance, const Ray ray, const vec3 h_sample, const SceneObjects *so,
+              const SceneLights *sl, const int sample_index)
+{
+    ShadeRec in_sr;
+    // 1. FInd exiting t value and location
+    float t_exit = intersectTest(&in_sr, so, ray);
+    // 2. Calculate initial radiance
+    Ray exit_ray = ray;
+    vec3_copy(exit_ray.origin, in_sr.hit_point);
+    vec3 init_rad = {0.0f, 0.0f, 0.0f};
+    raycast(init_rad, 0, h_sample, exit_ray, so, sl, sample_index);
+    // 3. Ray march back to front
+    float t_seg = 5.0f;
+    const float extinct_coeff = 0.01f;
+    const float phase_func = 1.0f / (float)(4.0 * PI);
+    const float scatter_coeff = 0.005f;
+    for(int i = t_exit; i > K_EPSILON; i -= t_seg)
+    {
+        // 4. At each segment, calculate direction illumination
+        vec3 displacement;
+        vec3_scale(displacement, ray.direction, i);
+        Ray light_ray;
+        vec3_add(light_ray.origin, ray.origin, displacement);
+
+        ShadeRec tmp_sr;
+        vec3_copy(tmp_sr.hit_point, light_ray.origin);
+        vec3 total_light_rad = {0.0f, 0.0f, 0.0f};
+        for(int j = 0; j < sl->num_lights; j++)
+        {
+            // 4a construct a ray towards a light point
+            getLightDir(light_ray.direction, sl->light_types[j], sl->light_ptrs[j], &tmp_sr, sample_index);
+            ShadeRec light_sr;
+            // 4b find exiting t value for that ray
+            float t_light_exit = intersectTest(&light_sr, so, light_ray);
+            // 4c get radiance from light directly
+            vec3 light_rad = {0.0f, 0.0f, 0.0f};
+            getIncRadiance(light_rad, sl->light_types[j], sl->light_ptrs[j], light_sr.hit_point);
+            // 4c adjust light radiance by distance traveled in medium
+            float rad_dec = powf((float)K_E, -extinct_coeff * t_light_exit);
+            vec3_scale(light_rad, light_rad, rad_dec);
+            // 5. Calculate how much direct illum contributes via phase function
+            vec3_scale(light_rad, light_rad, phase_func * scatter_coeff);
+            vec3_add(total_light_rad, total_light_rad, light_rad);
+        }
+        // Decrease initial radiance
+        float rad_dec = powf((float)K_E, -extinct_coeff * t_seg);
+        vec3_scale(init_rad, init_rad, rad_dec);
+        vec3_add(init_rad, init_rad, total_light_rad);
+    }
+    vec3_copy(radiance, init_rad);
 }

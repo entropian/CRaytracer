@@ -87,8 +87,8 @@ bool parseColor(vec3 r, FILE* fp)
 // Need to pass SceneTextures
 Texture* parseTexture(Scene* scene, FILE* fp)
 {
-    char buffer[128];    
-    
+    char buffer[128];
+
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
     Texture tex;
     if(!loadTexture(&tex, buffer))
@@ -112,9 +112,9 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp)
     {
         mat->tex_flags |= NOISE;
         return true;
-        //if(!getNextTokenInFile(buffer, fp)){return false;}            
+        //if(!getNextTokenInFile(buffer, fp)){return false;}
     }
-            
+
     if(strcmp(buffer, "DIFFUSE_MAP") == 0)
     {
         tex_ptr = parseTexture(scene, fp);
@@ -123,14 +123,14 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp)
             mat->tex_array[0] = tex_ptr;
             mat->tex_flags |= DIFFUSE;
         }
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type        
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type
     }
 
     if(strcmp(buffer, "NORMAL_MAP") == 0)
     {
         tex_ptr = parseTexture(scene, fp);
         if(tex_ptr)
-        {        
+        {
             mat->tex_array[1] = tex_ptr;
             mat->tex_flags |= NORMAL;
         }
@@ -154,21 +154,21 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-    strcpy_s(*name, NAME_LENGTH, buffer);    
+    strcpy_s(*name, NAME_LENGTH, buffer);
     if(mat->mat_type == EMISSIVE)
     {
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word COLOR
         if(!parseColor(mat->ce, fp)){return false;}
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word INTENSITY
-        if(!getNextTokenInFile(buffer, fp)){return false;}        
+        if(!getNextTokenInFile(buffer, fp)){return false;}
         mat->ke = (float)atof(buffer);
         mat->shadow = false;
-        mat->h_samples = NULL;        
+        mat->h_samples = NULL;
     }else
     {
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
-        if(!getNextTokenInFile(buffer, fp)){return false;}            
+        if(!getNextTokenInFile(buffer, fp)){return false;}
         if(strcmp(buffer, "yes") == 0)
         {
             mat->shadow = true;
@@ -176,14 +176,14 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
         {
             mat->shadow = false;
         }
-        
+
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
         if(!parseColor(mat->ca, fp)){return false;}
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_CONSTANT
         if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->ka = (float)atof(buffer);        
-        
+        mat->ka = (float)atof(buffer);
+
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word DIFF_COLOR
         if(!parseColor(mat->cd, fp)){return false;}
 
@@ -202,7 +202,7 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_CONSTANT
         if(!getNextTokenInFile(buffer, fp)){return false;}
-        mat->ks = (float)atof(buffer);        
+        mat->ks = (float)atof(buffer);
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SPEC_EXPONENT
         if(!getNextTokenInFile(buffer, fp)){return false;}
@@ -212,14 +212,15 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
         {
             mat->h_samples = NULL;
             goto Texture;
-        }       
-        
+        }
+
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word REF_CONSTANT
         if(!getNextTokenInFile(buffer, fp)){return false;}
         mat->kr = (float)atof(buffer);
         mat->h_samples = genHemisphereSamples(MULTIJITTERED, mat->exp);
-    
-        if(mat->mat_type == REFLECTIVE)
+
+        // TODO: Participating media should be its own category
+        if(mat->mat_type == REFLECTIVE || mat->mat_type == PARTICIPATING)
         {
             goto Texture;
         }

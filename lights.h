@@ -33,8 +33,7 @@ typedef struct PointLight_s
 
 typedef struct AreaLight_s
 {
-    bool dist_atten;
-    ObjectType obj_type; 
+    ObjectType obj_type;
     void* obj_ptr;
     float intensity;
     float flux;

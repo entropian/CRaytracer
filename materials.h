@@ -12,6 +12,7 @@ enum MatType
     REFLECTIVE = 4,
     TRANSPARENT = 8,
     EMISSIVE = 16,
+    PARTICIPATING = 32
 };
 
 enum TextureType

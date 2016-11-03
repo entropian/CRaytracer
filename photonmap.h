@@ -91,7 +91,7 @@ void calcSphereSample(vec3 sphere_sample)
     do{
         x = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
         y = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
-        z = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;        
+        z = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
     }while((x*x + y*y + z*z) > 1);
     vec3_assign(sphere_sample, x, y, z);
     vec3_normalize(sphere_sample, sphere_sample);
@@ -104,28 +104,28 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const float t, const 
     float rand_float = (float)rand() / (float)RAND_MAX;
     vec3 sample, ref_ray_dir;
     switch(sr->mat->mat_type)
-    {                        
+    {
     case MATTE:
     {
-        float reflectance_avg = (sr->mat->cd[0] + sr->mat->cd[1] + sr->mat->cd[2]) / 3.0f;                        
+        float reflectance_avg = (sr->mat->cd[0] + sr->mat->cd[1] + sr->mat->cd[2]) / 3.0f;
         if(rand_float > reflectance_avg){return false;}
         getSample3D(sample, sr->mat->h_samples, sample_index);
         getVec3InLocalBasis(ref_ray_dir, sample, sr->normal);
         photon_power[0] *= sr->mat->cd[0] / reflectance_avg;
         photon_power[1] *= sr->mat->cd[1] / reflectance_avg;
-        photon_power[2] *= sr->mat->cd[2] / reflectance_avg;                        
+        photon_power[2] *= sr->mat->cd[2] / reflectance_avg;
     } break;
-    case REFLECTIVE:                    
+    case REFLECTIVE:
     {
-        float reflectance_avg = (sr->mat->cs[0] + sr->mat->cs[1] + sr->mat->cs[2]) / 3.0f;                 
+        float reflectance_avg = (sr->mat->cs[0] + sr->mat->cs[1] + sr->mat->cs[2]) / 3.0f;
         if(rand_float > reflectance_avg){return false;}
-        getSample3D(sample, sr->mat->h_samples, sample_index);        
+        getSample3D(sample, sr->mat->h_samples, sample_index);
         vec3 reflect_dir;
         calcReflectRayDir(reflect_dir, sr->normal, ray->direction);
         getVec3InLocalBasis(ref_ray_dir, sample, reflect_dir);
         photon_power[0] *= sr->mat->cs[0] / reflectance_avg;
         photon_power[1] *= sr->mat->cs[1] / reflectance_avg;
-        photon_power[2] *= sr->mat->cs[2] / reflectance_avg;                                                
+        photon_power[2] *= sr->mat->cs[2] / reflectance_avg;
     } break;
     case TRANSPARENT:
     {
@@ -169,7 +169,7 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const float t, const 
 
 void getPointLightPhoton(Ray *ray, vec3 photon_power, const PointLight *point_light)
 {
-    vec3_scale(photon_power, point_light->color, point_light->flux);    
+    vec3_scale(photon_power, point_light->color, point_light->flux);
     vec3_copy(ray->origin, point_light->point);
     calcSphereSample(ray->direction);
 }
@@ -189,7 +189,7 @@ void getPointLightCausticPhoton(Ray *ray, vec3 photon_power, const PointLight *p
         int i, j;
         for(i = 0; i < THETA_ROW; i++)
         {
-            float angle_from_equator = (float)abs(i - THETA_ROW * 0.5f) * theta_per_cell;                
+            float angle_from_equator = (float)abs(i - THETA_ROW * 0.5f) * theta_per_cell;
             float cell_area = base_area * cos(angle_from_equator);
             bool reached = false;
             for(j = 0; j < PHI_COLUMN; j++)
@@ -225,8 +225,8 @@ void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light
                         const Samples3D *h_samples, const unsigned int sample_index)
 {
     vec3 h_sample, light_normal, point_on_light;
-    
-    getSample3D(h_sample, h_samples, sample_index);    
+
+    getSample3D(h_sample, h_samples, sample_index);
     getAreaLightNormal(light_normal, area_light, ORIGIN);
     getVec3InLocalBasis(ray->direction, h_sample, light_normal);
 
@@ -237,26 +237,26 @@ void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light
     vec3_scale(displacement, rect->width, unit_square_sample[0]);
     vec3_add(point_on_light, rect->point, displacement);
     vec3_scale(displacement, rect->height, unit_square_sample[1]);
-    vec3_add(point_on_light, point_on_light, displacement);            
+    vec3_add(point_on_light, point_on_light, displacement);
     vec3_copy(ray->origin, point_on_light);
 
-    vec3_scale(photon_power, area_light->color, area_light->flux); 
+    vec3_scale(photon_power, area_light->color, area_light->flux);
 }
 
 void getSphereLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light, const Samples3D *h_samples,
                           const unsigned int sample_index)
 {
-    Sphere *sphere = (Sphere*)(area_light->obj_ptr);    
+    Sphere *sphere = (Sphere*)(area_light->obj_ptr);
     vec3 normal, displacement;
     calcSphereSample(normal);
     vec3_scale(displacement, normal, sphere->radius);
     vec3_add(ray->origin, displacement, sphere->center);
-    
+
     vec3 h_sample;
     getSample3D(h_sample, h_samples, sample_index);
     getVec3InLocalBasis(ray->direction, h_sample, normal);
 
-    vec3_scale(photon_power, area_light->color, area_light->intensity);     
+    vec3_scale(photon_power, area_light->color, area_light->intensity);
 }
 
 void getAreaLightPhoton(Ray *ray, vec3 photon_power, AreaLight *area_light, Samples3D *h_samples, unsigned int *sample_index)
@@ -268,7 +268,7 @@ void getAreaLightPhoton(Ray *ray, vec3 photon_power, AreaLight *area_light, Samp
     }else if(area_light->obj_type == SPHERE)
     {
         getSphereLightPhoton(ray, photon_power, area_light, h_samples, *sample_index);
-        (*sample_index)++;        
+        (*sample_index)++;
     }else
     {
         fprintf(stderr, "Wrong light geometry type.\n");
@@ -309,7 +309,7 @@ void storePhoton(Photon* photon, Photonmap *photon_map, const vec3 photon_power,
         {
             photon_map->bbox.max[k] = photon->pos[k];
         }
-    }                
+    }
 }
 
 int countLight(const SceneLights *sl)
@@ -340,14 +340,14 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
     int photons_per_light = photon_map->max_photons / light_count;
 
     Samples3D *h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-    
+
     const int max_bounce = photon_map->max_bounce;
     int stored_photons = 0;
     unsigned int sample_index = 0;
     for(int i = 0; i < sl->num_lights; i++)
     {
         void* light_ptr = sl->light_ptrs[i];
-        LightType light_type = sl->light_types[i];        
+        LightType light_type = sl->light_types[i];
         if(light_type != POINTLIGHT && light_type != AREALIGHT)
         {
             light_ptr = NULL;
@@ -370,7 +370,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                 case POINTLIGHT:
                     getPointLightPhoton(&ray, photon_power, (PointLight*)light_ptr);
                     break;
-                case AREALIGHT:                    
+                case AREALIGHT:
                     getAreaLightPhoton(&ray, photon_power, (AreaLight*)light_ptr, h_samples, &sample_index);
                     break;
                 }
@@ -385,7 +385,7 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
                 if(sr.mat->mat_type == MATTE
                    && bounce_count != 0) // Excluding first bounce so the photon map is only for indirection illum
                 */
-                if(sr.mat->mat_type == MATTE)                
+                if(sr.mat->mat_type == MATTE)
                 {
                     // Store photon if surface is matte
                     stored_photons++;
@@ -417,8 +417,8 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
 #ifdef SHOW_TIME
     end_time = glfwGetTime();
     double seconds = end_time - start_time;
-    printf("Photon emission %f seconds.\n", seconds);        
-#endif    
+    printf("Photon emission %f seconds.\n", seconds);
+#endif
 }
 
 void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)    
@@ -770,7 +770,6 @@ void locatePhotons(NearestPhotons *const np, const Photonmap* photon_map, const 
             np->index[parent] = p;
             np->dist2[parent] = dist2;
             np->dist2[0] = np->dist2[1];
-
         }
     }
 }
@@ -793,7 +792,7 @@ void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, cons
     irrad[0] = irrad[1] = irrad[2] = 0.0f;
 
     float dist2[MAX_NPHOTONS];
-    Photon* index[MAX_NPHOTONS];    
+    Photon* index[MAX_NPHOTONS];
     NearestPhotons np;
     vec3_copy(np.pos, pos);
     np.dist2 = dist2;
@@ -837,15 +836,15 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
     ShadeRec sr;
     float t = intersectTest(&sr, so, ray);
     if(t < TMAX)
-    {            
+    {
         if(sr.mat->mat_type == DIFFUSE)
         {
             Ray new_ray;
             vec3_copy(new_ray.origin, sr.hit_point);
             getVec3InLocalBasis(new_ray.direction, h_sample, sr.normal);
-            ShadeRec new_sr;                    
+            ShadeRec new_sr;
             t = intersectTest(&new_sr, so, new_ray);
-            vec3 f;                    
+            vec3 f;
             if(t < TMAX)
             {
                 vec3 irrad;
@@ -866,6 +865,6 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
             vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
             vec3_mult(caustic_rad, caustic_irrad, f);
             vec3_add(color, pm_color, caustic_rad);
-        }                
-    }                
+        }
+    }
 }
