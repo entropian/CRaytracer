@@ -38,9 +38,9 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
             float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
             float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
             if(fabs(phi) <= sphere->phi && theta >= sphere->min_theta&&
-               theta <= sphere->max_theta)            
+               theta <= sphere->max_theta)
             {
-                fillShadeRecSphere(sr, sphere, hit_point, ray, t);            
+                fillShadeRecSphere(sr, sphere, hit_point, ray, t);
                 return t;
             }
         }
@@ -48,12 +48,12 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
         t = (-b + e)/denom;
         if(t > K_EPSILON)
         {
-            vec3 hit_point;            
+            vec3 hit_point;
             getPointOnRay(hit_point, ray, t);
             float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
-            float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));            
+            float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
             if(fabs(phi) <= sphere->phi && theta >= sphere->min_theta&&
-               theta <= sphere->max_theta)                            
+               theta <= sphere->max_theta)
             {
                 fillShadeRecSphere(sr, sphere, hit_point, ray, t);
                 return t;
@@ -87,12 +87,12 @@ float shadowRayIntersectSphere(Sphere *sphere, const Ray ray)
         float t = (-b - e)/denom;
         if(t > K_EPSILON)
         {
-            vec3 hit_point;            
+            vec3 hit_point;
             getPointOnRay(hit_point, ray, t);
             float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
             float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
             if(fabs(phi) <= sphere->phi && theta >= sphere->min_theta&&
-               theta <= sphere->max_theta)                        
+               theta <= sphere->max_theta)
             {
                 return t;
             }

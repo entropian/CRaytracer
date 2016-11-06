@@ -85,7 +85,7 @@ float shadowRayIntersectObject(const Object_t obj, const Ray ray)
         break;
     case SMOOTH_TRIANGLE:
         t = shadowRayIntersectSmoothTriangle((SmoothTriangle*)obj.ptr, ray);
-        break;                        
+        break;
     }
     return t;
 }

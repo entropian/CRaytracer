@@ -151,7 +151,63 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, c
     }
 }
 
-void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const EnvLight* env_light_ptr, const ShadeRec* sr)
+void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir, const AreaLight* area_light_ptr,
+                         const vec3 inc_rad, const ShadeRec* sr)
+{
+    // diffuse brdf
+    vec3 f;
+    diffuseBRDF(f, sr);    
+
+    // Incident radiance
+    vec3 neg_wi, displacement, light_normal;
+    vec3_sub(displacement, sr->hit_point, area_light_ptr->sample_point);
+    vec3_negate(neg_wi, light_dir);
+    getAreaLightNormal(light_normal, area_light_ptr, sr->hit_point);
+    // TODO: Fix this
+    /*
+    if(vec3_dot(neg_wi, light_normal) > 0.0f)
+    {
+
+    }else
+    {
+        return;
+    }
+    */
+    if(vec3_dot(neg_wi, light_normal) < 0.0f)
+    {
+        vec3_negate(light_normal, light_normal);
+    }
+
+    // Geometry term
+    float geo_term = vec3_dot(light_normal, neg_wi) * ndotwi /
+        vec3_dot(displacement, displacement);
+
+    // f * L * G / PDF
+    vec3 tmp;
+    vec3_mult(tmp, f, inc_rad);
+    vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
+    vec3_add(radiance, radiance, tmp);
+
+    // Specular component
+    MatType mat_type = sr->mat->mat_type;
+    if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
+    {
+        vec3 reflect_dir, wo_neg;
+        vec3_negate(wo_neg, sr->wo);
+        float ndotwo = vec3_dot(sr->normal, sr->wo);
+        vec3_scale(tmp, sr->normal, 2.0f * ndotwo);
+        vec3_add(reflect_dir, wo_neg, tmp);
+        float rdotl = vec3_dot(reflect_dir, light_dir);
+
+        vec3_scale(f, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        vec3_mult(tmp, f, inc_rad);
+        vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
+        vec3_add(radiance, radiance, tmp);
+    }
+}
+
+void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
+                     const EnvLight* env_light_ptr, const ShadeRec* sr)
 {
     vec3 f, inc_radiance_cos, tmp;
     diffuseBRDF(f, sr);
@@ -163,6 +219,26 @@ void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, co
 
     MatType mat_type = sr->mat->mat_type;
     if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)        
+    {
+        vec3 spec_radiance = {0.0f, 0.0f, 0.0f};
+        specularShading(spec_radiance, light_dir, inc_radiance_cos, sr);
+        vec3_scale(spec_radiance, spec_radiance, 1.0f/pdf);
+        vec3_add(radiance, radiance, spec_radiance);
+    }
+}
+
+void envLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir, const EnvLight* env_light_ptr,
+                     const vec3 inc_rad, const ShadeRec* sr)
+{
+    vec3 f, inc_radiance_cos, tmp;
+    diffuseBRDF(f, sr);
+    vec3_scale(inc_radiance_cos, inc_rad, ndotwi);
+    diffuseShading(radiance, inc_radiance_cos, sr);
+    float pdf = ndotwi / (float)PI;
+    vec3_scale(radiance, radiance, 1.0f/pdf);
+
+    MatType mat_type = sr->mat->mat_type;
+    if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
     {
         vec3 spec_radiance = {0.0f, 0.0f, 0.0f};
         specularShading(spec_radiance, light_dir, inc_radiance_cos, sr);
@@ -207,7 +283,38 @@ void directIllumShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
         diffuseShading(radiance, inc_radiance_cos,  sr);
 
         MatType mat_type = sr->mat->mat_type;
-        if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)                    
+        if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
+        {
+            // Specular component
+            specularShading(radiance, light_dir, inc_radiance_cos, sr);
+        }
+    }
+}
+
+void directIllumShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir, const void* light_ptr,
+                           const LightType light_type, const vec3 inc_rad, const ShadeRec* sr)
+{
+    switch(light_type)
+    {
+    case AREALIGHT:
+    {
+        AreaLight* area_light_ptr = (AreaLight*)light_ptr;
+        areaLightShadingRad(radiance, ndotwi, light_dir, area_light_ptr, inc_rad, sr);
+    } break;
+    case ENVLIGHT:
+    {
+        EnvLight* env_light_ptr = (EnvLight*)light_ptr;
+        envLightShadingRad(radiance, ndotwi, light_dir, env_light_ptr, inc_rad, sr);
+    } break;
+    default:
+        // Diffuse component
+        // kd*cd/PI * inc_radiance_cos
+        vec3 inc_radiance_cos;
+        vec3_scale(inc_radiance_cos, inc_rad, ndotwi);
+        diffuseShading(radiance, inc_radiance_cos,  sr);
+
+        MatType mat_type = sr->mat->mat_type;
+        if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
         {
             // Specular component
             specularShading(radiance, light_dir, inc_radiance_cos, sr);
@@ -218,7 +325,8 @@ void directIllumShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
 bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects* so,
                 const vec3 light_dir, const ShadeRec* sr)
 {
-    if(sl->shadow[light_index] && sr->mat->shadow)
+    //if(sl->shadow[light_index] && sr->mat->shadow)
+    if(sl->shadow[light_index])
     {
         Ray shadow_ray;
         vec3_copy(shadow_ray.origin, sr->hit_point);

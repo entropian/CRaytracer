@@ -40,10 +40,10 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         vec3_copy(r, ((DirLight*)light_ptr)->direction);
     } break;
     case POINTLIGHT:
-    { 
+    {
         vec3 displacement;
         vec3_sub(displacement, ((PointLight*)light_ptr)->point, sr->hit_point);
-        vec3_normalize(r, displacement);        
+        vec3_normalize(r, displacement);
     } break;
     case AREALIGHT:
     {
@@ -132,7 +132,7 @@ float calcLightDistance(const LightType light_type, const void* light_ptr, const
     {
     case DIRECTIONAL:
     {
-        t = TMAX;                                                                    
+        t = TMAX;
     } break;
     case POINTLIGHT:
     {

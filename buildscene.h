@@ -337,7 +337,8 @@ void initAreaLights(SceneLights* sl)
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
-    area_light_ptr->intensity = 55.0f;
+    //area_light_ptr->intensity = 55.0f;
+    area_light_ptr->intensity = 100.0f;
     //area_light_ptr->intensity = 20.0f;
     // Photon map intensity
     //area_light_ptr->intensity = 100.0f;
@@ -348,9 +349,12 @@ void initAreaLights(SceneLights* sl)
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
     rect->shadow = false;
-    vec3_assign(rect->point, 213.0f, 547.0f, -227.0f);
-    vec3_assign(rect->width, 130.0f, 0.0f, 0.0f);
-    vec3_assign(rect->height, 0.0f, 0.0f, -105.0f);
+    //vec3_assign(rect->point, 213.0f, 547.0f, -227.0f);
+    //vec3_assign(rect->width, 130.0f, 0.0f, 0.0f);
+    //vec3_assign(rect->height, 0.0f, 0.0f, -105.0f);
+    vec3_assign(rect->point, 213.0f, 800.0f, -227.0f);
+    vec3_assign(rect->width, 300.0f, 0.0f, 0.0f);
+    vec3_assign(rect->height, 0.0f, 0.0f, -250.0f);    
     vec3_copy(rect->normal, DOWN);
     vec3_copy(rect->mat->ce, area_light_ptr->color);
     rect->mat->ke = area_light_ptr->intensity;
@@ -376,6 +380,7 @@ void initAreaLights(SceneLights* sl)
 
 
     // Area light 2
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}    
     area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     area_light_ptr->intensity = 55.0f;
@@ -406,7 +411,7 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-
+    */
     /*
     // Sphere
     AreaLight* sphere_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
