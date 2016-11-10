@@ -142,8 +142,10 @@ int main()
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
 
 #ifdef CORNELL_BOX
-    vec3 position = {278.0f, 273.0f, 800.0f};
-    vec3 look_point = {278.0f, 273.0f, 0.0f};
+    //vec3 position = {278.0f, 273.0f, 800.0f};
+    //vec3 look_point = {278.0f, 273.0f, 0.0f};
+    vec3 position = {340.0f, 500.0f, 200.0f};
+    vec3 look_point = {340.0f, 500.0f, 0.0f};    
 #else
     vec3 position = {0.0f, 2.0f, 5.0f};
     vec3 look_point = {0.0f, 0.0f, 0.0f};
@@ -184,6 +186,8 @@ int main()
             vec3 h_sample;
             getSample3D(h_sample, &h_samples, sample_index);
 
+            fogmarch(color, ray, h_sample, &(scene.objects), &(scene.lights), sample_index);
+            /*
             ShadeRec sr;
             float t0 = intersectTest(&sr, &(scene.objects), ray);
             if(t0 < TMAX)
@@ -201,7 +205,7 @@ int main()
                     vec3_copy(color, radiance);
                 }
             }
-
+            */
 
             /*
               vec3 radiance;

@@ -48,10 +48,9 @@ traceFunc getTraceFunc(const TraceType trace_type)
 float raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray,
               const SceneObjects* so, const SceneLights* sl, const int sample_index)
 {
-    vec3_copy(radiance, ORIGIN);
-    float min_t = TMAX;
+    vec3_copy(radiance, BLACK);
     ShadeRec min_sr;
-    min_t = intersectTest(&min_sr, so, ray);
+    float min_t = intersectTest(&min_sr, so, ray);
 
     // Shading
     if(min_t < TMAX)
@@ -478,12 +477,22 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
     return min_t;
 }
 
-void directIllumInScatter(vec3 radiance, Ray ray, const float extinct_coeff, const float scatter_coeff,
-                          const float phase_func,
+float schlickPhaseFunc(const float cos_theta, const float k)
+{
+    float numerator = 1.0f - k * k;
+    float a = 1.0f + k * cos_theta;
+    float denom = 4.0f * (float)PI * (a*a);
+    return numerator / denom;
+}
+
+void directIllumInScatter(vec3 radiance, const vec3 point, const float extinct_coeff, const float scatter_coeff,
+                          const vec3 view_dir,
                           const SceneObjects *so, const SceneLights *sl, const int sample_index)
 {
     ShadeRec tmp_sr;
-    vec3_copy(tmp_sr.hit_point, ray.origin);
+    vec3_copy(tmp_sr.hit_point, point);
+    Ray ray;
+    vec3_copy(ray.origin, point);
     for(int j = 0; j < sl->num_lights; j++)
     {
         // 4a construct a ray towards a light point
@@ -500,7 +509,9 @@ void directIllumInScatter(vec3 radiance, Ray ray, const float extinct_coeff, con
         float rad_dec = powf((float)K_E, -extinct_coeff * t_light_exit);
         vec3_scale(light_rad, light_rad, rad_dec);
         // 5. Calculate how much direct illum contributes via phase function
-        vec3_scale(light_rad, light_rad, phase_func * scatter_coeff);
+        //vec3_scale(light_rad, light_rad, phase_func * scatter_coeff);
+        float phase = schlickPhaseFunc(vec3_dot(ray.direction, view_dir), 0.5f);
+        vec3_scale(light_rad, light_rad, phase * scatter_coeff);
         vec3_add(radiance, radiance, light_rad);
     }
 }
@@ -514,8 +525,9 @@ void raymarch(vec3 radiance, const Ray ray, const vec3 h_sample, const SceneObje
       other phase functions
       different scattering and absorption coefficients
       multiple scatterings
-      Try making a light shaft by placing objects with the volume
      */
+    vec3 view_dir;
+    vec3_negate(view_dir, ray.direction);
     const float extinct_coeff = 0.01f;
     const float phase_func = 1.0f / (float)(4.0 * PI);
     const float scatter_coeff = extinct_coeff * 0.5f;
@@ -535,13 +547,10 @@ void raymarch(vec3 radiance, const Ray ray, const vec3 h_sample, const SceneObje
         for(float i = t_exit; i > K_EPSILON; i -= t_seg)
         {
             // 4. At each segment, calculate direction illumination
-            vec3 displacement;
-            vec3_scale(displacement, ray.direction, i);
-            Ray light_ray;
-            vec3_add(light_ray.origin, ray.origin, displacement);
-
+            vec3 point;
+            getPointOnRay(point, ray, i);
             vec3 total_light_rad = {0.0f, 0.0f, 0.0f};
-            directIllumInScatter(total_light_rad, light_ray, extinct_coeff, scatter_coeff, phase_func,
+            directIllumInScatter(total_light_rad, point, extinct_coeff, scatter_coeff, view_dir,
                                  so, sl, sample_index);
             // Decrease initial radiance
             float rad_dec = powf((float)K_E, -extinct_coeff * t_seg);
@@ -551,16 +560,6 @@ void raymarch(vec3 radiance, const Ray ray, const vec3 h_sample, const SceneObje
         vec3_copy(radiance, init_rad);
     }else
     {
-        // Surface is inside the medium
-        // Calculate direct illumination on surface
-        // First get light radiance
-        // 1. Use shadowTest to see if the light is occluded
-        // 1. getIncRadiance
-        // 2. calcLightDistance
-        // 3. Trace ray towards light. 
-        //    If ray hits media boudary, and t is less than light_dist, then use t.
-        //       Else use light_dist
-        //    If ray hits the light, then use light_dist
         vec3 init_rad = {0.0f, 0.0f, 0.0f};
         if(in_sr.mat->mat_type == EMISSIVE)
         {
@@ -601,15 +600,12 @@ void raymarch(vec3 radiance, const Ray ray, const vec3 h_sample, const SceneObje
         for(float i = t_exit; i > K_EPSILON; i -= t_seg)
         {
             // 4. At each segment, calculate direction illumination
-            vec3 displacement;
-            vec3_scale(displacement, ray.direction, i);
-            Ray light_ray;
-            vec3_add(light_ray.origin, ray.origin, displacement);
-
+            vec3 point;
+            getPointOnRay(point, ray, i);
             ShadeRec tmp_sr;
-            vec3_copy(tmp_sr.hit_point, light_ray.origin);
+            vec3_copy(tmp_sr.hit_point, point);
             vec3 total_light_rad = {0.0f, 0.0f, 0.0f};
-            directIllumInScatter(total_light_rad, light_ray, extinct_coeff, scatter_coeff, phase_func,
+            directIllumInScatter(total_light_rad, point, extinct_coeff, scatter_coeff, view_dir,
                                  so, sl, sample_index);
             // Decrease initial radiance
             float rad_dec = powf((float)K_E, -extinct_coeff * t_seg);
@@ -617,5 +613,145 @@ void raymarch(vec3 radiance, const Ray ray, const vec3 h_sample, const SceneObje
             vec3_add(init_rad, init_rad, total_light_rad);
         }
         vec3_copy(radiance, init_rad);
+    }
+}
+
+/*
+  Input: starting point, length, ray
+ */
+void mediumMarch(vec3 out_rad, const vec3 entry_rad, const Ray ray, const float t_seg,
+                 const float medium_dist, const float extinct_coeff,
+                 const float scatter_coeff, const SceneObjects *so, const SceneLights *sl,
+                 const int sample_index)
+{
+    vec3 init_rad;
+    vec3_copy(init_rad, entry_rad);
+    vec3 view_dir;
+    vec3_negate(view_dir, ray.direction);
+    for(float i = medium_dist; i > K_EPSILON; i -= t_seg)
+    {
+        // 4. At each segment, calculate direction illumination
+        vec3 point;
+        getPointOnRay(point, ray, i);
+        vec3 total_light_rad = {0.0f, 0.0f, 0.0f};
+        directIllumInScatter(total_light_rad, point, extinct_coeff, scatter_coeff, view_dir,
+                             so, sl, sample_index);
+        // Decrease initial radiance
+        float rad_dec = powf((float)K_E, -extinct_coeff * t_seg);
+        vec3_scale(init_rad, init_rad, rad_dec);
+        vec3_scale(total_light_rad, total_light_rad, (rad_dec * t_seg) + (1.0 - rad_dec)*0.5f*t_seg);
+        vec3_add(init_rad, init_rad, total_light_rad);
+    }
+    vec3_copy(out_rad, init_rad);
+}
+
+void fogmarch(vec3 radiance, const Ray ray, const vec3 h_sample, const SceneObjects *so,
+              const SceneLights *sl, const int sample_index)
+{
+    vec3_copy(radiance, BLACK);
+    vec3 view_dir;
+    vec3_negate(view_dir, ray.direction);
+    const float extinct_coeff = 0.002f;
+    const float scatter_coeff = extinct_coeff * 0.6f;
+    float t_seg = 5.0f;
+    ShadeRec min_sr;
+    float min_t = intersectTest(&min_sr, so, ray);
+
+    if(min_t != TMAX)
+    {
+        vec3 init_rad = {0.0f, 0.0f, 0.0f};
+        if(min_sr.mat->mat_type == EMISSIVE)
+        {
+            vec3_scale(init_rad, min_sr.mat->ce, min_sr.mat->ke/1.0f);
+        }else
+        {
+            // Calc surface direct illum
+            for(int i = 0; i < sl->num_lights; i++)
+            {
+                vec3 light_dir;
+                getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
+                float ndotwi = vec3_dot(light_dir, min_sr.normal);
+                if(ndotwi <= 0){continue;}
+                if(shadowTest(i, sl, so, light_dir, &min_sr)){continue;}
+                vec3 light_rad;
+                getIncRadiance(light_rad, sl->light_types[i], sl->light_ptrs[i], min_sr.hit_point);
+                float light_dist = calcLightDistance(sl->light_types[i], sl->light_ptrs[i], min_sr.hit_point);
+                float rad_dec = powf((float)K_E, -extinct_coeff * light_dist);
+                vec3 dir_illum = {0.0f, 0.0f, 0.0f};
+                vec3_scale(dir_illum, light_rad, rad_dec);
+                vec3_add(init_rad, init_rad, dir_illum);
+            }
+        }
+        // ray march back to camera
+        mediumMarch(radiance, init_rad, ray, t_seg, min_t, extinct_coeff, scatter_coeff,
+                    so, sl, sample_index);
+        /*
+        for(float i = min_t; i > K_EPSILON; i -= t_seg)
+        {
+            // 4. At each segment, calculate direction illumination
+            vec3 point;
+            getPointOnRay(point, ray, i);
+            vec3 total_light_rad = {0.0f, 0.0f, 0.0f};
+            directIllumInScatter(total_light_rad, point, extinct_coeff, scatter_coeff, view_dir,
+                                 so, sl, sample_index);
+            // Decrease initial radiance
+            float rad_dec = powf((float)K_E, -extinct_coeff * t_seg);
+            vec3_scale(init_rad, init_rad, rad_dec);
+            vec3_scale(total_light_rad, total_light_rad, (rad_dec * t_seg) + (1.0 - rad_dec)*0.5f*t_seg);
+            vec3_add(init_rad, init_rad, total_light_rad);
+        }
+        vec3_copy(radiance, init_rad);
+        */
+    }else
+    {
+        const float max_fog_dist = 1000.0f;
+        vec3 init_rad = {0.0f, 0.0f, 0.0f};
+        mediumMarch(radiance, init_rad, ray, t_seg, max_fog_dist, extinct_coeff, scatter_coeff,
+                    so, sl, sample_index);
+        /*
+        for(float i = max_fog_dist; i > K_EPSILON; i -= t_seg)
+        {
+            // 4. At each segment, calculate direction illumination
+            vec3 displacement;
+            vec3_scale(displacement, ray.direction, i);
+            Ray light_ray;
+            vec3_add(light_ray.origin, ray.origin, displacement);
+
+            vec3 total_light_rad = {0.0f, 0.0f, 0.0f};
+            directIllumInScatter(total_light_rad, light_ray.origin, extinct_coeff, scatter_coeff, view_dir,
+                                 so, sl, sample_index);
+            // Decrease initial radiance
+            float rad_dec = powf((float)K_E, -extinct_coeff * t_seg);
+            vec3_scale(init_rad, init_rad, rad_dec);
+            vec3_scale(total_light_rad, total_light_rad, (rad_dec * t_seg) + (1.0 - rad_dec)*0.5f*t_seg);
+            vec3_add(init_rad, init_rad, total_light_rad);
+        }
+        vec3_copy(radiance, init_rad);
+        */
+    }
+}
+
+void mediumTrace(vec3 radiance, const Ray ray, const vec3 h_sample, const SceneObjects *so,
+                 const SceneLights *sl, const int sample_index)
+{
+    vec3 view_dir;
+    vec3_negate(view_dir, ray.direction);
+    const float extinct_coeff = 0.01f;
+    const float scatter_coeff = extinct_coeff * 0.5f;
+    float t_seg = 5.0f;
+    ShadeRec sr;
+    float t = intersectTest(&sr, so, ray);
+    if(t == TMAX){return;} // Shouldn't happen if the ray is inside a medium
+    if(sr.mat->mat_type == PARTICIPATING) // Ray passes through the medium hitting nothing
+    {
+        Ray new_ray;
+        vec3_copy(new_ray.direction, ray.direction);
+        getPointOnRay(new_ray.origin, ray, t);
+
+        vec3 entry_rad = {0.0f, 0.0f, 0.0f};
+        //trace(entry_rad, new_ray, h_sample, so, sl, sample_index);
+    }else // Ray hits something inside the medium
+    {
+
     }
 }
