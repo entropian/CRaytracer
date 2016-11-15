@@ -18,7 +18,8 @@
 #include "shading.h"
 #include "buildscene.h"
 #include "intersect.h"
-#include "trace.h"
+//#include "trace.h"
+#include "raymarch.h"
 #include "config.h"
 #include "texture.h"
 #include "noise.h"
@@ -142,10 +143,12 @@ int main()
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
 
 #ifdef CORNELL_BOX
-    //vec3 position = {278.0f, 273.0f, 800.0f};
-    //vec3 look_point = {278.0f, 273.0f, 0.0f};
+    vec3 position = {278.0f, 273.0f, 800.0f};
+    vec3 look_point = {278.0f, 273.0f, 0.0f};
+    /*
     vec3 position = {340.0f, 500.0f, 200.0f};
-    vec3 look_point = {340.0f, 500.0f, 0.0f};    
+    vec3 look_point = {340.0f, 500.0f, 0.0f};
+    */
 #else
     vec3 position = {0.0f, 2.0f, 5.0f};
     vec3 look_point = {0.0f, 0.0f, 0.0f};
@@ -160,7 +163,7 @@ int main()
     float pixel_length = frame_length/(float)(frame_res_width);
 
     // Set trace function
-    float (*trace)(vec3, int, const vec3, const Ray, const SceneObjects*, const SceneLights*, const int);
+    float (*trace)(vec3, int, const Ray, TraceArgs);
     trace = getTraceFunc(params.trace_type);
 
     double start_time, end_time;
@@ -186,7 +189,12 @@ int main()
             vec3 h_sample;
             getSample3D(h_sample, &h_samples, sample_index);
 
-            fogmarch(color, ray, h_sample, &(scene.objects), &(scene.lights), sample_index);
+            TraceArgs trace_args;
+            trace_args.objects = &(scene.objects);
+            trace_args.lights = &(scene.lights);
+            trace_args.sample_index = sample_index;
+            vec3_copy(trace_args.h_sample, h_sample);
+            //fogmarch(color, ray, trace_args);
             /*
             ShadeRec sr;
             float t0 = intersectTest(&sr, &(scene.objects), ray);
@@ -207,10 +215,10 @@ int main()
             }
             */
 
-            /*
-              vec3 radiance;
-              trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
-              vec3_add(color, color, radiance);
+
+            vec3 radiance;
+            trace(radiance, params.max_depth, ray, trace_args);
+            vec3_add(color, color, radiance);
 
             // Photon map
             if(photon_map_status)
@@ -220,7 +228,7 @@ int main()
                                        &caustic_map, &(scene.objects), ray);
                 vec3_add(color, color, pm_color);
             }
-            */
+
             // NEW
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];

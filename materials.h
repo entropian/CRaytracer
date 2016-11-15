@@ -30,11 +30,12 @@ typedef struct Material_s
     MatType mat_type;
     unsigned int tex_flags;
     float ka, kd, ks, ke, kr, exp;
-    float ior_in, ior_out;    
+    float ior_in, ior_out;
     vec3 ca, cd, cs, ce, cr;
     vec3 cf_in, cf_out;
     Samples3D* h_samples;
-    Texture* tex_array[3];    
+    float extinct_coeff, scatter_coeff;
+    Texture* tex_array[3];
 }Material;
 
 const int DIFFUSE_MAP_INDEX = 0;
