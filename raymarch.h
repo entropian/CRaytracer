@@ -1,5 +1,73 @@
 #pragma once
 #include "trace.h"
+//float pathTrace(vec3, int, const Ray, TraceArgs trace_args);
+
+traceFunc getTraceMediumFunc(const TraceType trace_type)
+{
+    traceFunc func;
+    switch(trace_type)
+    {
+    case RAYCAST:
+        func = &raycastMedium;
+        break;
+    case WHITTED:
+        func = &whittedTraceMedium;
+        break;
+        /*
+    case PATHTRACE:
+        func = &pathTrace;
+        break;
+        */
+    default:
+        func = &raycastMedium;
+    }
+    return func;
+}
+
+// Returns the material pointer of the smallest partcipating medium that encloses the start point
+Material* getMediumMatPtr(const vec3 start, const SceneObjects *so)
+{
+    // Use a stack to find the enclosing medium
+    Material *stack[10];
+    stack[0] = NULL;
+    int top = -1;
+    Ray ray;
+    vec3_copy(ray.origin, start);
+    vec3_assign(ray.direction, 0.0f, 0.0f, -1.0f);
+    ShadeRec sr;
+    float t = intersectTest(&sr, so, ray);
+    int count = 0;
+    while(t < TMAX)
+    {
+        if(sr.mat->mat_type == PARTICIPATING)
+        {
+            if(top == 9)
+            {
+                fprintf(stderr, "Too many enclosing media.\n");
+                break;
+            }else if(top = -1)
+            {
+                top++;
+                stack[top] = sr.mat;
+            }else
+            {
+                if(stack[top] == sr.mat)
+                {
+                    stack[top] = NULL;
+                    top--;
+                }else
+                {
+                    top++;
+                    stack[top] = sr.mat;
+                }
+            }
+        }
+        getPointOnRay(ray.origin, ray, t);
+        t = intersectTest(&sr, so, ray);
+    }
+    return stack[0];
+}
+
 float schlickPhaseFunc(const float cos_theta, const float k)
 {
     float numerator = 1.0f - k * k;
@@ -233,7 +301,7 @@ void fogmarch(vec3 radiance, const Ray ray, TraceArgs trace_args)
 }
 
 // Called when a ray enters or originates inside a medium
-void raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs trace_args)
+float raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs trace_args)
 {
     const SceneObjects *so = trace_args.objects;
     const SceneLights *sl = trace_args.lights;
@@ -242,19 +310,21 @@ void raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs trac
     vec3_copy(h_sample, trace_args.h_sample);
     vec3 view_dir;
     vec3_negate(view_dir, ray.direction);
-    const float extinct_coeff = 0.01f;
-    const float scatter_coeff = extinct_coeff * 0.5f;
+    const float extinct_coeff = trace_args.medium_mat->extinct_coeff;
+    const float scatter_coeff = trace_args.medium_mat->scatter_coeff;
     float t_seg = 5.0f;
     ShadeRec sr;
     float t = intersectTest(&sr, so, ray);
-    if(t == TMAX){return;} // Shouldn't happen if the ray is inside a medium
+    if(t == TMAX){return t;} // Shouldn't happen if the ray is inside a medium
     vec3 init_rad = {0.0f, 0.0f, 0.0f};
     if(sr.mat->mat_type == PARTICIPATING) // Ray passes through the medium hitting nothing
     {
+        TraceArgs new_trace_args = trace_args;
+        new_trace_args.medium_mat = NULL;
         Ray new_ray;
         vec3_copy(new_ray.direction, ray.direction);
         getPointOnRay(new_ray.origin, ray, t);
-        raycast(init_rad, depth-1, new_ray, trace_args);
+        raycast(init_rad, depth-1, new_ray, new_trace_args);
     }else if(sr.mat->mat_type == EMISSIVE)
     {
         vec3_scale(init_rad, sr.mat->ce, sr.mat->ke/1.0f);
@@ -263,6 +333,7 @@ void raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs trac
         calcDirectIllumSurfaceInMedium(init_rad, &sr, extinct_coeff, scatter_coeff, trace_args);
     }
     mediumMarch(radiance, init_rad, ray, t_seg, t, extinct_coeff, scatter_coeff, trace_args);
+    return t;
 }
 
 // Called when a ray enters or originates inside a medium

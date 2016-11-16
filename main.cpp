@@ -143,18 +143,20 @@ int main()
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
 
 #ifdef CORNELL_BOX
-    vec3 position = {278.0f, 273.0f, 800.0f};
-    vec3 look_point = {278.0f, 273.0f, 0.0f};
-    /*
+    //vec3 position = {278.0f, 273.0f, 800.0f};
+    //vec3 look_point = {278.0f, 273.0f, 0.0f};
+
+      // PM test
     vec3 position = {340.0f, 500.0f, 200.0f};
     vec3 look_point = {340.0f, 500.0f, 0.0f};
-    */
+
 #else
     vec3 position = {0.0f, 2.0f, 5.0f};
     vec3 look_point = {0.0f, 0.0f, 0.0f};
 #endif
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
+    Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
 
     // TODO: throw these in a struct for camera scaling
     float fov = 70.0f / 180.0f * PI;
@@ -164,7 +166,13 @@ int main()
 
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs);
-    trace = getTraceFunc(params.trace_type);
+    if(medium_mat)
+    {
+        trace = getTraceMediumFunc(params.trace_type);
+    }else
+    {
+        trace = getTraceFunc(params.trace_type);
+    }
 
     double start_time, end_time;
     start_time = glfwGetTime();
@@ -190,31 +198,13 @@ int main()
             getSample3D(h_sample, &h_samples, sample_index);
 
             TraceArgs trace_args;
+            trace_args.medium_mat = medium_mat;
             trace_args.objects = &(scene.objects);
             trace_args.lights = &(scene.lights);
             trace_args.sample_index = sample_index;
             vec3_copy(trace_args.h_sample, h_sample);
-            //fogmarch(color, ray, trace_args);
-            /*
-            ShadeRec sr;
-            float t0 = intersectTest(&sr, &(scene.objects), ray);
-            if(t0 < TMAX)
-            {
-                if(sr.mat->mat_type == EMISSIVE)
-                {
-                    vec3_scale(color, sr.mat->ce, sr.mat->ke);
-                    maxToOne(color, color);
-                }else if(sr.mat->mat_type == PARTICIPATING)
-                {
-                    vec3 radiance = {0.0f, 0.0f, 0.0f};
-                    Ray new_ray = ray;
-                    vec3_copy(new_ray.origin, sr.hit_point);
-                    raymarch(radiance, new_ray, h_sample, &(scene.objects), &(scene.lights), sample_index);
-                    vec3_copy(color, radiance);
-                }
-            }
-            */
 
+            //fogmarch(color, ray, trace_args);
 
             vec3 radiance;
             trace(radiance, params.max_depth, ray, trace_args);
@@ -241,6 +231,9 @@ int main()
             image[i*3 + 1] = (char)(color[1] * 255.0f);
             image[i*3 + 2] = (char)(color[2] * 255.0f);
         }
+        end_time = glfwGetTime();
+        double sec = end_time - start_time;
+        printf("%f seconds.\n", sec);
         if(SHOW_PROGRESS)
         {
             displayImage(window, viewport, image, frame_res_width, frame_res_height);
@@ -248,8 +241,10 @@ int main()
             int cur_percent = (int)((float)p / (float)(params.num_samples) * 100.0f);
             if(cur_percent > prev_percent)
             {
+                end_time = glfwGetTime();
+                double sec = end_time - start_time;
                 prev_percent = cur_percent;
-                printf("%d%%\n", cur_percent);
+                printf("%d%%\t%f sec\n", cur_percent, sec);
 
             }
         }

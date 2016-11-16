@@ -165,6 +165,15 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
         mat->ke = (float)atof(buffer);
         mat->shadow = false;
         mat->h_samples = NULL;
+    }else if(mat->mat_type == PARTICIPATING)
+    {
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word EXTINCT_COEFF
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->extinct_coeff = (float)atof(buffer);
+
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SCATTER_COEFF
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        mat->scatter_coeff = (float)atof(buffer);
     }else
     {
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED

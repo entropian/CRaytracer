@@ -43,6 +43,8 @@ typedef struct TraceArgs_s
 float raycast(vec3, int, const Ray, TraceArgs trace_args);
 float whittedTrace(vec3, int, const Ray, TraceArgs trace_args);
 float pathTrace(vec3, int, const Ray, TraceArgs trace_args);
+float raycastMedium(vec3, int, const Ray, TraceArgs trace_args);
+float whittedTraceMedium(vec3, int, const Ray, TraceArgs trace_args);
 
 /*
 typedef float (*traceFunc)(vec3, int, const vec3, const Ray,
@@ -70,8 +72,6 @@ traceFunc getTraceFunc(const TraceType trace_type)
     return func;
 }
 
-void raycastMedium(vec3, const int, const Ray, TraceArgs trace_args);
-
 float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
 {
     const SceneObjects *so = trace_args.objects;
@@ -93,10 +93,12 @@ float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
             maxToOne(radiance, radiance);
         }else if(min_sr.mat->mat_type == PARTICIPATING)
         {
+            TraceArgs new_trace_args = trace_args;
+            new_trace_args.medium_mat = min_sr.mat;
             Ray new_ray;
             getPointOnRay(new_ray.origin, ray, min_t);
             vec3_copy(new_ray.direction, ray.direction);
-            raycastMedium(radiance, depth-1, new_ray, trace_args);
+            raycastMedium(radiance, depth-1, new_ray, new_trace_args);
         }else
         {
             // Add ambient component to radiance

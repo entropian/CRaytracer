@@ -349,15 +349,18 @@ void initAreaLights(SceneLights* sl)
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
     rect->shadow = false;
+    /*
     vec3_assign(rect->point, 213.0f, 547.0f, -227.0f);
     vec3_assign(rect->width, 130.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 0.0f, -105.0f);
+    */
     //vec3_assign(rect->point, 213.0f, 800.0f, -227.0f);
-    /*
+
+      // pm test 
     vec3_assign(rect->point, 213.0f, 900.0f, -227.0f);
     vec3_assign(rect->width, 300.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 0.0f, -250.0f);
-    */
+
     vec3_copy(rect->normal, DOWN);
     vec3_copy(rect->mat->ce, area_light_ptr->color);
     rect->mat->ke = area_light_ptr->intensity;
