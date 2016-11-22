@@ -12,7 +12,11 @@ int PPM_write(const char *file_name, const unsigned char *image, const int image
 	}
 
 	FILE *fp;
+#ifdef _MSC_VER
 	fopen_s(&fp, file_name, "wb");
+#else
+  fp = fopen(file_name, "wb");
+#endif
 
 	// Header
 	fprintf(fp, "P6\n");

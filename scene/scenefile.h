@@ -5,15 +5,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
-#include "util/vec.h"
-#include "util/constants.h"
-#include "shapes/shapes.h"
-#include "shapes/instanced.h"
-#include "lights.h"
-#include "materials.h"
-#include "objloader/dbuffer.h"
-#include "sampling.h"
-#include "texture.h"
+#include "../util/vec.h"
+#include "../util/constants.h"
+#include "../shapes/shapes.h"
+#include "../shapes/instanced.h"
+#include "../lights.h"
+#include "../materials.h"
+#include "../objloader/dbuffer.h"
+#include "../sampling.h"
+#include "../texture.h"
 
 bool getPresetColor(vec3 r, const char buffer[])
 {
@@ -89,7 +89,7 @@ Texture* parseTexture(Scene* scene, FILE* fp)
 {
     char buffer[128];
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
+    if(!getNextTokenInFile(buffer, fp)){return NULL;}    // get file name
     Texture tex;
     if(!loadTexture(&tex, buffer))
     {
@@ -154,7 +154,8 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-    strcpy_s(*name, NAME_LENGTH, buffer);
+    //strcpy_s(*name, NAME_LENGTH, buffer);
+    stringCopy(*name, NAME_LENGTH, buffer);
     if(mat->mat_type == EMISSIVE)
     {
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word COLOR
@@ -712,13 +713,15 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
         printf("Loading %s took %f sec.\n", buffer, end - start);
     }else
     {
-        strcpy_s(mesh_file_names[(*num_file_names)++], NAME_LENGTH, buffer);
+        //strcpy_s(mesh_file_names[(*num_file_names)++], NAME_LENGTH, buffer);
+        stringCopy(mesh_file_names[(*num_file_names)++], NAME_LENGTH, buffer);
     }
 
     if(num_mesh != -1)
     {
         int len = strcspn(buffer, ".");
-        strncpy_s(mesh_entry->mesh_name, NAME_LENGTH, buffer, len);
+        //strncpy_s(mesh_entry->mesh_name, NAME_LENGTH, buffer, len);
+        stringNCopy(mesh_entry->mesh_name, NAME_LENGTH, buffer, len);
         mesh_entry->mesh_name[len] = '\0';
     }    
 
@@ -753,7 +756,8 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
 
     if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word MATERIAL
     if(!getNextTokenInFile(buffer, fp)){return -1;}
-    strcpy_s(mesh_entry->mat_name, NAME_LENGTH, buffer);
+    //strcpy_s(mesh_entry->mat_name, NAME_LENGTH, buffer);
+    stringCopy(mesh_entry->mat_name, NAME_LENGTH, buffer);
     
     return num_mesh;
 }

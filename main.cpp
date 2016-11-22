@@ -16,6 +16,7 @@
 #include "lights.h"
 #include "scene/scene.h"
 #include "shading.h"
+//#define CORNELL_BOX
 #include "buildscene.h"
 #include "intersect.h"
 #include "trace.h"
@@ -28,34 +29,19 @@
 
 #define SHOW_PROGRESS 1
 #define PROG
-#define CORNELL_BOX
+
 
 extern double g_traversal_time;
 
 bool EXIT = false;
 int MAX_DEPTH = 0;
 
-vec3 cam_position = {0.0f, 0.0f, 0.0f};
-
-// TODO:
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if(action == GLFW_PRESS)
     {
         switch(key)
         {
-        case GLFW_KEY_A:
-            cam_position[0] -= 0.01f;
-            break;
-        case GLFW_KEY_D:
-            cam_position[0] += 0.01f;
-            break;
-        case GLFW_KEY_W:
-            cam_position[2] -= 0.01f;
-            break;
-        case GLFW_KEY_S:
-            cam_position[2] += 0.01f;
-            break;
         case GLFW_KEY_Q:
             EXIT = true;
             break;
@@ -184,29 +170,9 @@ int main()
             vec3 h_sample;
             getSample3D(h_sample, &h_samples, sample_index);
 
-            ShadeRec sr;
-            float t0 = intersectTest(&sr, &(scene.objects), ray);
-            if(t0 < TMAX)
-            {
-                if(sr.mat->mat_type == EMISSIVE)
-                {
-                    vec3_scale(color, sr.mat->ce, sr.mat->ke);
-                    maxToOne(color, color);
-                }else if(sr.mat->mat_type == PARTICIPATING)
-                {
-                    vec3 radiance = {0.0f, 0.0f, 0.0f};
-                    Ray new_ray = ray;
-                    vec3_copy(new_ray.origin, sr.hit_point);
-                    raymarch(radiance, new_ray, h_sample, &(scene.objects), &(scene.lights), sample_index);
-                    vec3_copy(color, radiance);
-                }
-            }
-
-
-            /*
-              vec3 radiance;
-              trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
-              vec3_add(color, color, radiance);
+            vec3 radiance;
+            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
+            vec3_add(color, color, radiance);
 
             // Photon map
             if(photon_map_status)
@@ -216,7 +182,7 @@ int main()
                                        &caustic_map, &(scene.objects), ray);
                 vec3_add(color, color, pm_color);
             }
-            */
+
             // NEW
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];

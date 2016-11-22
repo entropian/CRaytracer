@@ -30,7 +30,9 @@ void Mesh_copyOBJShape(Mesh* mesh, const OBJShape* obj_shape)
     mesh->num_indices = obj_shape->num_indices;
     mesh->num_face_normals = 0;
     // TODO: Platform
-    strcpy_s(mesh->mat_name, NAME_LENGTH, obj_shape->mat_name);    
-    strcpy_s(mesh->mesh_name, NAME_LENGTH, obj_shape->mesh_name);
+    //strcpy_s(mesh->mat_name, NAME_LENGTH, obj_shape->mat_name);    
+    //strcpy_s(mesh->mesh_name, NAME_LENGTH, obj_shape->mesh_name);
+    stringCopy(mesh->mat_name, NAME_LENGTH, obj_shape->mat_name);    
+    stringCopy(mesh->mesh_name, NAME_LENGTH, obj_shape->mesh_name);
 }
 

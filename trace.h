@@ -184,13 +184,6 @@ float calcFresnelReflectance(const ShadeRec* sr)
 float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                    const Ray ray, const SceneObjects* so, const SceneLights* sl, const int sample_index)
 {
-    // debug variables
-    bool intersected = false, indirect = false, not_tir = false, tir = false;
-    
-    float reflect_t = 0, transmit_t = 0;
-    float kr = 0.0f, kt = 0.0f;
-    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};    
     vec3_copy(radiance, ORIGIN);
     
     float min_t = TMAX;
@@ -199,7 +192,6 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
     // Shading
     if(min_t < TMAX)
     {
-        intersected = true;
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
@@ -228,9 +220,8 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
             // Indirect illumination
             if(depth > 0 && (min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == TRANSPARENT))
             {
-                indirect = true;
-                //float reflect_t;
-                //vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+                float reflect_t;
+                vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
                 reflect_t = calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl, sample_index);
 
                 if(min_sr.mat->mat_type == REFLECTIVE)
@@ -242,15 +233,12 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                 float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
                 if(!totalInternalReflection(&min_sr))
                 {
-                    not_tir = true;
                     // Transmitted radiance
                     vec3 transmit_dir = {0, 0, 0};
                     float eta = calcTransmitDir(transmit_dir, &min_sr);
                     float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
-                    //float kr = calcFresnelReflectance(&min_sr);
-                    //float kt = 1.0f - kr;
-                    kr = calcFresnelReflectance(&min_sr);
-                    kt = 1.0f - kr;
+                    float kr = calcFresnelReflectance(&min_sr);
+                    float kt = 1.0f - kr;
 
                     vec3 btdf;
                     vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
@@ -258,8 +246,8 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     vec3_copy(transmitted_ray.origin, min_sr.hit_point);
                     vec3_copy(transmitted_ray.direction, transmit_dir);
 
-                    //float transmit_t;
-                    //vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
+                    float transmit_t;
+                    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
                     transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
                     vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                     vec3_mult(transmitted_illum, transmitted_illum, btdf);
@@ -281,8 +269,6 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
                     vec3_add(radiance, radiance, transmitted_illum);
                 }else
                 {
-
-                    tir = true;
                     vec3 color_filter;                    
                     if(ndotwo > 0.0f)
                     {

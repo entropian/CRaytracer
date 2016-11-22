@@ -2,8 +2,11 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
-
+#ifdef _MSC_VER
 typedef struct __declspec(align(16)) vec3_4_s
+#else
+typedef struct __attribute__((aligned(16))) vec3_4_s
+#endif
 {
     __m128 x, y, z;
 }vec3_4;

@@ -20,9 +20,8 @@
 #include "shading.h"
 #include "objloader/objloader.h"
 #include "mesh.h"
-#include "bsphere.h"
 
-#define CORNELL_BOX
+//#define CORNELL_BOX
 
 // Assuming mesh->normals and mesh->face_normals are uninitialized
 void calcTriangleNormals(Mesh* mesh)
@@ -536,8 +535,8 @@ void initSceneLights(SceneLights* sl)
     (sl->num_lights)++;    
     */
 
-    initAreaLights(sl);
-    //initEnvLight(sl);
+    //initAreaLights(sl);
+    initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
 }

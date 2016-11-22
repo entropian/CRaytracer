@@ -53,7 +53,8 @@ void parseConfigFile(ConfigParams* cp)
         if(strcmp(buffer, "scene_file") == 0)
         {
             getNextTokenInFile(buffer, fp);
-            strcpy_s(cp->file_name, NAME_LENGTH, buffer);
+            //strcpy_s(cp->file_name, NAME_LENGTH, buffer);
+            stringCopy(cp->file_name, NAME_LENGTH, buffer);
         }else if(strcmp(buffer, "window_width") == 0)
         {
             getNextTokenInFile(buffer, fp);

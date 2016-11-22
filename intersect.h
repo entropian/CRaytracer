@@ -6,6 +6,7 @@
 #include "lights.h"
 #include "accelerator/uniformgrid.h"
 #include "accelerator/bvh.h"
+#include "util/ray.h"
 
 #define MEASURE_TRAVERSAL_TIME
 

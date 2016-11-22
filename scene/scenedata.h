@@ -1,13 +1,13 @@
 #pragma once
 
-#include "shapes/shapes.h"
-#include "shapes/instanced.h"
-#include "lights.h"
-#include "accelerator/uniformgrid.h"
-#include "accelerator/bvh.h"
-#include "accelerator/bvh4.h"
-#include "objloader/objloader.h"
-#include "texture.h"
+#include "../shapes/shapes.h"
+#include "../shapes/instanced.h"
+#include "../lights.h"
+#include "../accelerator/uniformgrid.h"
+#include "../accelerator/bvh.h"
+#include "../accelerator/bvh4.h"
+#include "../objloader/objloader.h"
+#include "../texture.h"
 
 enum AccelType
 {
@@ -124,7 +124,8 @@ SceneMaterials SceneMaterials_create()
     sm.names = (char**)malloc(sizeof(char*) * DEFAULT_MATERIAL);
     initDefaultMatteMat(&(sm.materials[0]), GREY);
     sm.names[0] = (char*)malloc(sizeof(char) * NAME_LENGTH);
-    strcpy_s(sm.names[0], NAME_LENGTH, "DEFAULT");
+    //strcpy_s(sm.names[0], NAME_LENGTH, "DEFAULT");
+    stringCopy(sm.names[0], NAME_LENGTH, "DEFAULT");
     sm.size = 1;
     sm.max = DEFAULT_MATERIAL;
     return sm;
@@ -156,7 +157,8 @@ Material* SceneMaterials_push(SceneMaterials* sm, const Material* mat, const cha
     DBuffer name_buffer;
     DBuffer_assume(&name_buffer, (char*)sm->names, sm->size, sm->max, sizeof(char*));
     char* mat_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
-    strcpy_s(mat_name, NAME_LENGTH, name);
+    //strcpy_s(mat_name, NAME_LENGTH, name);
+    stringCopy(mat_name, NAME_LENGTH, name);
     DBuffer_push(name_buffer, mat_name);
     
     sm->materials = (Material*)(mat_buffer.data);

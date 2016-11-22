@@ -13,7 +13,7 @@ static void stringCopy(char* dest, const int max_len, const char* src)
 {
 #ifdef _MSC_VER
     strcpy_s(dest, max_len, src);
-#elif
+#else
     strcpy(dest, src);
 #endif
 }
@@ -22,7 +22,7 @@ static void stringNCopy(char* dest, const int max_len, const char*src, const int
 {
 #ifdef _MSC_VER
     strncpy_s(dest, max_len, src, len);
-#elif
+#else
     strncpy(dest, src, len);
 #endif
 }
@@ -39,6 +39,16 @@ struct OBJShape_s
     char mesh_name[OBJ_NAME_LENGTH];
 };
 typedef struct OBJShape_s OBJShape;
+
+typedef struct OBJMaterial_s
+{
+    float ambient[3];
+    float diffuse[3];
+    float specular[3];
+    float emissive[3];
+    
+    int illum;
+}OBJMaterial;
 
 void OBJShape_destroy(OBJShape* obj_shape);
 
@@ -161,14 +171,19 @@ static void OBJParseString(char buffer[], const char** str)
 {
     *str += strspn(*str, " \t");
     int length = strcspn(*str, " \t\r\0");
-    strncpy_s(buffer, 128, *str, length);
+    stringNCopy(buffer, 128, *str, length);
+    //strncpy_s(buffer, 128, *str, length);
     buffer[length] = '\0';
     *str += length;
 }
 
 static inline void getVertexIndexString(char* string, const VertexIndex* vi)
 {
+#ifdef _MSC_VER
     sprintf_s(string, 256, "p%dn%dt%d", vi->v_idx, vi->vn_idx, vi->vt_idx);
+#else
+    sprintf(string, "p%dn%dt%d", vi->v_idx, vi->vn_idx, vi->vt_idx);
+#endif
 }
 
 static inline bool vertexIndexComp(const VertexIndex* a, const VertexIndex* b)
