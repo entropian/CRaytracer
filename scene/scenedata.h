@@ -86,6 +86,7 @@ Texture* SceneTextures_push(SceneTextures* st, const Texture* tex, const char* n
     DBuffer name_buffer;
     DBuffer_assume(&name_buffer, (char*)st->names, st->size, st->max, sizeof(char*));
     char* tex_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
+    stringCopy(tex_name, MAX_NAME_LENGTH, name);
     DBuffer_push(name_buffer, tex_name);
 
     st->textures = (Texture*)(tex_buffer.data);

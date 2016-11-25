@@ -3,7 +3,7 @@ window_width  960
 window_height  960
 image_width  480
 image_height 480
-num_samples  256
+num_samples  64
 num_sample_sets 83
 max_depth  5
 trace_type RAYCAST
@@ -15,5 +15,5 @@ num_estimate 1500
 photon_depth 5
 photon_radius 10
 caustic_radius 0.6
-image_save no
+image_save yes
 

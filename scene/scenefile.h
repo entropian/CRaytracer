@@ -85,7 +85,7 @@ bool parseColor(vec3 r, FILE* fp)
 }
 
 // Need to pass SceneTextures
-Texture* parseTexture(Scene* scene, FILE* fp)
+Texture* parseTexture(Scene* scene, FILE* fp, char *tex_file_name)
 {
     char buffer[128];
 
@@ -101,6 +101,7 @@ Texture* parseTexture(Scene* scene, FILE* fp)
     {
         return NULL;
     }
+    stringCopy(tex_file_name, MAX_NAME_LENGTH, buffer);
     return Scene_addTexture(scene, &tex, buffer);
 }
 
@@ -128,7 +129,14 @@ Texture* parseTextureFileName(Scene* scene, const char *file_name)
     return Scene_addTexture(scene, &tex, file_name);
 }
 
-bool parseTextures(Material* mat, Scene* scene, FILE* fp)
+typedef struct MatTexAux_s
+{
+    char mat_name[MAX_NAME_LENGTH];
+    char tex_name[MAX_NAME_LENGTH];
+    TextureType tex_type;
+}MatTexAux;
+
+bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, const char *mat_name)
 {
     char buffer[128];
     mat->tex_flags = NO_TEXTURE;
@@ -147,28 +155,44 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp)
 
     if(strcmp(buffer, "DIFFUSE_MAP") == 0)
     {
-        tex_ptr = parseTexture(scene, fp);
+        char tex_file_name[MAX_NAME_LENGTH];
+        tex_ptr = parseTexture(scene, fp, tex_file_name);
         if(tex_ptr)
         {
+            /*
             mat->tex_array[0] = tex_ptr;
             mat->tex_flags |= DIFFUSE;
+            */
+            MatTexAux pair;
+            pair.tex_type = DIFFUSE;
+            stringCopy(pair.tex_name, MAX_NAME_LENGTH, tex_file_name);
+            stringCopy(pair.mat_name, MAX_NAME_LENGTH, mat_name);
+            DBuffer_push(*mat_tex_aux, pair);
         }
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type
     }
 
     if(strcmp(buffer, "NORMAL_MAP") == 0)
     {
-        tex_ptr = parseTexture(scene, fp);
+        char tex_file_name[MAX_NAME_LENGTH];
+        tex_ptr = parseTexture(scene, fp, tex_file_name);
         if(tex_ptr)
         {
+            /*
             mat->tex_array[1] = tex_ptr;
             mat->tex_flags |= NORMAL;
+            */
+            MatTexAux pair;
+            pair.tex_type = NORMAL;
+            stringCopy(pair.tex_name, MAX_NAME_LENGTH, tex_file_name);
+            stringCopy(pair.mat_name, MAX_NAME_LENGTH, mat_name);
+            DBuffer_push(*mat_tex_aux, pair);
         }
     }
     return true;
 }
 
-bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
+bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
 {
     char buffer[128];
     char type_name[128];
@@ -277,12 +301,12 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
         return false;
 
     Texture:
-        parseTextures(mat, scene, fp);
+        parseTextures(mat, scene, fp, mat_tex_aux, *name);
         return true;
     }
 }
 
-int parseMaterials(Scene* scene, FILE* fp)
+int parseMaterials(Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
 {
     char buffer[128];
     while(getNextTokenInFile(buffer, fp) && strcmp(buffer, "END_MATERIALS") != 0)
@@ -291,7 +315,7 @@ int parseMaterials(Scene* scene, FILE* fp)
         {
             Material mat;
             char* name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
-            parseMatEntry(&mat, &name, scene, fp);
+            parseMatEntry(&mat, &name, scene, fp, mat_tex_aux);
             Scene_addMaterial(scene, &mat, name);
         }
     }

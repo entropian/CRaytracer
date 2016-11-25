@@ -44,6 +44,11 @@ Material* Scene_addMaterial(Scene* scene, const Material* mat, const char* name)
     return SceneMaterials_push(&(scene->materials), mat, name);
 }
 
+Material* Scene_findMaterial(Scene* scene, const char* name)
+{
+    return findMaterial(name, &(scene->materials));
+}
+
 Texture* Scene_addTexture(Scene* scene, const Texture* tex, const char* name)
 {
     return SceneTextures_push(&(scene->textures), tex, name);
@@ -62,11 +67,6 @@ Mesh* Scene_addMesh(Scene* scene, const Mesh* mesh)
 mat3* Scene_addTransform(Scene* scene, const mat3* mat)
 {
     return SceneTransforms_push(&(scene->transforms), mat);
-}
-
-Material* Scene_findMaterial(Scene* scene, const char* name)
-{
-    return findMaterial(name, &(scene->materials));
 }
 
 Mesh** Scene_findMeshes(int* num_meshes, const Scene* scene, const char* name)

@@ -37,8 +37,9 @@ typedef struct Material_s
     Texture* tex_array[3];
 }Material;
 
-const int DIFFUSE_MAP_INDEX = 0;
-const int NORMAL_MAP_INDEX = 1;
+const unsigned int DIFFUSE_MAP_INDEX = 0;
+const unsigned int NORMAL_MAP_INDEX = 1;
+const unsigned int SPEC_MAP_INDEX = 2;
 
 MatType getMatTypeFromString(const char* str);
 void printMaterial(const Material* mat);
