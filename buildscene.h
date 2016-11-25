@@ -1,4 +1,4 @@
-#pragma once
+
 
 #include "GLFW/glfw3.h"
 #include <cstdio>
@@ -82,7 +82,7 @@ void calcTriangleNormals(Mesh* mesh)
         normal_index = mesh->indices[i+2] * 3;
         mesh->normals[normal_index] += mesh->face_normals[face_normal_index];
         mesh->normals[normal_index+1] += mesh->face_normals[face_normal_index+1];
-        mesh->normals[normal_index+2] += mesh->face_normals[face_normal_index+2];                        
+        mesh->normals[normal_index+2] += mesh->face_normals[face_normal_index+2];
     }
     for(int i = 0; i < mesh->num_normals; i += 3)
     {
@@ -169,7 +169,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
 
     int num_mesh_found = 0;
     Mesh** meshes = Scene_findMeshes(&num_mesh_found, scene, mesh_entry.mesh_name);
-    Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
+    Material* mat_default = Scene_findMaterial(scene, mesh_entry.mat_name);
     mat3 inv_scale_mat, normal_mat;
     mat3_scale_inverse(inv_scale_mat, mesh_entry.scaling);
     mat3_mult(normal_mat, rotation, inv_scale_mat);
@@ -178,6 +178,11 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
     for(int i = 0; i < num_mesh_found; i++)
     {
         Mesh* mesh = meshes[i];
+        Material *mat_for_mesh = Scene_findMaterial(scene, mesh->mat_name);
+        if(!mat_for_mesh)
+        {
+            mat_for_mesh = mat_default;
+        }
         triangle_count += mesh->num_indices / 3;
         for(int j = 0; j < mesh->num_indices; j += 3)
         {
@@ -230,7 +235,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
                 vec3_copy(mesh_tri->normal, new_face_normal);                     
                 mesh_tri->shadow = mesh_entry.shadow;
                 mesh_tri->mesh_ptr = mesh;
-                mesh_tri->mat = mat;                                    
+                mesh_tri->mat = mat_for_mesh;
                 Object_t obj = {FLAT_TRIANGLE, mesh_tri};
                 Scene_addObject(scene, &obj);
             }else
@@ -247,7 +252,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
 
                 mesh_tri->shadow = mesh_entry.shadow;
                 mesh_tri->mesh_ptr = mesh;
-                mesh_tri->mat = mat;                                    
+                mesh_tri->mat = mat_for_mesh;
                 Object_t obj = {SMOOTH_TRIANGLE, mesh_tri};
                 Scene_addObject(scene, &obj);                    
             }                
@@ -293,18 +298,104 @@ void initSceneObjects(Scene* scene, const char* scenefile)
             getNextTokenInFile(buffer, fp);
             if(strcmp(buffer, "MESH") == 0)
             {
-                OBJShape* shapes = NULL;
-                int num_mesh;
+                OBJShape *shapes = NULL;
+                OBJMaterial *materials = NULL;
+                int num_mesh = 0;
+                int num_mat = 0;
                 char mesh_file_names[MAX_MESH][NAME_LENGTH];
                 int num_file_names = 0;
                 MeshEntry mesh_entry;
-                num_mesh = parseMesh(&mesh_entry, &shapes, mesh_file_names, &num_file_names, fp);
+                parseMesh(&mesh_entry, &shapes, &materials, &num_mesh, &num_mat,
+                          mesh_file_names, &num_file_names, fp);
+                
+                for(int i = 0; i < num_mat; i++)
+                {
+                    const OBJMaterial *obj_mat = &(materials[i]);
+                    Material material;
+                    initMaterial(&material);
+                    material.shadow = true;
+                    vec3_assign(material.ca, obj_mat->ambient[0], obj_mat->ambient[1], obj_mat->ambient[2]);
+                    vec3_assign(material.cd, obj_mat->diffuse[0], obj_mat->diffuse[1], obj_mat->diffuse[2]);
+                    vec3_assign(material.cs, obj_mat->specular[0], obj_mat->specular[1], obj_mat->specular[2]);
+                    vec3_assign(material.ce, obj_mat->emissive[0], obj_mat->emissive[1], obj_mat->emissive[2]);
+                    vec3_assign(material.cf_in, obj_mat->transmittance[0], obj_mat->transmittance[1],
+                                obj_mat->transmittance[2]);
+                    vec3_copy(material.cf_out, WHITE);
+                    material.ka = material.kd = material.ks = material.ke = 1.0f;
+                    material.exp = obj_mat->shininess;
+                    material.ior_in = obj_mat->ior;
+                    material.ior_out = 1.0f;
+
+                    if(obj_mat->illum == 2)
+                    {
+                        if(material.cs[0] > 0.0f || material.cs[1] > 0.0f || material.cs[1] > 0.0f)
+                        {
+                            material.mat_type = PHONG;
+                        }else
+                        {
+                            material.mat_type = MATTE;
+                        }
+                    }else if(obj_mat->illum == 5)
+                    {
+                        material.mat_type = REFLECTIVE;
+                        // TODO: Not sure how to set kr
+                        material.kr = 1.0f;
+                    }else if(obj_mat->illum == 7)
+                    {
+                        material.mat_type = TRANSPARENT;
+                    }else
+                    {
+                        material.mat_type = INVALID_MAT_TYPE;
+                    }
+
+                    if(obj_mat->diffuse_map[0] != '\0')
+                    {
+                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->diffuse_map);
+                        if(tex_ptr)
+                        {
+                            setMaterialDiffuseTexPtr(&material, tex_ptr);
+                            material.tex_flags |= DIFFUSE;
+                        }
+                    }
+                    if(obj_mat->normal_map[0] != '\0')
+                    {
+                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->normal_map);
+                        if(tex_ptr)
+                        {
+                            setMaterialNormalTexPtr(&material, tex_ptr);
+                            material.tex_flags |= NORMAL;
+                        }
+                    }
+                    // Not yet supported
+                    /*                      
+                    if(obj_mat->ambient_map[0] != '\0')
+                    {
+                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->ambient_map);
+                    }
+                    if(obj_mat->specular_map[0] != '\0')
+                    {
+                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->specular_map);
+                    }                    
+                    if(obj_mat->shininess_map[0] != '\0')
+                    {
+                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->shininess_map);
+                    }
+                    if(obj_mat->alpha_map[0] != '\0')
+                    {
+                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->alpha_map);
+                    }
+                    */
+                    Scene_addMaterial(scene, &material, obj_mat->name);                    
+                }
+                if(materials){free(materials);}
+                printf("Mesh material names\n");
                 for(int i = 0; i < num_mesh; i++)
                 {
                     Mesh mesh;
-                    Mesh_copyOBJShape(&mesh, &(shapes[i]));
+                    Mesh_copyOBJShape(&mesh, &(shapes[i]));                    
                     calcTriangleNormals(&mesh);
-                    Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
+                    //Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
+                    Material* mat = Scene_findMaterial(scene, mesh.mat_name);
                     if(mat->tex_flags & NORMAL)
                     {
                         calcTangentVec(&mesh);
@@ -589,4 +680,5 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
     // NOTE: taken out to main so that projection map can be built before the
     // mesh triangles are scrambled.
     //buildSceneAccel(scene);
+    //Scene_printMaterials(scene);
 }

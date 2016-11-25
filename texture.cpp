@@ -24,7 +24,7 @@ void freeTexture(Texture* tex)
 }
 
 bool getTexColor(vec3 color_out, const Texture* texture, const vec2 texcoord)
-{    
+{
     float u_float = texcoord[0];
     if(u_float < 0.0f)
     {

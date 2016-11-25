@@ -131,7 +131,8 @@ int main()
     vec3 position = {278.0f, 273.0f, 800.0f};
     vec3 look_point = {278.0f, 273.0f, 0.0f};
 #else
-    vec3 position = {0.0f, 2.0f, 5.0f};
+    //vec3 position = {0.0f, 2.0f, 5.0f};
+    vec3 position = {0.0f, 50.0f, 3.0f};
     vec3 look_point = {0.0f, 0.0f, 0.0f};
 #endif
     vec3 up_vec = {0.0f, 1.0f, 0.0f};

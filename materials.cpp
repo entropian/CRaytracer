@@ -32,11 +32,35 @@ void printMaterial(const Material* mat)
 {
     printf("shadow %s\n", mat->shadow ? "true" : "false");
     printf("ka %f, kd %f\n", mat->ka, mat->kd);
+    printf("ks %f, ke %f\n", mat->ks, mat->ke);
+    printVec3WithText("ca", mat->cd);
     printVec3WithText("cd", mat->cd);
     printVec3WithText("cs", mat->cs);
+    printVec3WithText("ce", mat->cs);
     printf("ior_in %f, ior_out %f\n", mat->ior_in, mat->ior_out);
     printVec3WithText("cf_in", mat->cf_in);
     printVec3WithText("cf_out", mat->cf_out);
+}
+
+void initMaterial(Material *mat)
+{
+    mat->shadow = false;
+    mat->mat_type = INVALID_MAT_TYPE;
+    mat->tex_flags = 0;
+    mat->ka = mat->kd = mat->ks = mat->ke = mat->kr = mat->exp = 0.0f;
+    mat->ior_in = mat->ior_out = 0.0f;
+    vec3_copy(mat->ca, BLACK);
+    vec3_copy(mat->cd, BLACK);
+    vec3_copy(mat->cs, BLACK);
+    vec3_copy(mat->cr, BLACK);
+    vec3_copy(mat->ce, BLACK);
+    vec3_copy(mat->cf_in, BLACK);
+    vec3_copy(mat->cf_out, BLACK);
+    mat->h_samples = NULL;
+    for(int i = 0; i < 3; i++)
+    {
+        mat->tex_array[i] = NULL;
+    }
 }
 
 void initDefaultMatteMat(Material* mat, const vec3 color)
@@ -64,4 +88,19 @@ void initDefaultPhongMat(Material* mat, const vec3 color)
     mat->shadow = true;
     mat->h_samples = genHemisphereSamples(MULTIJITTERED, DEFAULT_GLOSSINESS);
     mat->tex_flags = NO_TEXTURE;    
+}
+
+void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv)
+{
+    getTexColor(texel, mat->tex_array[DIFFUSE_MAP_INDEX], uv);
+}
+
+void setMaterialDiffuseTexPtr(Material *mat, Texture *tex)
+{
+    mat->tex_array[DIFFUSE_MAP_INDEX] = tex;
+}
+
+void setMaterialNormalTexPtr(Material *mat, Texture *tex)
+{
+    mat->tex_array[NORMAL_MAP_INDEX] = tex;
 }

@@ -55,7 +55,7 @@ NORMAL_MAP textures/sponza_arch_ddn.png
 END_MATERIALS
 
 
-OBJECT PLANE
+#OBJECT PLANE
 CAST_SHADOW yes
 POINT 0.0 -1.0 -14.0
 NORMAL 0.0 1.0 0.0
@@ -89,7 +89,7 @@ LOCATION 0.5 0.0 -1
 Orientation 0 0 0
 MATERIAL trans1
 
-OBJECT MESH
+#OBJECT MESH
 FILE models/buddha.obj
 CAST_SHADOW yes
 SMOOTH yes
@@ -104,7 +104,7 @@ CAST_SHADOW yes
 SMOOTH yes
 SCALING 0.5 0.5 0.5
 LOCATION -1.2 1.0 -1
-Orientation 0 0 0
+Orientation 0 0 0, 
 MATERIAL matte2
 
 #OBJECT MESH
@@ -112,6 +112,15 @@ FILE models/cube.obj
 CAST_SHADOW yes
 SMOOTH yes
 SCALING 0.5 0.5 0.5
+LOCATION 0.5 1.0 -1
+Orientation 0 0 0
+MATERIAL matte2
+
+OBJECT MESH
+FILE models/sponza/sponza.obj
+CAST_SHADOW yes
+SMOOTH yes
+SCALING 0.03 0.03 0.03
 LOCATION 0.5 1.0 -1
 Orientation 0 0 0
 MATERIAL matte2

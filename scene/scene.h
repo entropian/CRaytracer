@@ -49,6 +49,11 @@ Texture* Scene_addTexture(Scene* scene, const Texture* tex, const char* name)
     return SceneTextures_push(&(scene->textures), tex, name);
 }
 
+Texture* Scene_findTexture(Scene* scene, const char *name)
+{
+    return findTexture(name, &(scene->textures));
+}
+
 Mesh* Scene_addMesh(Scene* scene, const Mesh* mesh)
 {
     return SceneMeshes_push(&(scene->meshes), mesh);
@@ -72,4 +77,14 @@ Mesh** Scene_findMeshes(int* num_meshes, const Scene* scene, const char* name)
 int Scene_getNumMaterials(Scene* scene)
 {
     return scene->materials.size;
+}
+
+void Scene_printMaterials(Scene *scene)
+{
+    SceneMaterials *sm = &(scene->materials);
+    for(int i = 0; i < sm->size; i++)
+    {
+        printf("%s\n", sm->names[i]);
+        printMaterial(&(sm->materials[i]));
+    }
 }

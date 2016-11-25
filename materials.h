@@ -34,7 +34,7 @@ typedef struct Material_s
     vec3 ca, cd, cs, ce, cr;
     vec3 cf_in, cf_out;
     Samples3D* h_samples;
-    Texture* tex_array[3];    
+    Texture* tex_array[3];
 }Material;
 
 const int DIFFUSE_MAP_INDEX = 0;
@@ -42,5 +42,9 @@ const int NORMAL_MAP_INDEX = 1;
 
 MatType getMatTypeFromString(const char* str);
 void printMaterial(const Material* mat);
+void initMaterial(Material *mat);
 void initDefaultMatteMat(Material* mat, const vec3 color);
 void initDefaultPhongMat(Material* mat, const vec3 color);
+void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv);
+void setMaterialDiffuseTexPtr(Material *mat, Texture *tex);
+void setMaterialNormalTexPtr(Material *mat, Texture *tex);

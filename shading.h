@@ -19,7 +19,8 @@ void diffuseBRDF(vec3 f, const ShadeRec* sr)
     if(sr->mat->tex_flags & DIFFUSE)
     {
         vec3 texel;
-        getTexColor(texel, sr->mat->tex_array[DIFFUSE_MAP_INDEX], sr->uv);
+        //getTexColor(texel, sr->mat->tex_array[DIFFUSE_MAP_INDEX], sr->uv);
+        getMaterialDiffuseTexColor(texel, sr->mat, sr->uv);
         vec3_scale(reflectance, texel, sr->mat->kd);        
     }else
     {

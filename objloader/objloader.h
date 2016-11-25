@@ -7,7 +7,8 @@
 #include "dbuffer.h"
 #include "hashindex.h"
 
-#define OBJ_NAME_LENGTH 32
+#define OBJ_NAME_LENGTH 64
+#define OBJ_PATH_LENGTH 128
 
 static void stringCopy(char* dest, const int max_len, const char* src)
 {
@@ -40,17 +41,86 @@ struct OBJShape_s
 };
 typedef struct OBJShape_s OBJShape;
 
+void OBJShape_init(OBJShape *obj_shape);
+
 typedef struct OBJMaterial_s
 {
-    float ambient[3];
-    float diffuse[3];
-    float specular[3];
-    float emissive[3];
+    float ambient[3]; // Ka
+    float diffuse[3]; // Kd
+    float specular[3]; // ks
+    float emissive[3]; // Ke
+    float transmittance[3]; // Tf
+    float shininess; // Ns
+    float ior; // Ni
+    float dissolve; // d
+    int illum;  // 1 for diffuse, 2 for specular, 5 for reflective, 7 for transparent
     
-    int illum;
+    char name[OBJ_NAME_LENGTH];
+    char diffuse_map[OBJ_PATH_LENGTH]; // map_Kd
+    char specular_map[OBJ_PATH_LENGTH]; // map_Ks
+    char ambient_map[OBJ_PATH_LENGTH]; // map_Ka
+    char shininess_map[OBJ_PATH_LENGTH]; // map_Ns
+    char normal_map[OBJ_PATH_LENGTH]; // map_bump
+    char alpha_map[OBJ_PATH_LENGTH]; // map_d       
 }OBJMaterial;
 
+void OBJMaterial_init(OBJMaterial *obj_material);
+    
 void OBJShape_destroy(OBJShape* obj_shape);
+void OBJMaterial_destroy(OBJMaterial *obj_material);
+
+static void printOBJMaterials(const OBJMaterial *obj_materials, const int num_mat)
+{
+    for(int i = 0; i < num_mat; i++)
+    {
+        const OBJMaterial *material = &(obj_materials[i]);
+        printf("Ambient: ");
+        for(int j = 0; j < 3; j++)
+        {
+            printf("%f ", material->ambient[j]);
+        }
+        printf("\n");
+
+        printf("Diffuse: ");
+        for(int j = 0; j < 3; j++)
+        {
+            printf("%f ", material->diffuse[j]);
+        }
+        printf("\n");
+
+        printf("Specular: ");
+        for(int j = 0; j < 3; j++)
+        {
+            printf("%f ", material->specular[j]);
+        }
+        printf("\n");
+
+        printf("Emissive: ");
+        for(int j = 0; j < 3; j++)
+        {
+            printf("%f ", material->emissive[j]);
+        }
+        printf("\n");
+
+        printf("Transmittance: ");
+        for(int j = 0; j < 3; j++)
+        {
+            printf("%f ", material->transmittance[j]);
+        }
+        printf("\n");
+
+        printf("Shininess: %f\n", material->shininess);
+        printf("Index of refraction: %f\n", material->ior);
+        printf("Dissolve: %f\n", material->dissolve);
+        printf("Name: %s\n", material->name);
+        printf("Ambient map: %s\n", material->ambient_map);
+        printf("Diffuse map: %s\n", material->diffuse_map);
+        printf("Specular map: %s\n", material->specular_map);
+        printf("Shininess map: %s\n", material->shininess_map);
+        printf("Normal map: %s\n", material->normal_map);
+        printf("Alpha map: %s\n", material->alpha_map);                    
+    }
+}
 
 typedef struct VertexIndex_s
 {
@@ -302,10 +372,47 @@ static bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, con
     return true;
 }
 
-int loadOBJ(OBJShape** shapes, const char*  file_name);
+bool loadOBJ(OBJShape** shapes, OBJMaterial **materials, int *num_shape, int *num_mat, const char*  file_name);
 
 #ifdef OBJ_LOADER_IMPLEMENTATION
-int loadOBJ(OBJShape** shapes, const char*  file_name)
+
+void OBJShape_init(OBJShape *obj_shape)
+{
+    obj_shape->positions = NULL;
+    obj_shape->normals = NULL;
+    obj_shape->texcoords = NULL;
+    obj_shape->indices = NULL;
+    obj_shape->num_positions = 0;
+    obj_shape->num_normals = 0;
+    obj_shape->num_texcoords = 0;
+    obj_shape->num_indices = 0;
+    obj_shape->mat_name[0] = '\0';
+    obj_shape->mesh_name[0] = '\0';    
+}
+
+void OBJMaterial_init(OBJMaterial *obj_material)
+{
+    for(int i = 0; i < 3; i++)
+    {
+        obj_material->ambient[i] = 0.0f;
+        obj_material->diffuse[i] = 0.0f;
+        obj_material->specular[i] = 0.0f;
+        obj_material->emissive[i] = 0.0f;
+        obj_material->transmittance[i] = 0.0f;
+    }
+    obj_material->shininess = 1.0f;
+    obj_material->ior = 1.0f;
+    obj_material->dissolve = 1.0f;
+    obj_material->illum = 1;
+    obj_material->ambient_map[0] = '\0';
+    obj_material->diffuse_map[0] = '\0';
+    obj_material->specular_map[0] = '\0';
+    obj_material->shininess_map[0] = '\0';
+    obj_material->normal_map[0] = '\0';
+    obj_material->alpha_map[0] = '\0';
+}
+
+bool loadMTL(DBuffer *obj_materials, const char *file_name)
 {
     FILE* fp;
 #ifdef _MSC_VER
@@ -316,7 +423,233 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     if(!fp)
     {
         fprintf(stderr, "Cannot open file %s\n", file_name);
-        return -1;
+        return false;
+    }
+
+    char base_path[OBJ_PATH_LENGTH];
+    base_path[0] = '\0';
+    unsigned int char_index;
+    for(char_index = 0; file_name[char_index] != '\0'; char_index++){}
+    for(; char_index > 0 && file_name[char_index] != '\\' && file_name[char_index] != '/'; char_index--){}
+    stringNCopy(base_path, OBJ_PATH_LENGTH, file_name, char_index + 1);
+    
+    OBJMaterial material;
+    OBJMaterial_init(&material);
+
+    int read_result;
+    char line_buffer[1024];
+
+    while(OBJGetLine(fp, &read_result, line_buffer, 1024))
+    {
+        // Skip empty line
+        if(read_result == 0)
+        {
+            continue;
+        }
+
+        const char* line_ptr = &(line_buffer[0]);
+        // Skip leading space
+        line_ptr += strspn(line_ptr, " \t");
+
+        if(line_ptr[0] == '\0' || line_ptr[0] == '#')
+        {
+            continue;
+        }
+
+        if(strncmp(line_ptr, "newmtl", 6) == 0 && line_ptr[6] == ' ')
+        {
+            if(!(material.name[0] == '\0'))
+            {
+                DBuffer_push(*obj_materials, material);
+            }
+            OBJMaterial_init(&material);
+            char name_buffer[OBJ_PATH_LENGTH];
+            line_ptr += 7;
+#ifdef _MSC_VER
+            sscanf_s(line_ptr, "%s", name_buffer, OBJ_PATH_LENGTH);
+#else
+            sscanf(line_ptr, "%s", name_buffer);
+#endif
+            strcpy(material.name, name_buffer);
+            continue;
+        }
+
+        // Ambient
+        if(line_ptr[0] == 'K' && line_ptr[1] == 'a' && line_ptr[2] == ' ')
+        {
+            line_ptr += 3;
+            float r, g, b;
+            OBJParseFloat3(&r, &g, &b, &line_ptr);
+            material.ambient[0] = r;
+            material.ambient[1] = g;
+            material.ambient[2] = b;
+            continue;
+        }
+
+        // Diffuse
+        if(line_ptr[0] == 'K' && line_ptr[1] == 'd' && line_ptr[2] == ' ')
+        {
+            line_ptr += 3;
+            float r, g, b;
+            OBJParseFloat3(&r, &g, &b, &line_ptr);
+            material.diffuse[0] = r;
+            material.diffuse[1] = g;
+            material.diffuse[2] = b;
+            continue;
+        }
+
+        // Specular
+        if(line_ptr[0] == 'K' && line_ptr[1] == 's' && line_ptr[2] == ' ')
+        {
+            line_ptr += 3;
+            float r, g, b;
+            OBJParseFloat3(&r, &g, &b, &line_ptr);
+            material.specular[0] = r;
+            material.specular[1] = g;
+            material.specular[2] = b;
+            continue;
+        }
+
+        // Emissive
+        if(line_ptr[0] == 'K' && line_ptr[1] == 'e' && line_ptr[2] == ' ')
+        {
+            line_ptr += 3;
+            float r, g, b;
+            OBJParseFloat3(&r, &g, &b, &line_ptr);
+            material.emissive[0] = r;
+            material.emissive[1] = g;
+            material.emissive[2] = b;
+            continue;
+        }
+
+        // Transmittance
+        if(line_ptr[0] == 'K' && line_ptr[1] == 'e' && line_ptr[2] == ' ')
+        {
+            line_ptr += 3;
+            float r, g, b;
+            OBJParseFloat3(&r, &g, &b, &line_ptr);
+            material.transmittance[0] = r;
+            material.transmittance[1] = g;
+            material.transmittance[2] = b;
+            continue;
+        }
+
+        // Index of refraction
+        if(line_ptr[0] == 'N' && line_ptr[1] == 'i' && line_ptr[2] == ' ')
+        {
+            line_ptr += 3;
+            material.ior = OBJParseInt(&line_ptr);
+            continue;
+        }
+
+        // Shininess
+        if(line_ptr[0] == 'N' && line_ptr[1] == 's' && line_ptr[2] == ' ')
+        {
+            line_ptr += 3;
+            material.shininess = OBJParseInt(&line_ptr);
+            continue;
+        }
+
+        // illum model
+        if(strncmp(line_ptr, "illum", 5) == 0 && line_ptr[5] == ' ')
+        {
+            line_ptr += 6;
+            material.illum = OBJParseInt(&line_ptr);
+            continue;
+        }
+
+        // Dissolve
+        if(line_ptr[0] == 'd' && line_ptr[1] == ' ')
+        {
+            line_ptr += 2;
+            material.dissolve = OBJParseInt(&line_ptr);
+            continue;
+        }
+        if(line_ptr[0] == 'T' && line_ptr[1] == 'r' && line_ptr[2] == ' ')
+        {
+            line_ptr += 3;
+            material.dissolve = 1.0f - OBJParseInt(&line_ptr);
+            continue;
+        }
+
+        // Ambient map
+        if(strncmp(line_ptr, "map_Ka", 6) == 0 && line_ptr[6] == ' ')
+        {
+            line_ptr += 7;
+            //stringCopy(material.ambient_map, OBJ_PATH_LENGTH, line_ptr);
+            stringCopy(material.ambient_map, OBJ_PATH_LENGTH, base_path);
+            strcat(material.ambient_map, line_ptr);
+            continue;
+        }
+
+        // Diffuse map
+        if(strncmp(line_ptr, "map_Kd", 6) == 0 && line_ptr[6] == ' ')
+        {
+            line_ptr += 7;
+            stringCopy(material.diffuse_map, OBJ_PATH_LENGTH, line_ptr);
+            stringCopy(material.diffuse_map, OBJ_PATH_LENGTH, base_path);
+            strcat(material.diffuse_map, line_ptr);
+            continue;
+        }
+
+        // Specular map
+        if(strncmp(line_ptr, "map_Ks", 6) == 0 && line_ptr[6] == ' ')
+        {
+            line_ptr += 7;
+            stringCopy(material.specular_map, OBJ_PATH_LENGTH, line_ptr);
+            stringCopy(material.specular_map, OBJ_PATH_LENGTH, base_path);
+            strcat(material.specular_map, line_ptr);
+            continue;
+        }
+
+        // Shininess map
+        if(strncmp(line_ptr, "map_Ns", 6) == 0 && line_ptr[6] == ' ')
+        {
+            line_ptr += 7;
+            stringCopy(material.shininess_map, OBJ_PATH_LENGTH, line_ptr);
+            stringCopy(material.shininess_map, OBJ_PATH_LENGTH, base_path);
+            strcat(material.shininess_map, line_ptr);
+            continue;
+        }
+
+        // Normal map
+        if(strncmp(line_ptr, "map_bump", 8) == 0 && line_ptr[8] == ' ')
+        {
+            line_ptr += 9;
+            stringCopy(material.normal_map, OBJ_PATH_LENGTH, line_ptr);
+            stringCopy(material.normal_map, OBJ_PATH_LENGTH, base_path);
+            strcat(material.normal_map, line_ptr);
+            continue;
+        }
+
+        // Alpha map
+        if(strncmp(line_ptr, "map_d", 5) == 0 && line_ptr[6] == ' ')
+        {
+            line_ptr += 6;
+            stringCopy(material.alpha_map, OBJ_PATH_LENGTH, line_ptr);
+            stringCopy(material.alpha_map, OBJ_PATH_LENGTH, base_path);
+            strcat(material.alpha_map, line_ptr);
+            continue;
+        }
+    }
+    if(material.name[0] != '\0')
+    {
+        DBuffer_push(*obj_materials, material);
+    }
+}
+
+bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *num_mat, const char* file_name)
+{
+    FILE* fp;
+#ifdef _MSC_VER
+    fopen_s(&fp, file_name, "r");
+#else
+    fp = fopen(file_name, "r");
+#endif
+    if(!fp)
+    {
+        fprintf(stderr, "Cannot open file %s\n", file_name);
+        return false;
     }
     int read_result;
     char line_buffer[1024];
@@ -329,6 +662,7 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     mesh_name[i] = '\0';
 
     DBuffer obj_shapes = DBuffer_create(OBJShape);
+    DBuffer obj_materials = DBuffer_create(OBJMaterial);
 
     DBuffer in_positions = DBuffer_create(float);
     DBuffer in_normals = DBuffer_create(float);
@@ -446,6 +780,32 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
                 DBuffer_push(obj_shapes, shape);
             }
         }
+
+        if((strncmp(line_ptr, "mtllib", 6) == 0) && line_ptr[6] == ' ')
+        {
+            line_ptr += 7;
+            char name_buffer[OBJ_PATH_LENGTH];
+#ifdef _MSC_VER
+            sscanf(line_ptr, "%s", name_buffer, OBJ_PATH_LENGTH);
+#else
+            sscanf(line_ptr, "%s", name_buffer);
+#endif
+            unsigned int char_index;
+            for(char_index = 0; file_name[char_index] != '\0'; char_index++){}
+            for(; char_index > 0 && file_name[char_index] != '\\' && file_name[char_index] != '/';
+                char_index--){}            
+            char mtl_path[OBJ_PATH_LENGTH];
+            if(char_index > 0)
+            {
+                stringNCopy(mtl_path, OBJ_PATH_LENGTH, file_name, char_index + 1);
+            }else
+            {
+                mtl_path[0] = '\0';
+            }
+            strcat(mtl_path, name_buffer);
+            
+            loadMTL(&obj_materials, mtl_path);
+        }
     }
     OBJShape shape;
     if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
@@ -504,33 +864,7 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
         }
         printf("\n");
     }
-#endif    
-    /*
-    float* in_pos_ptr = (float*)(in_positions.data);
-    for(int i = 0; i < DBuffer_size(in_positions); i++)
-    {
-        if(i % 3 == 0)
-        {
-            printf("\n");
-        }        
-        printf("%f ", in_pos_ptr[i]);
-    }
-    printf("\n");
-
-
-    for(int i = 0; i < DBuffer_size(in_face_group); i++)
-    {
-        VertexIndex* vi_ptr = (VertexIndex*)(face_ptr[i].data);
-        printf("face size %d\n", DBuffer_size(face_ptr[i]));
-        printf("face max %d\n", DBuffer_max_elements(face_ptr[i]));
-        For(int j = 0; j < DBuffer_size(face_ptr[i]); j++)
-        {
-            printf("%d/%d/%d ", vi_ptr[j].v_idx, vi_ptr[j].vt_idx, vi_ptr[j].vn_idx);
-        }
-        printf("\n");
-    }
-    printf("\n");
-    */
+#endif
     DBuffer* face_ptr = (DBuffer*)(in_face_group.data);
     DBuffer_destroy(&in_positions);
     DBuffer_destroy(&in_normals);
@@ -543,7 +877,10 @@ int loadOBJ(OBJShape** shapes, const char*  file_name)
     DBuffer_destroy(&in_face_group);
     
     *shapes = (OBJShape*)(obj_shapes.data);
-    return DBuffer_size(obj_shapes);
+    *num_shape = DBuffer_size(obj_shapes);
+    *materials = (OBJMaterial*)(obj_materials.data);
+    *num_mat = DBuffer_size(obj_materials);
+    return true;
 }
 
 void OBJShape_destroy(OBJShape* obj_shape)

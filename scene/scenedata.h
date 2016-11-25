@@ -104,9 +104,8 @@ Texture* findTexture(const char* tex_name, const SceneTextures* st)
             return &(st->textures[i]);
         }
     }    
-    fprintf(stderr, "Texture not found.\n");
+    //fprintf(stderr, "Texture not found.\n");
     return NULL;
-    //return &(sm->materials[0]);
 }
 
 typedef struct SceneMaterials_s
@@ -178,8 +177,10 @@ Material* findMaterial(const char* mat_name, const SceneMaterials* sm)
         }
     }
     
-    fprintf(stderr, "Material not found. Default material returned\n");
-    return &(sm->materials[0]);
+    //fprintf(stderr, "Material not found. Default material returned\n");
+    //return &(sm->materials[0]);
+    fprintf(stderr, "Material not found. Returning NULL\n");
+    return NULL;
 }
 
 typedef struct SceneMeshes_s
