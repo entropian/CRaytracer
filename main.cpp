@@ -37,27 +37,12 @@ extern double g_traversal_time;
 bool EXIT = false;
 int MAX_DEPTH = 0;
 
-vec3 cam_position = {0.0f, 0.0f, 0.0f};
-
-// TODO:
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if(action == GLFW_PRESS)
     {
         switch(key)
         {
-        case GLFW_KEY_A:
-            cam_position[0] -= 0.01f;
-            break;
-        case GLFW_KEY_D:
-            cam_position[0] += 0.01f;
-            break;
-        case GLFW_KEY_W:
-            cam_position[2] -= 0.01f;
-            break;
-        case GLFW_KEY_S:
-            cam_position[2] += 0.01f;
-            break;
         case GLFW_KEY_Q:
             EXIT = true;
             break;
@@ -154,15 +139,10 @@ int main()
     vec3 look_point = {340.0f, 500.0f, 0.0f};
     */
 #else
-    //vec3 position = {0.0f, 0.0f, 15.0f};
-    vec3 position = {-3.0f, -3.0f, 3.0f};
-    //vec3 position = {-4.0f, 3.0f, -3.0f};
-    vec3 look_point = {3.0f, -3.0f, -3.0f};
-    //vec3 look_point = {-2.0f, 4.0f, -2.0f};
-    
-    // Good ones
-    //vec3 look_point = {-6.0f, 3.0f, -3.0f};
-    //vec3 look_point = {-2.0f, 2.0f, -2.0f};
+    //vec3 position = {0.0f, 2.0f, 5.0f};
+    //vec3 position = {0.0f, 50.0f, 3.0f};
+    vec3 position = {-5.0f, 40.0f, 1.0f};
+    vec3 look_point = {0.0f, 1.0f, 0.0f};
 #endif
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);

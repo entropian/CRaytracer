@@ -44,9 +44,19 @@ Material* Scene_addMaterial(Scene* scene, const Material* mat, const char* name)
     return SceneMaterials_push(&(scene->materials), mat, name);
 }
 
+Material* Scene_findMaterial(Scene* scene, const char* name)
+{
+    return findMaterial(name, &(scene->materials));
+}
+
 Texture* Scene_addTexture(Scene* scene, const Texture* tex, const char* name)
 {
     return SceneTextures_push(&(scene->textures), tex, name);
+}
+
+Texture* Scene_findTexture(Scene* scene, const char *name)
+{
+    return findTexture(name, &(scene->textures));
 }
 
 Mesh* Scene_addMesh(Scene* scene, const Mesh* mesh)
@@ -59,11 +69,6 @@ mat3* Scene_addTransform(Scene* scene, const mat3* mat)
     return SceneTransforms_push(&(scene->transforms), mat);
 }
 
-Material* Scene_findMaterial(Scene* scene, const char* name)
-{
-    return findMaterial(name, &(scene->materials));
-}
-
 Mesh** Scene_findMeshes(int* num_meshes, const Scene* scene, const char* name)
 {
     return findMeshes(num_meshes, &(scene->meshes), name);
@@ -72,4 +77,14 @@ Mesh** Scene_findMeshes(int* num_meshes, const Scene* scene, const char* name)
 int Scene_getNumMaterials(Scene* scene)
 {
     return scene->materials.size;
+}
+
+void Scene_printMaterials(Scene *scene)
+{
+    SceneMaterials *sm = &(scene->materials);
+    for(int i = 0; i < sm->size; i++)
+    {
+        printf("%s\n", sm->names[i]);
+        printMaterial(&(sm->materials[i]));
+    }
 }

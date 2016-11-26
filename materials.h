@@ -38,10 +38,16 @@ typedef struct Material_s
     Texture* tex_array[3];
 }Material;
 
-const int DIFFUSE_MAP_INDEX = 0;
-const int NORMAL_MAP_INDEX = 1;
+const unsigned int DIFFUSE_MAP_INDEX = 0;
+const unsigned int NORMAL_MAP_INDEX = 1;
+const unsigned int SPEC_MAP_INDEX = 2;
 
 MatType getMatTypeFromString(const char* str);
 void printMaterial(const Material* mat);
+void initMaterial(Material *mat);
 void initDefaultMatteMat(Material* mat, const vec3 color);
 void initDefaultPhongMat(Material* mat, const vec3 color);
+void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv);
+void getMaterialNormalTexColor(vec3 texel, const Material *mat, const vec2 uv);
+void setMaterialDiffuseTexPtr(Material *mat, Texture *tex);
+void setMaterialNormalTexPtr(Material *mat, Texture *tex);

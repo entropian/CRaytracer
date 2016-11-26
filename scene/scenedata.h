@@ -1,13 +1,13 @@
 #pragma once
 
-#include "shapes/shapes.h"
-#include "shapes/instanced.h"
-#include "lights.h"
-#include "accelerator/uniformgrid.h"
-#include "accelerator/bvh.h"
-#include "accelerator/bvh4.h"
-#include "objloader/objloader.h"
-#include "texture.h"
+#include "../shapes/shapes.h"
+#include "../shapes/instanced.h"
+#include "../lights.h"
+#include "../accelerator/uniformgrid.h"
+#include "../accelerator/bvh.h"
+#include "../accelerator/bvh4.h"
+#include "../objloader/objloader.h"
+#include "../texture.h"
 
 enum AccelType
 {
@@ -86,6 +86,7 @@ Texture* SceneTextures_push(SceneTextures* st, const Texture* tex, const char* n
     DBuffer name_buffer;
     DBuffer_assume(&name_buffer, (char*)st->names, st->size, st->max, sizeof(char*));
     char* tex_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
+    stringCopy(tex_name, MAX_NAME_LENGTH, name);
     DBuffer_push(name_buffer, tex_name);
 
     st->textures = (Texture*)(tex_buffer.data);
@@ -104,9 +105,8 @@ Texture* findTexture(const char* tex_name, const SceneTextures* st)
             return &(st->textures[i]);
         }
     }    
-    fprintf(stderr, "Texture not found.\n");
+    //fprintf(stderr, "Texture not found.\n");
     return NULL;
-    //return &(sm->materials[0]);
 }
 
 typedef struct SceneMaterials_s
@@ -124,7 +124,8 @@ SceneMaterials SceneMaterials_create()
     sm.names = (char**)malloc(sizeof(char*) * DEFAULT_MATERIAL);
     initDefaultMatteMat(&(sm.materials[0]), GREY);
     sm.names[0] = (char*)malloc(sizeof(char) * NAME_LENGTH);
-    strcpy_s(sm.names[0], NAME_LENGTH, "DEFAULT");
+    //strcpy_s(sm.names[0], NAME_LENGTH, "DEFAULT");
+    stringCopy(sm.names[0], NAME_LENGTH, "DEFAULT");
     sm.size = 1;
     sm.max = DEFAULT_MATERIAL;
     return sm;
@@ -156,7 +157,8 @@ Material* SceneMaterials_push(SceneMaterials* sm, const Material* mat, const cha
     DBuffer name_buffer;
     DBuffer_assume(&name_buffer, (char*)sm->names, sm->size, sm->max, sizeof(char*));
     char* mat_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
-    strcpy_s(mat_name, NAME_LENGTH, name);
+    //strcpy_s(mat_name, NAME_LENGTH, name);
+    stringCopy(mat_name, NAME_LENGTH, name);
     DBuffer_push(name_buffer, mat_name);
     
     sm->materials = (Material*)(mat_buffer.data);
@@ -176,8 +178,10 @@ Material* findMaterial(const char* mat_name, const SceneMaterials* sm)
         }
     }
     
-    fprintf(stderr, "Material not found. Default material returned\n");
-    return &(sm->materials[0]);
+    //fprintf(stderr, "Material not found. Default material returned\n");
+    //return &(sm->materials[0]);
+    fprintf(stderr, "Material not found. Returning NULL\n");
+    return NULL;
 }
 
 typedef struct SceneMeshes_s

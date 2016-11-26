@@ -1,12 +1,12 @@
-scene_file ref_box.txt
+scene_file test_scene2.txt
 window_width  960
 window_height  960
 image_width  960
 image_height 960
 num_samples  64
 num_sample_sets 83
-max_depth  8
-trace_type WHITTED
+max_depth  5
+trace_type PATHTRACE
 accel_struct BVH4
 photon_map no
 num_photons 1000000
@@ -15,5 +15,5 @@ num_estimate 1500
 photon_depth 5
 photon_radius 10
 caustic_radius 0.6
-image_save no
+image_save yes
 

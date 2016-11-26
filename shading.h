@@ -15,23 +15,27 @@
 void diffuseBRDF(vec3 f, const ShadeRec* sr)
 {
     vec3 reflectance;
-
+    /*
     if(sr->mat->tex_flags & DIFFUSE)
     {
         vec3 texel;
-        getTexColor(texel, sr->mat->tex_array[DIFFUSE_MAP_INDEX], sr->uv);
+        //getTexColor(texel, sr->mat->tex_array[DIFFUSE_MAP_INDEX], sr->uv);
+        getMaterialDiffuseTexColor(texel, sr->mat, sr->uv);
         vec3_scale(reflectance, texel, sr->mat->kd);        
     }else
     {
         vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
     }
-
+    */
     if(sr->mat->tex_flags & NOISE)
     {
         //float noise_val = turbulenceNoise(sr->hit_point);
         float noise_val = fBm(sr->hit_point);
         vec3_scale(reflectance, reflectance, noise_val);
-    }    
+    }else
+    {
+        vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
+    }
 
     vec3_scale(f, reflectance, 1.0f/(float)PI);
 }

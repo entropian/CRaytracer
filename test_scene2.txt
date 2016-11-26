@@ -80,7 +80,7 @@ LOCATION 0.5 1.0 -1
 Orientation 130 0 0
 MATERIAL ref1
 
-OBJECT MESH
+#OBJECT MESH
 FILE models/teapot.obj
 CAST_SHADOW yes
 SMOOTH yes
@@ -90,11 +90,11 @@ Orientation 0 0 0
 MATERIAL trans1
 
 #OBJECT MESH
-FILE models/cube.obj
+FILE models/buddha.obj
 CAST_SHADOW yes
 SMOOTH yes
-SCALING 0.5 0.5 0.5
-LOCATION -1.2 1.0 -1
+SCALING 1 1 1
+LOCATION 0.5 0.0 -1
 Orientation 0 0 0
 MATERIAL matte2
 
@@ -103,6 +103,24 @@ FILE models/cube.obj
 CAST_SHADOW yes
 SMOOTH yes
 SCALING 0.5 0.5 0.5
+LOCATION -1.2 1.0 -1
+Orientation 0 0 0, 
+MATERIAL matte2
+
+#OBJECT MESH
+FILE models/cube.obj
+CAST_SHADOW yes
+SMOOTH yes
+SCALING 0.5 0.5 0.5
+LOCATION 0.5 1.0 -1
+Orientation 0 0 0
+MATERIAL matte2
+
+OBJECT MESH
+FILE models/sponza/sponza.obj
+CAST_SHADOW yes
+SMOOTH yes
+SCALING 0.03 0.03 0.03
 LOCATION 0.5 1.0 -1
 Orientation 0 0 0
 MATERIAL matte2

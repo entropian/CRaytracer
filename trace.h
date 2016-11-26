@@ -87,6 +87,10 @@ float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
     // Shading
     if(min_t < TMAX)
     {
+        if(min_sr.mat->tex_flags != NO_TEXTURE)
+        {
+            updateShadeRecWithTexInfo(&min_sr);
+        }
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
@@ -244,7 +248,10 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
     // Shading
     if(min_t < TMAX)
     {
-        intersected = true;
+        if(min_sr.mat->tex_flags != NO_TEXTURE)
+        {
+            updateShadeRecWithTexInfo(&min_sr);
+        }
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
@@ -273,10 +280,9 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
             // Indirect illumination
             if(depth > 0 && (min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == TRANSPARENT))
             {
-                indirect = true;
-                //float reflect_t;
-                //vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                reflect_t = calcSpecRefRadiance(reflected_illum, depth, ray, &min_sr, trace_args);
+                float reflect_t;
+                vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+                reflect_t = calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl, sample_index);
 
                 if(min_sr.mat->mat_type == REFLECTIVE)
                 {
@@ -287,15 +293,12 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
                 float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
                 if(!totalInternalReflection(&min_sr))
                 {
-                    not_tir = true;
                     // Transmitted radiance
                     vec3 transmit_dir = {0, 0, 0};
                     float eta = calcTransmitDir(transmit_dir, &min_sr);
                     float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
-                    //float kr = calcFresnelReflectance(&min_sr);
-                    //float kt = 1.0f - kr;
-                    kr = calcFresnelReflectance(&min_sr);
-                    kt = 1.0f - kr;
+                    float kr = calcFresnelReflectance(&min_sr);
+                    float kt = 1.0f - kr;
 
                     vec3 btdf;
                     vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
@@ -303,9 +306,10 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
                     vec3_copy(transmitted_ray.origin, min_sr.hit_point);
                     vec3_copy(transmitted_ray.direction, transmit_dir);
 
-                    //float transmit_t;
-                    //vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-                    transmit_t = whittedTrace(transmitted_illum, depth-1, transmitted_ray, trace_args);
+                    float transmit_t;
+                    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
+                    transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
+                    
                     vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                     vec3_mult(transmitted_illum, transmitted_illum, btdf);
                     // Scaling reflection since there's no total internal reflection
@@ -326,9 +330,7 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
                     vec3_add(radiance, radiance, transmitted_illum);
                 }else
                 {
-
-                    tir = true;
-                    vec3 color_filter;
+                    vec3 color_filter;                    
                     if(ndotwo > 0.0f)
                     {
                         vec3_pow(color_filter, min_sr.mat->cf_out, reflect_t);
@@ -396,6 +398,10 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
     // Shading
     if(min_t < TMAX)
     {
+        if(min_sr.mat->tex_flags != NO_TEXTURE)
+        {
+            updateShadeRecWithTexInfo(&min_sr);
+        }
         if(min_sr.mat->mat_type == EMISSIVE)
         {
 #ifdef SEPARATE_DIRECT_INDIRECT

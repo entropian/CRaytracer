@@ -5,15 +5,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
-#include "util/vec.h"
-#include "util/constants.h"
-#include "shapes/shapes.h"
-#include "shapes/instanced.h"
-#include "lights.h"
-#include "materials.h"
-#include "objloader/dbuffer.h"
-#include "sampling.h"
-#include "texture.h"
+#include "../util/vec.h"
+#include "../util/constants.h"
+#include "../shapes/shapes.h"
+#include "../shapes/instanced.h"
+#include "../lights.h"
+#include "../materials.h"
+#include "../objloader/dbuffer.h"
+#include "../sampling.h"
+#include "../texture.h"
 
 bool getPresetColor(vec3 r, const char buffer[])
 {
@@ -85,20 +85,51 @@ bool parseColor(vec3 r, FILE* fp)
 }
 
 // Need to pass SceneTextures
-Texture* parseTexture(Scene* scene, FILE* fp)
+Texture* parseTexture(Scene* scene, FILE* fp, char *tex_file_name)
 {
     char buffer[128];
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
+    if(!getNextTokenInFile(buffer, fp)){return NULL;}    // get file name
+    Texture *tex_ptr;
+    tex_ptr = Scene_findTexture(scene, buffer);
+    if(tex_ptr)
+    {
+        return tex_ptr;
+    }
     Texture tex;
     if(!loadTexture(&tex, buffer))
     {
         return NULL;
     }
+    stringCopy(tex_file_name, MAX_NAME_LENGTH, buffer);
     return Scene_addTexture(scene, &tex, buffer);
 }
 
-bool parseTextures(Material* mat, Scene* scene, FILE* fp)
+Texture* parseTextureFileName(Scene* scene, const char *file_name)
+{    
+    Texture* tex_ptr;
+    tex_ptr = Scene_findTexture(scene, file_name);
+    if(tex_ptr)
+    {
+        return tex_ptr;
+    }
+    Texture tex;
+    if(!loadTexture(&tex, file_name))
+    {
+        return NULL;
+    }
+    printf("Loaded %s\n", file_name);
+    return Scene_addTexture(scene, &tex, file_name);
+}
+
+typedef struct MatTexNamePair_s
+{
+    char mat_name[MAX_NAME_LENGTH];
+    char tex_name[MAX_NAME_LENGTH];
+    TextureType tex_type;
+}MatTexNamePair;
+
+bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, const char *mat_name)
 {
     char buffer[128];
     mat->tex_flags = NO_TEXTURE;
@@ -114,31 +145,41 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp)
         return true;
         //if(!getNextTokenInFile(buffer, fp)){return false;}
     }
-
+    
     if(strcmp(buffer, "DIFFUSE_MAP") == 0)
     {
-        tex_ptr = parseTexture(scene, fp);
+        char tex_file_name[MAX_NAME_LENGTH];
+        tex_ptr = parseTexture(scene, fp, tex_file_name);
         if(tex_ptr)
         {
-            mat->tex_array[0] = tex_ptr;
-            mat->tex_flags |= DIFFUSE;
+            // Storing material name and texture name pair for binding later
+            MatTexNamePair pair;
+            pair.tex_type = DIFFUSE;
+            stringCopy(pair.tex_name, MAX_NAME_LENGTH, tex_file_name);
+            stringCopy(pair.mat_name, MAX_NAME_LENGTH, mat_name);
+            DBuffer_push(*mat_tex_aux, pair);
         }
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type
     }
 
     if(strcmp(buffer, "NORMAL_MAP") == 0)
     {
-        tex_ptr = parseTexture(scene, fp);
+        char tex_file_name[MAX_NAME_LENGTH];
+        tex_ptr = parseTexture(scene, fp, tex_file_name);
         if(tex_ptr)
         {
-            mat->tex_array[1] = tex_ptr;
-            mat->tex_flags |= NORMAL;
+            // Storing material name and texture name pair for binding later
+            MatTexNamePair pair;
+            pair.tex_type = NORMAL;
+            stringCopy(pair.tex_name, MAX_NAME_LENGTH, tex_file_name);
+            stringCopy(pair.mat_name, MAX_NAME_LENGTH, mat_name);
+            DBuffer_push(*mat_tex_aux, pair);
         }
     }
     return true;
 }
 
-bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
+bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
 {
     char buffer[128];
     char type_name[128];
@@ -154,7 +195,7 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-    strcpy_s(*name, NAME_LENGTH, buffer);
+    stringCopy(*name, NAME_LENGTH, buffer);
     if(mat->mat_type == EMISSIVE)
     {
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word COLOR
@@ -255,12 +296,12 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp)
         return false;
 
     Texture:
-        parseTextures(mat, scene, fp);
+        parseTextures(mat, scene, fp, mat_tex_aux, *name);
         return true;
     }
 }
 
-int parseMaterials(Scene* scene, FILE* fp)
+int parseMaterials(Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
 {
     char buffer[128];
     while(getNextTokenInFile(buffer, fp) && strcmp(buffer, "END_MATERIALS") != 0)
@@ -269,7 +310,7 @@ int parseMaterials(Scene* scene, FILE* fp)
         {
             Material mat;
             char* name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
-            parseMatEntry(&mat, &name, scene, fp);
+            parseMatEntry(&mat, &name, scene, fp, mat_tex_aux);
             Scene_addMaterial(scene, &mat, name);
         }
     }
@@ -695,12 +736,12 @@ typedef struct
 }MeshEntry;
 
 // Return -1 if the file cannot be read
-int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][NAME_LENGTH],
-              int* num_file_names, FILE* fp)
+bool parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, OBJMaterial** materials, int *num_mesh, int *num_mat,
+               char mesh_file_names[][NAME_LENGTH], int* num_file_names, FILE* fp)
 {
     char buffer[128];
-    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word FILE_NAME
-    if(!getNextTokenInFile(buffer, fp)){return -1;}    // get file name
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word FILE_NAME
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get file name
     bool file_not_read = true;
     for(int i = 0; i < *num_file_names; i++)
     {
@@ -710,29 +751,33 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
             break;
         }
     }
-    
-    int num_mesh = 0;
+
+    bool parseSuccessful;
     if(file_not_read)
     {
         double start, end;
         start = glfwGetTime();
-        num_mesh = loadOBJ(shapes, buffer);
+        parseSuccessful = loadOBJ(shapes, materials, num_mesh, num_mat, buffer);
         end = glfwGetTime();
         printf("Loading %s took %f sec.\n", buffer, end - start);
     }else
     {
-        strcpy_s(mesh_file_names[(*num_file_names)++], NAME_LENGTH, buffer);
+        num_mesh = 0;
+        stringCopy(mesh_file_names[(*num_file_names)++], NAME_LENGTH, buffer);
     }
 
-    if(num_mesh != -1)
+    if(parseSuccessful)
     {
         int len = strcspn(buffer, ".");
-        strncpy_s(mesh_entry->mesh_name, NAME_LENGTH, buffer, len);
+        stringNCopy(mesh_entry->mesh_name, NAME_LENGTH, buffer, len);
         mesh_entry->mesh_name[len] = '\0';
-    }    
+    }else
+    {
+        return false;
+    }
 
-    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return -1;}
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
+    if(!getNextTokenInFile(buffer, fp)){return false;}
     if(strcmp(buffer, "yes") == 0)
     {
         mesh_entry->shadow = true;
@@ -741,8 +786,8 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
         mesh_entry->shadow = false;
     }
 
-    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word SMOOTH
-    if(!getNextTokenInFile(buffer, fp)){return -1;}
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SMOOTH
+    if(!getNextTokenInFile(buffer, fp)){return false;}
     if(strcmp(buffer, "yes") == 0)
     {
         mesh_entry->smooth = true;
@@ -751,20 +796,20 @@ int parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, char mesh_file_names[][N
         mesh_entry->smooth = false;
     }    
 
-    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word SCALING
-    if(!parseVec3(mesh_entry->scaling, fp)){return -1;}
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SCALING
+    if(!parseVec3(mesh_entry->scaling, fp)){return false;}
 
-    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word LOCATION
-    if(!parseVec3(mesh_entry->location, fp)){return -1;}
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
+    if(!parseVec3(mesh_entry->location, fp)){return false;}
 
-    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word ORIENTATION
-    if(!parseVec3(mesh_entry->orientation, fp)){return -1;}      
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word ORIENTATION
+    if(!parseVec3(mesh_entry->orientation, fp)){return false;}      
 
-    if(!getNextTokenInFile(buffer, fp)){return -1;}    // Skip over the word MATERIAL
-    if(!getNextTokenInFile(buffer, fp)){return -1;}
-    strcpy_s(mesh_entry->mat_name, NAME_LENGTH, buffer);
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MATERIAL
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    stringCopy(mesh_entry->mat_name, NAME_LENGTH, buffer);
     
-    return num_mesh;
+    return true;
 }
 
 bool parsePrimitive(Object_t* obj, FILE* fp, Scene* scene, const char* prim_name)

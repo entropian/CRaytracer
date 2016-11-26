@@ -14,8 +14,11 @@
   Shallow Bounding Volume Hierarchies for Fast SIMD Ray Tracing of Incoherent Rays
   by Dammertz, Hanika, and Keller
  */
-
+#ifdef _MSC_VER
 #define CACHE_ALIGN __declspec(align(16))
+#else
+#define CACHE_ALIGN __attribute__((aligned(16)))
+#endif
 
 __m128 rayIntersectAABB4(__m128* less_than, const float bbox[24], const Ray ray)
 {
@@ -93,7 +96,11 @@ __m128 rayIntersectAABB4(__m128* less_than, const float bbox[24], const Ray ray)
     return t;
 }
 
+#ifdef _MSC_VER
 typedef _declspec(align(16)) struct BVHNode4_s
+#else
+typedef struct __attribute__((aligned(16))) BVHNode4_s
+#endif
 {
     float bbox[2*3*4]; // 96 bytes
     void *child[4]; // 16 bytes
@@ -107,7 +114,12 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     assert(num_obj > 0);
 
     const int MIN_OBJECTS_PER_LEAF = 4;
+#ifdef _MSC_VER
     BVHNode4* pNode = (BVHNode4*)_aligned_malloc(sizeof(BVHNode4) + 1, 16);
+#else
+    BVHNode4 *pNode;
+    posix_memalign((void**)&pNode, 16, sizeof(BVHNode4) + 1);
+#endif
     *tree = pNode;
     // Partion objects into two sets, then partition each of those two sets to produce four sets
     // Calculate the bounding box for each of the four sets
