@@ -121,6 +121,7 @@ void parseConfigFile(ConfigParams* cp)
             }
         }else if(strcmp(buffer, "photon_map") == 0)
         {
+            cp->photon_map = false;
             getNextTokenInFile(buffer, fp);
             if(strcmp(buffer, "yes") == 0)
             {

@@ -100,7 +100,7 @@ void directIllumInScatter(vec3 radiance, const vec3 point, const float extinct_c
         getIncRadiance(light_rad, sl->light_types[j], sl->light_ptrs[j], light_sr.hit_point);
         float rad_dec = powf((float)K_E, -extinct_coeff * medium_dist);
         vec3_scale(light_rad, light_rad, rad_dec);
-        float phase = schlickPhaseFunc(vec3_dot(ray.direction, view_dir), 0.5f);
+        float phase = schlickPhaseFunc(vec3_dot(ray.direction, view_dir), 0.88f);
         vec3_scale(light_rad, light_rad, phase * scatter_coeff);
         vec3_add(radiance, radiance, light_rad);
     }
@@ -259,7 +259,9 @@ void calcDirectIllumSurfaceInMedium(vec3 radiance, const ShadeRec *sr,
         float rad_dec = powf((float)K_E, -extinct_coeff * medium_dist);
         vec3 dir_illum = {0.0f, 0.0f, 0.0f};
         vec3_scale(dir_illum, light_rad, rad_dec);
-        vec3_add(radiance, radiance, dir_illum);
+        directIllumShadingRad(radiance, ndotwi, light_dir, sl->light_ptrs[i], sl->light_types[i],
+                              dir_illum, sr);
+        //vec3_add(radiance, radiance, dir_illum);
     }
 }
 
@@ -273,9 +275,11 @@ void fogmarch(vec3 radiance, const Ray ray, TraceArgs trace_args)
     vec3_copy(radiance, BLACK);
     vec3 view_dir;
     vec3_negate(view_dir, ray.direction);
-    const float extinct_coeff = 0.002f;
+    //const float extinct_coeff = 0.002f;
+    const float extinct_coeff = 0.00005f;
     const float scatter_coeff = extinct_coeff * 0.6f;
-    float t_seg = 5.0f;
+    //const float scatter_coeff = 0.0;
+    float t_seg = 10.0f;
     ShadeRec min_sr;
     float min_t = intersectTest(&min_sr, so, ray);
 

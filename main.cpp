@@ -16,6 +16,7 @@
 #include "lights.h"
 #include "scene/scene.h"
 #include "shading.h"
+//#define CORNELL_BOX
 #include "buildscene.h"
 #include "intersect.h"
 //#include "trace.h"
@@ -29,7 +30,7 @@
 
 #define SHOW_PROGRESS 1
 #define PROG
-#define CORNELL_BOX
+
 
 extern double g_traversal_time;
 
@@ -139,20 +140,29 @@ int main()
 
     // Camera
     Camera camera;
-    initPinholeCameraDefault(&camera);
+    //initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
+    initThinLensCameraDefault(&camera, 8.2, 1, params.num_samples, params.num_sample_sets);
 
 #ifdef CORNELL_BOX
-    //vec3 position = {278.0f, 273.0f, 800.0f};
-    //vec3 look_point = {278.0f, 273.0f, 0.0f};
-
+    vec3 position = {278.0f, 273.0f, 800.0f};
+    //vec3 position = {278.0f, 600.0f, 800.0f};
+    vec3 look_point = {278.0f, 273.0f, 0.0f};
+    /*
       // PM test
     vec3 position = {340.0f, 500.0f, 200.0f};
     vec3 look_point = {340.0f, 500.0f, 0.0f};
-
+    */
 #else
-    vec3 position = {0.0f, 2.0f, 5.0f};
-    vec3 look_point = {0.0f, 0.0f, 0.0f};
+    //vec3 position = {0.0f, 0.0f, 15.0f};
+    vec3 position = {-3.0f, -3.0f, 3.0f};
+    //vec3 position = {-4.0f, 3.0f, -3.0f};
+    vec3 look_point = {3.0f, -3.0f, -3.0f};
+    //vec3 look_point = {-2.0f, 4.0f, -2.0f};
+    
+    // Good ones
+    //vec3 look_point = {-6.0f, 3.0f, -3.0f};
+    //vec3 look_point = {-2.0f, 2.0f, -2.0f};
 #endif
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
@@ -204,9 +214,7 @@ int main()
             trace_args.sample_index = sample_index;
             vec3_copy(trace_args.h_sample, h_sample);
 
-            //fogmarch(color, ray, trace_args);
-
-            vec3 radiance;
+            vec3 radiance = {0.0f, 0.0f, 0.0f};
             trace(radiance, params.max_depth, ray, trace_args);
             vec3_add(color, color, radiance);
 
@@ -312,8 +320,11 @@ int main()
     freeSamples3D(&h_samples);
     Scene_destroy(&scene);
     Camera_destroy(&camera);
-    Photonmap_destroy(&photon_map);
-    Photonmap_destroy(&caustic_map);
+    if(params.photon_map)
+    {
+        Photonmap_destroy(&photon_map);
+        Photonmap_destroy(&caustic_map);
+    }
 
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;

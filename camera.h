@@ -67,8 +67,8 @@ void initThinLensCameraDefault(Camera *camera, const float focal_length, const f
 {
     initPinholeCameraDefault(camera);
     camera->camera_type = ThinLens;
-    camera->focal_length = DEFAULT_FOCAL_LENGTH;
-    camera->lens_radius = DEFAULT_LENS_RADIUS;    
+    camera->focal_length = focal_length;
+    camera->lens_radius = lens_radius;
 }
 
 // Sets up orthonormal basis, position, and focal point
