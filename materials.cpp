@@ -95,6 +95,11 @@ void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv)
     getTexColor(texel, mat->tex_array[DIFFUSE_MAP_INDEX], uv);
 }
 
+void getMaterialNormalTexColor(vec3 texel, const Material *mat, const vec2 uv)
+{
+    getTexColor(texel, mat->tex_array[NORMAL_MAP_INDEX], uv);
+}
+
 void setMaterialDiffuseTexPtr(Material *mat, Texture *tex)
 {
     mat->tex_array[DIFFUSE_MAP_INDEX] = tex;

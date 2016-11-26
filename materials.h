@@ -47,5 +47,6 @@ void initMaterial(Material *mat);
 void initDefaultMatteMat(Material* mat, const vec3 color);
 void initDefaultPhongMat(Material* mat, const vec3 color);
 void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv);
+void getMaterialNormalTexColor(vec3 texel, const Material *mat, const vec2 uv);
 void setMaterialDiffuseTexPtr(Material *mat, Texture *tex);
 void setMaterialNormalTexPtr(Material *mat, Texture *tex);

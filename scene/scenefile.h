@@ -118,23 +118,16 @@ Texture* parseTextureFileName(Scene* scene, const char *file_name)
     {
         return NULL;
     }
-    /*
-    if(tex.width == 0 || tex.height == 0)
-    {
-        printf("%s bad dimension.\n", file_name);
-    }
-    */
-    printf("%s ", file_name);
-    printf("%d %d\n", tex.width, tex.height);
+    printf("Loaded %s\n", file_name);
     return Scene_addTexture(scene, &tex, file_name);
 }
 
-typedef struct MatTexAux_s
+typedef struct MatTexNamePair_s
 {
     char mat_name[MAX_NAME_LENGTH];
     char tex_name[MAX_NAME_LENGTH];
     TextureType tex_type;
-}MatTexAux;
+}MatTexNamePair;
 
 bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, const char *mat_name)
 {
@@ -152,18 +145,15 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, 
         return true;
         //if(!getNextTokenInFile(buffer, fp)){return false;}
     }
-
+    
     if(strcmp(buffer, "DIFFUSE_MAP") == 0)
     {
         char tex_file_name[MAX_NAME_LENGTH];
         tex_ptr = parseTexture(scene, fp, tex_file_name);
         if(tex_ptr)
         {
-            /*
-            mat->tex_array[0] = tex_ptr;
-            mat->tex_flags |= DIFFUSE;
-            */
-            MatTexAux pair;
+            // Storing material name and texture name pair for binding later
+            MatTexNamePair pair;
             pair.tex_type = DIFFUSE;
             stringCopy(pair.tex_name, MAX_NAME_LENGTH, tex_file_name);
             stringCopy(pair.mat_name, MAX_NAME_LENGTH, mat_name);
@@ -178,11 +168,8 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, 
         tex_ptr = parseTexture(scene, fp, tex_file_name);
         if(tex_ptr)
         {
-            /*
-            mat->tex_array[1] = tex_ptr;
-            mat->tex_flags |= NORMAL;
-            */
-            MatTexAux pair;
+            // Storing material name and texture name pair for binding later
+            MatTexNamePair pair;
             pair.tex_type = NORMAL;
             stringCopy(pair.tex_name, MAX_NAME_LENGTH, tex_file_name);
             stringCopy(pair.mat_name, MAX_NAME_LENGTH, mat_name);
@@ -208,7 +195,6 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
-    //strcpy_s(*name, NAME_LENGTH, buffer);
     stringCopy(*name, NAME_LENGTH, buffer);
     if(mat->mat_type == EMISSIVE)
     {

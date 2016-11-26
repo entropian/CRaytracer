@@ -56,6 +56,10 @@ float raycast(vec3 radiance, int depth, const vec3 sample, const Ray ray,
     // Shading
     if(min_t < TMAX)
     {
+        if(min_sr.mat->tex_flags != NO_TEXTURE)
+        {
+            updateShadeRecWithTexInfo(&min_sr);
+        }
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
@@ -192,6 +196,10 @@ float whittedTrace(vec3 radiance, int depth, const vec3 h_sample,
     // Shading
     if(min_t < TMAX)
     {
+        if(min_sr.mat->tex_flags != NO_TEXTURE)
+        {
+            updateShadeRecWithTexInfo(&min_sr);
+        }
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
@@ -330,7 +338,11 @@ float pathTrace(vec3 radiance, int depth, const vec3 h_sample, const Ray ray, co
     min_t = intersectTest(&min_sr, so, ray);
     // Shading
     if(min_t < TMAX)
-    {    
+    {
+        if(min_sr.mat->tex_flags != NO_TEXTURE)
+        {
+            updateShadeRecWithTexInfo(&min_sr);
+        }
         if(min_sr.mat->mat_type == EMISSIVE)
         {
 #ifdef SEPARATE_DIRECT_INDIRECT

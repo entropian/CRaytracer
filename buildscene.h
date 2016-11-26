@@ -285,16 +285,15 @@ void initSceneObjects(Scene* scene, const char* scenefile)
         return;
     }
     /*
-      Load textures as we parse materials, but defer storing texture pointers until all texture
-      loadings are done.
-      As we parse materials, instead of storing texture pointers in material, store texture name
-      and type, and corresponding material pointer into a auxillary struct.
+      Load textures as we parse materials, but defer storing texture pointers in materials
+      until all texture loadings are done.
+      As we parse materials, store texture name and type, and material name into a auxillary struct.
       Once all texture loadings are done, iterate through the aux struct, get corresponding texture
       pointers and store it in the material.
      */
-    DBuffer mat_tex_aux = DBuffer_create(MatTexAux);
+    DBuffer mat_tex_pairs = DBuffer_create(MatTexNamePair);
         
-    int num_mat = parseMaterials(scene, fp, &mat_tex_aux);
+    int num_mat = parseMaterials(scene, fp, &mat_tex_pairs);
     char buffer[128];
     while(getNextTokenInFile(buffer, fp))
     {
@@ -334,6 +333,10 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     material.exp = obj_mat->shininess;
                     material.ior_in = obj_mat->ior;
                     material.ior_out = 1.0f;
+                    material.tex_flags = NO_TEXTURE;
+                    // TODO: fix exponent
+                    //material.h_samples = genHemisphereSamples(MULTIJITTERED, material.exp);
+                    material.h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
 
                     if(obj_mat->illum == 2)
                     {
@@ -362,15 +365,11 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                         Texture* tex_ptr = parseTextureFileName(scene, obj_mat->diffuse_map);
                         if(tex_ptr)
                         {
-                            /*
-                            setMaterialDiffuseTexPtr(&material, tex_ptr);
-                            material.tex_flags |= DIFFUSE;
-                            */
-                            MatTexAux pair;
+                            MatTexNamePair pair;
                             pair.tex_type = DIFFUSE;
                             stringCopy(pair.tex_name, MAX_NAME_LENGTH, obj_mat->diffuse_map);
                             stringCopy(pair.mat_name, MAX_NAME_LENGTH, obj_mat->name);
-                            DBuffer_push(mat_tex_aux, pair);
+                            DBuffer_push(mat_tex_pairs, pair);
                         }
                     }
                     if(obj_mat->normal_map[0] != '\0')
@@ -378,57 +377,34 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                         Texture* tex_ptr = parseTextureFileName(scene, obj_mat->normal_map);
                         if(tex_ptr)
                         {
-                            /*
-                            setMaterialNormalTexPtr(&material, tex_ptr);
-                            material.tex_flags |= NORMAL;
-                            */
-                            MatTexAux pair;
+                            MatTexNamePair pair;
                             pair.tex_type = NORMAL;
                             stringCopy(pair.tex_name, MAX_NAME_LENGTH, obj_mat->normal_map);
                             stringCopy(pair.mat_name, MAX_NAME_LENGTH, obj_mat->name);
-                            DBuffer_push(mat_tex_aux, pair);
+                            DBuffer_push(mat_tex_pairs, pair);
                         }
                     }
-                    // Not yet supported
-                    /*                      
-                    if(obj_mat->ambient_map[0] != '\0')
-                    {
-                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->ambient_map);
-                    }
-                    if(obj_mat->specular_map[0] != '\0')
-                    {
-                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->specular_map);
-                    }                    
-                    if(obj_mat->shininess_map[0] != '\0')
-                    {
-                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->shininess_map);
-                    }
-                    if(obj_mat->alpha_map[0] != '\0')
-                    {
-                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->alpha_map);
-                    }
-                    */
                     Scene_addMaterial(scene, &material, obj_mat->name);
                 }
 
                 
-                MatTexAux *aux_array = (MatTexAux*)(mat_tex_aux.data);
-                const unsigned int aux_count = DBuffer_size(mat_tex_aux);
-                for(int i = 0; i < aux_count; i++)
+                MatTexNamePair *pair_array = (MatTexNamePair*)(mat_tex_pairs.data);
+                const unsigned int pair_count = DBuffer_size(mat_tex_pairs);
+                for(int i = 0; i < pair_count; i++)
                 {
-                    MatTexAux *aux_ptr = &(aux_array[i]);
-                    Material *mat_ptr = Scene_findMaterial(scene, aux_ptr->mat_name);
+                    MatTexNamePair *pair_ptr = &(pair_array[i]);
+                    Material *mat_ptr = Scene_findMaterial(scene, pair_ptr->mat_name);
                     if(!mat_ptr){
-                        fprintf(stderr, "Couldn't find material %s.\n", aux_ptr->mat_name);
+                        fprintf(stderr, "Couldn't find material %s.\n", pair_ptr->mat_name);
                         continue;
                     }
-                    Texture *tex_ptr = Scene_findTexture(scene, aux_ptr->tex_name);
+                    Texture *tex_ptr = Scene_findTexture(scene, pair_ptr->tex_name);
                     if(!tex_ptr){
                         fprintf(stderr, "Couldn't find texture %s for material %s.\n",
-                                aux_ptr->tex_name, aux_ptr->mat_name);
+                                pair_ptr->tex_name, pair_ptr->mat_name);
                         continue;
                     }
-                    switch(aux_ptr->tex_type)
+                    switch(pair_ptr->tex_type)
                     {
                     case DIFFUSE:
                     {
@@ -440,7 +416,7 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     } break;
                     }
                 }
-                DBuffer_destroy(&mat_tex_aux);
+                DBuffer_destroy(&mat_tex_pairs);
                 if(materials){free(materials);}
                 
                 for(int i = 0; i < num_mesh; i++)

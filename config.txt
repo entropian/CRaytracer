@@ -1,12 +1,12 @@
 scene_file test_scene2.txt
 window_width  960
 window_height  960
-image_width  480
-image_height 480
+image_width  960
+image_height 960
 num_samples  64
 num_sample_sets 83
 max_depth  5
-trace_type RAYCAST
+trace_type PATHTRACE
 accel_struct BVH4
 photon_map no
 num_photons 1000000
