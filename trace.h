@@ -8,6 +8,7 @@
 #include "scene/scenedata.h"
 #include "shading.h"
 #include "intersect.h"
+#include <assert.h>
 
 extern int MAX_DEPTH;
 #define SEPARATE_DIRECT_INDIRECT
@@ -282,7 +283,8 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
             {
                 float reflect_t;
                 vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                reflect_t = calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl, sample_index);
+                //reflect_t = calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl, sample_index);
+                reflect_t = calcSpecRefRadiance(reflected_illum, depth, ray, &min_sr, trace_args);
 
                 if(min_sr.mat->mat_type == REFLECTIVE)
                 {
@@ -308,7 +310,8 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
 
                     float transmit_t;
                     vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-                    transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
+                    //transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
+                    transmit_t = whittedTrace(transmitted_illum, depth-1, transmitted_ray, trace_args);
                     
                     vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                     vec3_mult(transmitted_illum, transmitted_illum, btdf);
@@ -454,6 +457,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
 
                     vec3 inc_radiance;
                     pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
+                    assert(inc_radiance[0] >= 0.0f && inc_radiance[1] >= 0.0f && inc_radiance[2] >= 0.0f);
                     vec3 brdf;
                     vec3_scale(brdf, min_sr.mat->cd, min_sr.mat->kd / (float)PI);
                     float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
@@ -467,9 +471,11 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
 
                 if(min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == PHONG)
                 {
-                    vec3 reflected_illum;
+                    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
                     // NOTE: depth - 1 is a shitty hack
                     calcSpecRadiancePT(reflected_illum, ray, &min_sr, depth-1, trace_args);
+                    assert(reflected_illum[0] >= 0.0f && reflected_illum[1] >= 0.0f &&
+                           reflected_illum[2] >= 0.0f);
                     vec3_scale(reflected_illum, reflected_illum, min_sr.mat->ks);
                     vec3_add(radiance, radiance, reflected_illum);
                 }
@@ -489,6 +495,8 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
                     if(rand_float <= kr) // Reflection
                     {
                         reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, depth, trace_args);
+                        assert(reflected_illum[0] >= 0.0f && reflected_illum[1] >= 0.0f &&
+                               reflected_illum[2] >= 0.0f);
                     }else // Transmission
                     {
                         vec3 transmit_dir = {0, 0, 0};
@@ -503,6 +511,8 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
                         vec3_copy(transmitted_ray.direction, transmit_dir);
 
                         transmit_t = pathTrace(transmitted_illum, depth-1, transmitted_ray, trace_args);
+                        assert(transmitted_illum[0] >= 0.0f && transmitted_illum[1] >= 0.0f &&
+                               transmitted_illum[2] >= 0.0f);
                         vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                         vec3_mult(transmitted_illum, transmitted_illum, btdf);
                     }
@@ -530,6 +540,11 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
     }else
     {
         vec3_copy(radiance, sl->bg_color);
+    }
+    assert(radiance[0] >= 0.0f && radiance[1] >= 0.0f && radiance[2] >= 0.0f);
+    if(vec3_equal(min_sr.normal, BLACK))
+    {
+        vec3_copy(radiance, RED);
     }
     return min_t;
 }

@@ -45,7 +45,7 @@ Material* getMediumMatPtr(const vec3 start, const SceneObjects *so)
             {
                 fprintf(stderr, "Too many enclosing media.\n");
                 break;
-            }else if(top = -1)
+            }else if(top == -1)
             {
                 top++;
                 stack[top] = sr.mat;

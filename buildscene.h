@@ -337,12 +337,13 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     // TODO: fix exponent
                     //material.h_samples = genHemisphereSamples(MULTIJITTERED, material.exp);
                     material.h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-
+                    /*
                     if(obj_mat->illum == 2)
                     {
                         if(material.cs[0] > 0.0f || material.cs[1] > 0.0f || material.cs[1] > 0.0f)
                         {
-                            material.mat_type = PHONG;
+                            //material.mat_type = PHONG;
+                            material.mat_type = MATTE;
                         }else
                         {
                             material.mat_type = MATTE;
@@ -358,7 +359,9 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     }else
                     {
                         material.mat_type = INVALID_MAT_TYPE;
-                    }                    
+                    }
+                    */
+                    material.mat_type = MATTE;
 
                     if(obj_mat->diffuse_map[0] != '\0')
                     {
@@ -387,7 +390,6 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     Scene_addMaterial(scene, &material, obj_mat->name);
                 }
 
-                
                 MatTexNamePair *pair_array = (MatTexNamePair*)(mat_tex_pairs.data);
                 const unsigned int pair_count = DBuffer_size(mat_tex_pairs);
                 for(int i = 0; i < pair_count; i++)
@@ -580,7 +582,7 @@ void initEnvLight(SceneLights* sl)
 {
     if(sl->num_lights == MAX_LIGHTS){return;}
     EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
-    env_light->intensity = 1.0f;
+    env_light->intensity = 2.0f;
     vec3_copy(env_light->color, WHITE);
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
@@ -682,7 +684,7 @@ void buildSceneAccel(Scene *scene)
         start = glfwGetTime();
         UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, 2);
         end = glfwGetTime();
-        printf("Uniform grid build time: %f sec\n", end - start);        
+        printf("Uniform grid build time: %f sec\n", end - start);
         so->accel_ptr = rg;
     }else if(so->accel == BVH)
     {
@@ -693,7 +695,7 @@ void buildSceneAccel(Scene *scene)
         end = glfwGetTime();
         printf("BVH build time: %f sec\n", end - start);
         //int leaf_count = 0;
-        //printBVH(tree, &leaf_count, 0);        
+        //printBVH(tree, &leaf_count, 0);
         so->accel_ptr = tree;
     }else if(so->accel == BVH4)
     {

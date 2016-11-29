@@ -21,6 +21,7 @@ static void updateShadeRecWithTexInfo(ShadeRec *sr)
     {
         getMaterialDiffuseTexColor(sr->mat->cd, sr->mat, sr->uv);
     }
+    /*
     // Update normal with normal texture value
     if(sr->mat->tex_flags & NORMAL)
     {
@@ -29,4 +30,5 @@ static void updateShadeRecWithTexInfo(ShadeRec *sr)
         getVec3InLocalBasis(sr->normal, texel, sr->normal);
         vec3_normalize(sr->normal, sr->normal);
     }
+    */
 }

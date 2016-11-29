@@ -470,7 +470,7 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
 #else
             sscanf(line_ptr, "%s", name_buffer);
 #endif
-            strcpy(material.name, name_buffer);
+            stringCopy(material.name, OBJ_NAME_LENGTH, name_buffer);
             continue;
         }
 
@@ -578,7 +578,11 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
             line_ptr += 7;
             //stringCopy(material.ambient_map, OBJ_PATH_LENGTH, line_ptr);
             stringCopy(material.ambient_map, OBJ_PATH_LENGTH, base_path);
+#ifdef _MSC_VER
+            strcat_s(material.ambient_map, OBJ_NAME_LENGTH, line_ptr);
+#else
             strcat(material.ambient_map, line_ptr);
+#endif
             continue;
         }
 
@@ -588,7 +592,11 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
             line_ptr += 7;
             stringCopy(material.diffuse_map, OBJ_PATH_LENGTH, line_ptr);
             stringCopy(material.diffuse_map, OBJ_PATH_LENGTH, base_path);
+#ifdef _MSC_VER
+            strcat_s(material.diffuse_map, OBJ_NAME_LENGTH, line_ptr);
+#else
             strcat(material.diffuse_map, line_ptr);
+#endif
             continue;
         }
 
@@ -598,7 +606,11 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
             line_ptr += 7;
             stringCopy(material.specular_map, OBJ_PATH_LENGTH, line_ptr);
             stringCopy(material.specular_map, OBJ_PATH_LENGTH, base_path);
+#ifdef _MSC_VER
+            strcat_s(material.specular_map, OBJ_NAME_LENGTH, line_ptr);
+#else
             strcat(material.specular_map, line_ptr);
+#endif
             continue;
         }
 
@@ -608,7 +620,11 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
             line_ptr += 7;
             stringCopy(material.shininess_map, OBJ_PATH_LENGTH, line_ptr);
             stringCopy(material.shininess_map, OBJ_PATH_LENGTH, base_path);
+#ifdef _MSC_VER
+            strcat_s(material.shininess_map, OBJ_NAME_LENGTH, line_ptr);
+#else
             strcat(material.shininess_map, line_ptr);
+#endif
             continue;
         }
 
@@ -618,7 +634,11 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
             line_ptr += 9;
             stringCopy(material.normal_map, OBJ_PATH_LENGTH, line_ptr);
             stringCopy(material.normal_map, OBJ_PATH_LENGTH, base_path);
+#ifdef _MSC_VER
+            strcat_s(material.normal_map, OBJ_NAME_LENGTH, line_ptr);
+#else
             strcat(material.normal_map, line_ptr);
+#endif
             continue;
         }
 
@@ -628,7 +648,11 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
             line_ptr += 6;
             stringCopy(material.alpha_map, OBJ_PATH_LENGTH, line_ptr);
             stringCopy(material.alpha_map, OBJ_PATH_LENGTH, base_path);
+#ifdef _MSC_VER
+            strcat_s(material.alpha_map, OBJ_NAME_LENGTH, line_ptr);
+#else
             strcat(material.alpha_map, line_ptr);
+#endif
             continue;
         }
     }
@@ -786,7 +810,7 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
             line_ptr += 7;
             char name_buffer[OBJ_PATH_LENGTH];
 #ifdef _MSC_VER
-            sscanf(line_ptr, "%s", name_buffer, OBJ_PATH_LENGTH);
+            sscanf_s(line_ptr, "%s", name_buffer, OBJ_PATH_LENGTH);
 #else
             sscanf(line_ptr, "%s", name_buffer);
 #endif
@@ -802,8 +826,11 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
             {
                 mtl_path[0] = '\0';
             }
+#ifdef _MSC_VER
+            strcat_s(mtl_path, OBJ_NAME_LENGTH, name_buffer);
+#else
             strcat(mtl_path, name_buffer);
-            
+#endif
             loadMTL(&obj_materials, mtl_path);
         }
     }

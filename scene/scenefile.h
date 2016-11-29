@@ -106,7 +106,7 @@ Texture* parseTexture(Scene* scene, FILE* fp, char *tex_file_name)
 }
 
 Texture* parseTextureFileName(Scene* scene, const char *file_name)
-{    
+{
     Texture* tex_ptr;
     tex_ptr = Scene_findTexture(scene, file_name);
     if(tex_ptr)
@@ -119,6 +119,7 @@ Texture* parseTextureFileName(Scene* scene, const char *file_name)
         return NULL;
     }
     printf("Loaded %s\n", file_name);
+    //stringCopy(tex.name, MAX_NAME_LENGTH, file_name);
     return Scene_addTexture(scene, &tex, file_name);
 }
 
@@ -752,7 +753,7 @@ bool parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, OBJMaterial** materials
         }
     }
 
-    bool parseSuccessful;
+    bool parseSuccessful = false;
     if(file_not_read)
     {
         double start, end;

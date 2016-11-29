@@ -1,12 +1,14 @@
 #pragma once
 #include "util/vec.h"
+#include "util/constants.h"
 
 typedef struct Texture_s
 {
     int width;
     int height;
     int comp;
-    unsigned char* data;    
+    unsigned char* data;
+    //char name[MAX_NAME_LENGTH];
 }Texture;
 
 bool loadTexture(Texture* tex, const char* file_name);

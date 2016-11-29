@@ -125,13 +125,13 @@ int main()
 
     // Camera
     Camera camera;
-    //initPinholeCameraDefault(&camera);
+    initPinholeCameraDefault(&camera);
     //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
-    initThinLensCameraDefault(&camera, 8.2, 1, params.num_samples, params.num_sample_sets);
+    //initThinLensCameraDefault(&camera, 8.2, 1, params.num_samples, params.num_sample_sets);
 
 #ifdef CORNELL_BOX
-    vec3 position = {278.0f, 273.0f, 800.0f};
-    //vec3 position = {278.0f, 600.0f, 800.0f};
+    //vec3 position = {278.0f, 273.0f, 800.0f};
+    vec3 position = {278.0f, 600.0f, 800.0f};
     vec3 look_point = {278.0f, 273.0f, 0.0f};
     /*
       // PM test
@@ -141,8 +141,10 @@ int main()
 #else
     //vec3 position = {0.0f, 2.0f, 5.0f};
     //vec3 position = {0.0f, 50.0f, 3.0f};
-    vec3 position = {-5.0f, 40.0f, 1.0f};
-    vec3 look_point = {0.0f, 1.0f, 0.0f};
+    //vec3 position = {-5.0f, 40.0f, 1.0f};
+    //vec3 look_point = {0.0f, 1.0f, 0.0f};
+    vec3 position = {-7.0f, 7.0f, 2.0f};
+    vec3 look_point = {0.0f, 7.0f, 0.0f};
 #endif
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&camera, position, look_point, up_vec);
@@ -299,7 +301,7 @@ int main()
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
     Scene_destroy(&scene);
-    Camera_destroy(&camera);
+     Camera_destroy(&camera);
     if(params.photon_map)
     {
         Photonmap_destroy(&photon_map);

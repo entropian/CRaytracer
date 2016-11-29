@@ -40,8 +40,8 @@ const vec3 GREY = {0.5f, 0.5f, 0.5f};
 const float DEFAULT_FOCAL_LENGTH = 3.0f;
 const float DEFAULT_LENS_RADIUS = 0.2f;
 
-const float K_EPSILON = 0.000005f;
-//const float K_EPSILON = 0.01f;
+//const float K_EPSILON = 0.000005f;
+const float K_EPSILON = 0.0001f;
 const float K_SMALLVALUE = 0.0000001f;
 const float TMAX = FLT_MAX;
 const float HUGEVALUE = 1.0E10;

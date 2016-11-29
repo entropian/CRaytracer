@@ -158,7 +158,7 @@ Material* SceneMaterials_push(SceneMaterials* sm, const Material* mat, const cha
     DBuffer_assume(&name_buffer, (char*)sm->names, sm->size, sm->max, sizeof(char*));
     char* mat_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
     //strcpy_s(mat_name, NAME_LENGTH, name);
-    stringCopy(mat_name, NAME_LENGTH, name);
+    stringCopy(mat_name, MAX_NAME_LENGTH, name);
     DBuffer_push(name_buffer, mat_name);
     
     sm->materials = (Material*)(mat_buffer.data);
@@ -350,7 +350,7 @@ void freeSceneLights(SceneLights* sl)
                     freeSamples3D(env_light_ptr->samples3D);
                     env_light_ptr->samples3D = NULL;
                 }
-            }else if(sl->light_types[i] = POINTLIGHT)
+            }else if(sl->light_types[i] == POINTLIGHT)
             {
                 PointLight *point_light = (PointLight*)(sl->light_ptrs[i]);
                 if(point_light->proj_map)
