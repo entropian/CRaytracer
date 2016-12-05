@@ -62,7 +62,8 @@ void specularShading(vec3 radiance, const vec3 light_dir,
     vec3_scale(tmp, sr->normal, ndotwo * 2.0f);
     vec3_add(reflect_dir, wo_neg, tmp);    
     float rdotl = clamp(vec3_dot(reflect_dir, light_dir), 0.0f, 1.0f);
-    vec3_scale(tmp, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+    // NOTE: using cd instead of cs
+    vec3_scale(tmp, sr->mat->cd, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
     vec3_mult(tmp, inc_radiance_cos, tmp);
     vec3_add(radiance, radiance, tmp);
 }
@@ -99,8 +100,9 @@ void ambientShading(vec3 radiance, const AmbientLight* amb_light, const vec3 sam
         }
     }
 }
-
-void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const AreaLight* area_light_ptr, const ShadeRec* sr)
+extern void maxToOne(vec3, const vec3);
+void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
+                      const AreaLight* area_light_ptr, const ShadeRec* sr)
 {
     // diffuse brdf
     vec3 f;
@@ -127,7 +129,7 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, c
     }    
     getIncRadiance(inc_radiance, AREALIGHT, area_light_ptr, sr->hit_point);    
 
-    // Geometry term                                    
+    // Geometry term
     float geo_term = vec3_dot(light_normal, neg_wi) * ndotwi /
         vec3_dot(displacement, displacement);
 
@@ -146,9 +148,10 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir, c
         float ndotwo = vec3_dot(sr->normal, sr->wo);
         vec3_scale(tmp, sr->normal, 2.0f * ndotwo);
         vec3_add(reflect_dir, wo_neg, tmp);
-        float rdotl = vec3_dot(reflect_dir, light_dir);
+        float rdotl = clamp(vec3_dot(reflect_dir, light_dir), 0.0f, 1.0f);
 
-        vec3_scale(f, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        //vec3_scale(f, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        vec3_scale(f, sr->mat->cd, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
         vec3_mult(tmp, f, inc_radiance);
         vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
         vec3_add(radiance, radiance, tmp);
@@ -201,8 +204,11 @@ void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir
         vec3_scale(tmp, sr->normal, 2.0f * ndotwo);
         vec3_add(reflect_dir, wo_neg, tmp);
         float rdotl = vec3_dot(reflect_dir, light_dir);
+        assert(rdotl <= 1.0f);
 
-        vec3_scale(f, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        //vec3_scale(f, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        // NOTE: Using cd instead of cs
+        vec3_scale(f, sr->mat->cd, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
         vec3_mult(tmp, f, inc_rad);
         vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
         vec3_add(radiance, radiance, tmp);

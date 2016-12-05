@@ -327,7 +327,7 @@ void mapSamplesToDisk(Samples2D *dest_samples, const Samples2D *src_samples)
         }
         phi *= (float)PI/4.0f;
         dest_samples->samples[i][0] = r*cos(phi);
-        dest_samples->samples[i][1] = r*sin(phi);        
+        dest_samples->samples[i][1] = r*sin(phi);
     }
 }
 
@@ -339,7 +339,7 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
         return;
     }
     prepSample3DStruct(dest_samples);
-    unsigned int size = src_samples->num_samples * src_samples->num_sets;    
+    unsigned int size = src_samples->num_samples * src_samples->num_sets;
     for(unsigned int i = 0; i < size; i++)
     {
         float cos_phi = (float)cos(2.0f * (float)PI * src_samples->samples[i][0]);

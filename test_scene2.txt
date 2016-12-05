@@ -123,7 +123,7 @@ SMOOTH yes
 SCALING 0.03 0.03 0.03
 LOCATION 0.5 1.0 -1
 Orientation 0 0 0
-MATERIAL matte2
+MATERIAL matte1
 
 #OBJECT MESH
 FILE models/crysponza.obj

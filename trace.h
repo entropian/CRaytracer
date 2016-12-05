@@ -184,12 +184,12 @@ float calcTransmitDir(vec3 transmit_dir, const ShadeRec* sr)
     vec3 n;
     vec3_copy(n, sr->normal);
     float cos_theta_i = vec3_dot(n, sr->wo);
-    float eta = sr->mat->ior_in / sr->mat->ior_out;    
+    float eta = sr->mat->ior_in / sr->mat->ior_out;
     if(cos_theta_i < 0.0f)
     {
         cos_theta_i = -cos_theta_i;
         vec3_negate(n, n);
-        eta = 1.0f / eta;                    
+        eta = 1.0f / eta;
     }
 
     float tmp = 1.0f - (1.0f - cos_theta_i * cos_theta_i) / (eta * eta);
@@ -256,7 +256,10 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
-            //maxToOne(radiance, radiance);
+            if(depth == MAX_DEPTH)
+            {
+                maxToOne(radiance, radiance);
+            }
         }else
         {
             ambientShading(radiance, sl->amb_light, h_sample, so, &min_sr);
@@ -267,7 +270,7 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
                 vec3 light_dir;
                 getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
                 float ndotwi = vec3_dot(light_dir, min_sr.normal);
-                if(ndotwi > 0)
+                if(ndotwi > 0.0f)
                 {
                     bool in_shadow = shadowTest(i, sl, so, light_dir, &min_sr);
                     if(!in_shadow)
@@ -359,6 +362,28 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
     return min_t;
 }
 
+void cosWeightedHemisphereSample(vec3 sample, const float e)
+{
+    // Random sample in [-1, 1] square
+    float x = ((float)rand() / (float)RAND_MAX) * 2 - 0.5f;
+    float y = ((float)rand() / (float)RAND_MAX) * 2 - 0.5f;
+    // Rejection sampling for circle
+    while((x*x + y*y) > 1.0f)
+    {
+        x = ((float)rand() / (float)RAND_MAX) * 2 - 0.5f;
+        y = ((float)rand() / (float)RAND_MAX) * 2 - 0.5f;
+    }
+    // Map disk sample to hemisphere
+    float cos_phi = (float)cos(2.0f * (float)PI * x);
+    float sin_phi = (float)sin(2.0f * (float)PI * x);
+    float cos_theta = powf((1.0f - fabs(y)), 1.0f / (e + 1.0f));
+    float sin_theta = (float)sqrt(1.0f - cos_theta * cos_theta);
+    float pu = sin_theta * cos_phi;
+    float pv = sin_theta * sin_phi;
+    float pw = cos_theta;
+    vec3_assign(sample, pu, pv, pw);
+}
+
 float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
                          const int depth, TraceArgs trace_args)
 {
@@ -378,7 +403,37 @@ float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
     float phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
     float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
     vec3 brdf;
-    vec3_scale(brdf, sr->mat->cs, phong_lobe); // Defer reflectance scaling
+    //vec3_scale(brdf, sr->mat->cs, phong_lobe); // Defer reflectance scaling
+    vec3_scale(brdf, sr->mat->cd, phong_lobe); // NOTE: using cd instead of cs
+    float t;
+    t = pathTrace(ref_radiance, depth-1, sample_ray, trace_args);
+    vec3_scale(ref_radiance, ref_radiance, vec3_dot(sr->normal, sample_ray.direction) / pdf);
+    vec3_mult(ref_radiance, ref_radiance, brdf);
+    return t;
+}
+
+float calcSpecRadiancePTGenSample(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
+                         const int depth, TraceArgs trace_args)
+{
+    const int sample_index = trace_args.sample_index;
+    vec3 reflect_dir;
+    calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
+    vec3 new_sample;
+    //getSample3D(new_sample, sr->mat->h_samples, sample_index + (MAX_DEPTH - depth));
+    cosWeightedHemisphereSample(new_sample, sr->mat->exp);
+    Ray sample_ray;
+    vec3_copy(sample_ray.origin, sr->hit_point);
+    getVec3InLocalBasis(sample_ray.direction, new_sample, reflect_dir);
+    if(vec3_dot(sample_ray.direction, sr->normal) < 0)
+    {
+        vec3 reflected_sample = {-new_sample[0], -new_sample[1], new_sample[2]};
+        getVec3InLocalBasis(sample_ray.direction, reflected_sample, reflect_dir);
+    }
+    float phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat->exp);
+    float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
+    vec3 brdf;
+    //vec3_scale(brdf, sr->mat->cs, phong_lobe); // Defer reflectance scaling
+    vec3_scale(brdf, sr->mat->cd, phong_lobe); // NOTE: using cd instead of cs
     float t;
     t = pathTrace(ref_radiance, depth-1, sample_ray, trace_args);
     vec3_scale(ref_radiance, ref_radiance, vec3_dot(sr->normal, sample_ray.direction) / pdf);
@@ -469,7 +524,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
                     vec3_add(radiance, radiance, tmp);
                 }
 
-                if(min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == PHONG)
+                if(min_sr.mat->mat_type == REFLECTIVE)
                 {
                     vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
                     // NOTE: depth - 1 is a shitty hack
@@ -478,6 +533,48 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
                            reflected_illum[2] >= 0.0f);
                     vec3_scale(reflected_illum, reflected_illum, min_sr.mat->ks);
                     vec3_add(radiance, radiance, reflected_illum);
+                }
+
+                if(min_sr.mat->mat_type == PHONG)
+                {
+                    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+                    float rand_float = (float)rand() / (float)RAND_MAX;
+                    if(rand_float <= min_sr.mat->ks)
+                    {
+                        // Matte
+                        vec3 new_sample;
+                        getSample3D(new_sample, min_sr.mat->h_samples, sample_index + (MAX_DEPTH - depth));
+                        Ray sample_ray;
+                        getVec3InLocalBasis(sample_ray.direction, new_sample, min_sr.normal);
+                        vec3_copy(sample_ray.origin, min_sr.hit_point);
+
+                        vec3 inc_radiance;
+                        pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
+                        assert(inc_radiance[0] >= 0.0f && inc_radiance[1] >= 0.0f && inc_radiance[2] >= 0.0f);
+                        vec3 brdf;
+                        // TODO: figure this out
+                        //vec3_scale(brdf, min_sr.mat->cd, min_sr.mat->kd / (float)PI);
+                        vec3_scale(brdf, min_sr.mat->cd, 1.0f / (float)PI);
+                        float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
+                        float pdf = ndotwi / (float)PI;
+
+                        vec3 tmp;
+                        vec3_mult(tmp, inc_radiance, brdf);
+                        vec3_scale(tmp, tmp, ndotwi / pdf);
+                        vec3_add(radiance, radiance, tmp);
+                    }else
+                    {
+                        // Reflective
+                        // TODO: convert samples to proper exponent
+                        vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+                        // NOTE: depth - 1 is a shitty hack
+                        calcSpecRadiancePTGenSample(reflected_illum, ray, &min_sr, depth-1, trace_args);
+                        assert(reflected_illum[0] >= 0.0f && reflected_illum[1] >= 0.0f &&
+                               reflected_illum[2] >= 0.0f);
+                        // TODO: figure this out
+                        //vec3_scale(reflected_illum, reflected_illum, min_sr.mat->ks);
+                        vec3_add(radiance, radiance, reflected_illum);
+                    }
                 }
 
                 if(min_sr.mat->mat_type == TRANSPARENT)
@@ -542,10 +639,6 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
         vec3_copy(radiance, sl->bg_color);
     }
     assert(radiance[0] >= 0.0f && radiance[1] >= 0.0f && radiance[2] >= 0.0f);
-    if(vec3_equal(min_sr.normal, BLACK))
-    {
-        vec3_copy(radiance, RED);
-    }
     return min_t;
 }
 

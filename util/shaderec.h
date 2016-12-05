@@ -16,19 +16,16 @@ typedef struct ShadeRec
 
 static void updateShadeRecWithTexInfo(ShadeRec *sr)
 {
-    // Update diffuse color with diffuse texture value
     if(sr->mat->tex_flags & DIFFUSE)
     {
         getMaterialDiffuseTexColor(sr->mat->cd, sr->mat, sr->uv);
     }
-    /*
-    // Update normal with normal texture value
-    if(sr->mat->tex_flags & NORMAL)
+    if(sr->mat->tex_flags & SPECULAR)
     {
-        vec3 texel;
-        getMaterialNormalTexColor(texel, sr->mat, sr->uv);
-        getVec3InLocalBasis(sr->normal, texel, sr->normal);
-        vec3_normalize(sr->normal, sr->normal);
+        // TEMP:
+        vec3 spec_color;
+        getMaterialSpecularTexColor(spec_color, sr->mat, sr->uv);
+        sr->mat->ks = spec_color[0];
+        sr->mat->kd = 1.0f - sr->mat->ks;
     }
-    */
 }

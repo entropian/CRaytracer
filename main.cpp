@@ -112,16 +112,20 @@ int main()
     {
         photon_map_status = true;
         Photonmap_init(&photon_map, num_photons, max_bounce);
-        Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
         emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
-        emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
         Photonmap_balance(&photon_map);
-        Photonmap_balance(&caustic_map);
+        if(params.caustic_map)
+        {
+            Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
+            emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
+            Photonmap_balance(&caustic_map);
+        }
     }
     PhotonQueryVars query_vars;
     query_vars.nphotons = params.pm_config.num_estimate;
     query_vars.photon_radius = params.pm_config.photon_radius;
     query_vars.caustic_radius = params.pm_config.caustic_radius;
+    query_vars.caustic = params.caustic_map;
 
     // Camera
     Camera camera;
@@ -143,7 +147,7 @@ int main()
     //vec3 position = {0.0f, 50.0f, 3.0f};
     //vec3 position = {-5.0f, 40.0f, 1.0f};
     //vec3 look_point = {0.0f, 1.0f, 0.0f};
-    vec3 position = {-7.0f, 7.0f, 2.0f};
+    vec3 position = {-10.0f, 7.0f, 2.0f};
     vec3 look_point = {0.0f, 7.0f, 0.0f};
 #endif
     vec3 up_vec = {0.0f, 1.0f, 0.0f};

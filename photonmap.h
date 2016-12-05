@@ -42,6 +42,7 @@ typedef struct Photonmap_s
 
 typedef struct PhotonQueryVars_s
 {
+    bool caustic;
     int num_photons;
     int num_caustic_photons;
     int nphotons;
@@ -858,13 +859,15 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
                 vec3_scale(f, sr.mat->cd, sr.mat->kd * vec3_dot(sr.normal, new_ray.direction));
                 vec3_mult(pm_color, pm_color, f);
             }
-
-            vec3 caustic_irrad, caustic_rad;
-            irradEstimate(caustic_irrad, caustic_map, sr.hit_point, sr.normal,
-                          query_vars.caustic_radius, query_vars.nphotons);
-            vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
-            vec3_mult(caustic_rad, caustic_irrad, f);
-            vec3_add(color, pm_color, caustic_rad);
+            if(query_vars.caustic)
+            {
+                vec3 caustic_irrad, caustic_rad;
+                irradEstimate(caustic_irrad, caustic_map, sr.hit_point, sr.normal,
+                              query_vars.caustic_radius, query_vars.nphotons);
+                vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
+                vec3_mult(caustic_rad, caustic_irrad, f);
+                vec3_add(color, pm_color, caustic_rad);
+            }
         }
     }
 }

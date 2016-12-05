@@ -337,7 +337,8 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     // TODO: fix exponent
                     //material.h_samples = genHemisphereSamples(MULTIJITTERED, material.exp);
                     material.h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-                    /*
+                    stringCopy(material.name, MAX_NAME_LENGTH, obj_mat->name);
+
                     if(obj_mat->illum == 2)
                     {
                         if(material.cs[0] > 0.0f || material.cs[1] > 0.0f || material.cs[1] > 0.0f)
@@ -360,9 +361,7 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     {
                         material.mat_type = INVALID_MAT_TYPE;
                     }
-                    */
-                    material.mat_type = MATTE;
-
+                    // Load textures
                     if(obj_mat->diffuse_map[0] != '\0')
                     {
                         Texture* tex_ptr = parseTextureFileName(scene, obj_mat->diffuse_map);
@@ -383,6 +382,18 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                             MatTexNamePair pair;
                             pair.tex_type = NORMAL;
                             stringCopy(pair.tex_name, MAX_NAME_LENGTH, obj_mat->normal_map);
+                            stringCopy(pair.mat_name, MAX_NAME_LENGTH, obj_mat->name);
+                            DBuffer_push(mat_tex_pairs, pair);
+                        }
+                    }
+                    if(obj_mat->specular_map[0] != '\0')
+                    {
+                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->specular_map);
+                        if(tex_ptr)
+                        {
+                            MatTexNamePair pair;
+                            pair.tex_type = SPECULAR;
+                            stringCopy(pair.tex_name, MAX_NAME_LENGTH, obj_mat->specular_map);
                             stringCopy(pair.mat_name, MAX_NAME_LENGTH, obj_mat->name);
                             DBuffer_push(mat_tex_pairs, pair);
                         }
@@ -416,15 +427,19 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     {
                         setMaterialNormalTexPtr(mat_ptr, tex_ptr);
                     } break;
+                    case SPECULAR:
+                    {
+                        setMaterialSpecularTexPtr(mat_ptr, tex_ptr);
+                    } break;
                     }
                 }
                 DBuffer_destroy(&mat_tex_pairs);
                 if(materials){free(materials);}
-                
+
                 for(int i = 0; i < num_mesh; i++)
                 {
                     Mesh mesh;
-                    Mesh_copyOBJShape(&mesh, &(shapes[i]));                    
+                    Mesh_copyOBJShape(&mesh, &(shapes[i]));
                     calcTriangleNormals(&mesh);
                     //Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
                     Material* mat = Scene_findMaterial(scene, mesh.mat_name);
@@ -456,6 +471,7 @@ void initAreaLights(SceneLights* sl)
 {
 
     // Area light
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
@@ -483,6 +499,7 @@ void initAreaLights(SceneLights* sl)
     vec3_assign(rect->width, 300.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 0.0f, -250.0f);
     */
+    /*
     vec3_copy(rect->normal, DOWN);
     vec3_copy(rect->mat->ce, area_light_ptr->color);
     rect->mat->ke = area_light_ptr->intensity;
@@ -505,7 +522,7 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-
+    */
 
     // Area light 2
     /*
@@ -540,10 +557,10 @@ void initAreaLights(SceneLights* sl)
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
     */
-    /*
+
     // Sphere
     AreaLight* sphere_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-    sphere_light_ptr->intensity = 1000000.0f;
+    sphere_light_ptr->intensity = 10.0f;
     vec3_assign(sphere_light_ptr->color, 1.0f, 0.85f, 0.5f);
     vec3_assign(sphere_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
@@ -552,8 +569,8 @@ void initAreaLights(SceneLights* sl)
     //vec3_assign(sphere->center, -0.9f, 5.0f, -3.1f);
     //vec3_assign(sphere->center, -0.9f, 5.0f, -1.0f);
     // Photon map location
-    vec3_assign(sphere->center, 500.0f, 225.0f, -290.0f);
-    sphere->radius = 20.0f;
+    vec3_assign(sphere->center, 0.0f, 10.0f, 0.0f);
+    sphere->radius = 1.0f;
     sphere->min_theta = 0.0f;
     sphere->max_theta = (float)PI;
     sphere->phi = (float)PI;
@@ -562,6 +579,7 @@ void initAreaLights(SceneLights* sl)
     vec3_copy(sphere->mat->ce, sphere_light_ptr->color);
     sphere->mat->ke = sphere_light_ptr->intensity;
     sphere->mat->mat_type = EMISSIVE;
+    sphere->mat->tex_flags = NO_TEXTURE;
 
     Samples3D* h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
 
@@ -575,7 +593,6 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = sphere_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-    */
 }
 
 void initEnvLight(SceneLights* sl)
@@ -622,6 +639,7 @@ void initSceneLights(SceneLights* sl)
     {
         sl->light_ptrs[i] = NULL;
     }
+    /*
     sl->num_lights = 0;
     // Directional light
     if(sl->num_lights == MAX_LIGHTS){return;}
@@ -635,7 +653,7 @@ void initSceneLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = dir_light_ptr;
     sl->light_types[sl->num_lights] = DIRECTIONAL;
     (sl->num_lights)++;
-
+    */
     
     // Point light
     /*
@@ -669,8 +687,8 @@ void initSceneLights(SceneLights* sl)
     (sl->num_lights)++;    
     */
 
-    //initAreaLights(sl);
-    initEnvLight(sl);
+    initAreaLights(sl);
+    //initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
 }

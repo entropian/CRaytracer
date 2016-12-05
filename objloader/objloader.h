@@ -643,7 +643,7 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         }
 
         // Alpha map
-        if(strncmp(line_ptr, "map_d", 5) == 0 && line_ptr[6] == ' ')
+        if(strncmp(line_ptr, "map_d", 5) == 0 && line_ptr[5] == ' ')
         {
             line_ptr += 6;
             stringCopy(material.alpha_map, OBJ_PATH_LENGTH, line_ptr);
@@ -705,12 +705,18 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
                     max
                     element_size
      */
-    DBuffer in_face_group = DBuffer_create(DBuffer);    
-    
+    DBuffer in_face_group = DBuffer_create(DBuffer);
+
     while(OBJGetLine(fp, &read_result, line_buffer, 1024))
     {
+        // Remove leading space
         const char* line_ptr = &(line_buffer[0]);
         line_ptr += strspn(line_ptr, " \t");
+
+        if(line_ptr[0] == '#')
+        {
+            continue;
+        }
 
         // Position
         if(line_ptr[0] == 'v' && line_ptr[1] == ' ')
@@ -720,9 +726,9 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
             OBJParseFloat3(&x, &y, &z, &line_ptr);
             DBuffer_push(in_positions, x);
             DBuffer_push(in_positions, y);
-            DBuffer_push(in_positions, z);            
+            DBuffer_push(in_positions, z);
         }
-        
+
         // Normal
         if(line_ptr[0] == 'v' && line_ptr[1] == 'n')
         {
@@ -731,7 +737,7 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
             OBJParseFloat3(&x, &y, &z, &line_ptr);
             DBuffer_push(in_normals, x);
             DBuffer_push(in_normals, y);
-            DBuffer_push(in_normals, z);                        
+            DBuffer_push(in_normals, z);
         }
 
         // Texcoord
@@ -768,7 +774,7 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
                 {
                     DBuffer_push(face, vi);
                 }
-            }            
+            }
             DBuffer_push(in_face_group, face);
         }
 

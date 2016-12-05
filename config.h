@@ -30,6 +30,7 @@ typedef struct ConfigParams_s
     AccelType accel_type;
     bool image_save;
     bool photon_map;
+    bool caustic_map;
     PhotonmapConfig pm_config;
     char file_name[128];
 }ConfigParams;
@@ -127,6 +128,14 @@ void parseConfigFile(ConfigParams* cp)
             if(strcmp(buffer, "yes") == 0)
             {
                 cp->photon_map = true;
+            }
+        }else if(strcmp(buffer, "caustic_map") == 0)
+        {
+            cp->caustic_map = false;
+            getNextTokenInFile(buffer, fp);
+            if(strcmp(buffer, "yes") == 0)
+            {
+                cp->caustic_map = true;
             }
         }else if(strcmp(buffer, "num_photons") == 0)
         {

@@ -190,7 +190,7 @@ void interpTriangleVec3(vec3 out, const float beta, const float gamma,
     vec3_scale(out, v0, 1.0f - beta - gamma);
     vec3_scale(tmp, v1, beta);
     vec3_add(out, out, tmp);
-    vec3_scale(tmp, v2, gamma);    
+    vec3_scale(tmp, v2, gamma);
     vec3_add(out, out, tmp);
     vec3_normalize(out, out);
 }
@@ -211,36 +211,33 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     vec3_assign(n1, mesh->normals[index_1], mesh->normals[index_1+1], mesh->normals[index_1+2]);
     vec3_assign(n2, mesh->normals[index_2], mesh->normals[index_2+1], mesh->normals[index_2+2]);
     interpTriangleVec3(tmp_normal, beta, gamma, n0, n1, n2);
+    mat3_mult_vec3(sr->normal, *(tri->normal_mat), tmp_normal);
+    vec3_normalize(sr->normal, sr->normal);
     vec3 surface_normal;
-    mat3_mult_vec3(surface_normal, *(tri->normal_mat), tmp_normal);
-    vec3_normalize(surface_normal, surface_normal);
-
+    vec3_copy(surface_normal, sr->normal);
     assert(surface_normal[0] != 0.0f || surface_normal[1] != 0.0f || surface_normal[2] != 0.0f);
-
-    vec3 tex_normal;
+    
     if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
     {
         interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
         if(tri->mat->tex_flags & NORMAL)
         {
-            //vec3 tangent, binormal, tex_normal, normal, tmp;
-            vec3 tangent, binormal, normal, tmp;
-            interpTriangleVec3(tmp, beta, gamma, mesh->tangents[tri->i0], mesh->tangents[tri->i1], mesh->tangents[tri->i2]);
+            vec3 tangent, binormal, tex_normal, normal, tmp;
+            interpTriangleVec3(tmp, beta, gamma,
+                               mesh->tangents[tri->i0], mesh->tangents[tri->i1], mesh->tangents[tri->i2]);
             mat3_mult_vec3(tangent, *(tri->normal_mat), tmp);
             vec3_normalize(tangent, tangent);
 
-            vec3_cross(binormal, surface_normal, tangent);
+            vec3_cross(binormal, sr->normal, tangent);
             vec3_normalize(binormal, binormal);
 
-            getTexColor(tex_normal, tri->mat->tex_array[1], sr->uv);
-            orthoNormalTransform(normal, tangent, binormal, surface_normal, tex_normal);
+            getMaterialNormalTexColor(tex_normal, tri->mat, sr->uv);
+            orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);
             vec3_normalize(normal, normal);
             vec3_copy(sr->normal, normal);
         }
-    }else
-    {
-        vec3_copy(sr->normal, surface_normal);
     }
+
     if(vec3_equal(sr->normal, BLACK))
     {
         vec3_copy(sr->normal, surface_normal);
