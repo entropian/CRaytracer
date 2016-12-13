@@ -66,20 +66,19 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
     int num_aabb;
     getSceneObjAABBs(aabb_array, &num_aabb, objects, *num_obj);
     ug->aabb = calcUniformGridAABB(aabb_array, num_aabb);
-    
+
     ug->wx = ug->aabb.max[0] - ug->aabb.min[0];
     ug->wy = ug->aabb.max[1] - ug->aabb.min[1];
     ug->wz = ug->aabb.max[2] - ug->aabb.min[2];
-    printVec3WithText("aabb.max", ug->aabb.max);
-    printVec3WithText("aabb.min", ug->aabb.min);    
+    printVec3WithText("Uniform grid max", ug->aabb.max);
+    printVec3WithText("Uniform grid min", ug->aabb.min);
 
-    //float s = powf(ug->wx * ug->wy * ug->wz / *num_obj, 0.33333f);
     float s = powf(ug->wx * ug->wy * ug->wz / *num_obj, 0.33333f);
     ug->nx = (int)(ug->wx * multiplier / s + 1);
     ug->ny = (int)(ug->wy * multiplier / s + 1);
     ug->nz = (int)(ug->wz * multiplier / s + 1);
     ug->num_cells = ug->nx * ug->ny * ug->nz;
-    
+
     int nx = ug->nx, ny = ug->ny, nz = ug->nz;
     float wx = ug->wx, wy = ug->wy, wz = ug->wz;
 

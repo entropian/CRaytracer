@@ -13,6 +13,10 @@
 extern int MAX_DEPTH;
 #define SEPARATE_DIRECT_INDIRECT
 
+// Reminder
+extern bool g_is_photon_map;
+extern ShadeRec g_primary_sr;
+
 enum TraceType
 {
     RAYCAST,
@@ -253,6 +257,13 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
         {
             updateShadeRecWithTexInfo(&min_sr);
         }
+        /*
+        // Reminder
+        if(g_is_photon_map && depth == MAX_DEPTH)
+        {
+            g_primary_sr = min_sr;
+        }
+        */
         if(min_sr.mat->mat_type == EMISSIVE)
         {
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
@@ -264,19 +275,22 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
         {
             ambientShading(radiance, sl->amb_light, h_sample, so, &min_sr);
             // Direct illumination
-
-            for(int i = 0; i < sl->num_lights; i++)
+            // TODO: refactor
+            if(min_sr.mat->mat_type == MATTE || min_sr.mat->mat_type == PHONG)
             {
-                vec3 light_dir;
-                getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
-                float ndotwi = vec3_dot(light_dir, min_sr.normal);
-                if(ndotwi > 0.0f)
+                for(int i = 0; i < sl->num_lights; i++)
                 {
-                    bool in_shadow = shadowTest(i, sl, so, light_dir, &min_sr);
-                    if(!in_shadow)
+                    vec3 light_dir;
+                    getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
+                    float ndotwi = vec3_dot(light_dir, min_sr.normal);
+                    if(ndotwi > 0.0f)
                     {
-                        directIllumShading(radiance, ndotwi, light_dir, sl->light_ptrs[i],
-                                           sl->light_types[i], &min_sr);
+                        bool in_shadow = shadowTest(i, sl, so, light_dir, &min_sr);
+                        if(!in_shadow)
+                        {
+                            directIllumShading(radiance, ndotwi, light_dir, sl->light_ptrs[i],
+                                               sl->light_types[i], &min_sr);
+                        }
                     }
                 }
             }
@@ -286,7 +300,6 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
             {
                 float reflect_t;
                 vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                //reflect_t = calcSpecRefRadiance(reflected_illum, depth, h_sample, ray, &min_sr, so, sl, sample_index);
                 reflect_t = calcSpecRefRadiance(reflected_illum, depth, ray, &min_sr, trace_args);
 
                 if(min_sr.mat->mat_type == REFLECTIVE)
@@ -313,9 +326,8 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
 
                     float transmit_t;
                     vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-                    //transmit_t = whittedTrace(transmitted_illum, depth-1, h_sample, transmitted_ray, so, sl, sample_index);
                     transmit_t = whittedTrace(transmitted_illum, depth-1, transmitted_ray, trace_args);
-                    
+
                     vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
                     vec3_mult(transmitted_illum, transmitted_illum, btdf);
                     // Scaling reflection since there's no total internal reflection
@@ -336,7 +348,7 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
                     vec3_add(radiance, radiance, transmitted_illum);
                 }else
                 {
-                    vec3 color_filter;                    
+                    vec3 color_filter;
                     if(ndotwo > 0.0f)
                     {
                         vec3_pow(color_filter, min_sr.mat->cf_out, reflect_t);
@@ -602,7 +614,10 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
                         float kt = 1.0f - kr;
 
                         vec3 btdf;
-                        vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
+                        // TODO: since I'm using Russian roulette, it probably doesn't make sense
+                        // to multiply by kt?
+                        //vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
+                        vec3_scale(btdf, WHITE, 1 / (eta*eta) / ndotwt);
                         Ray transmitted_ray;
                         vec3_copy(transmitted_ray.origin, min_sr.hit_point);
                         vec3_copy(transmitted_ray.direction, transmit_dir);

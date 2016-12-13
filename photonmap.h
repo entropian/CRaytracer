@@ -130,34 +130,31 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const float t, const 
     } break;
     case TRANSPARENT:
     {
-        if(!totalInternalReflection(sr))
+        float kr = calcFresnelReflectance(sr);
+        vec3 transmit_dir;
+        calcTransmitDir(transmit_dir, sr);
+        float ndotwo = vec3_dot(sr->normal, sr->wo);
+        vec3 color_filter_ref, color_filter_trans;
+        // NOTE: the pairing between color_filter_ref and color_filter_trans,
+        // and cf_in and cf_out are the reverse of that in the whittedTrace and pathTrace function,
+        // because the tracing direction is reversed.
+        if(ndotwo > 0.0f)
         {
-            float kr = calcFresnelReflectance(sr);
-            vec3 transmit_dir;
-            calcTransmitDir(transmit_dir, sr);
-            float ndotwo = vec3_dot(sr->normal, sr->wo);
-            vec3 color_filter_ref, color_filter_trans;
-            if(ndotwo > 0.0f)
-            {
-                vec3_pow(color_filter_ref, sr->mat->cf_out, t);
-                vec3_pow(color_filter_trans, sr->mat->cf_in, t);
-            }else
-            {
-                vec3_pow(color_filter_ref, sr->mat->cf_in, t);
-                vec3_pow(color_filter_trans, sr->mat->cf_out, t);
-            }
-            if(rand_float <= kr)
-            {
-                calcReflectRayDir(ref_ray_dir, sr->normal, ray->direction);
-                vec3_mult(photon_power, photon_power, color_filter_ref);
-            }else
-            {
-                vec3_copy(ref_ray_dir, transmit_dir);
-                vec3_mult(photon_power, photon_power, color_filter_trans);
-            }
+            vec3_pow(color_filter_ref, sr->mat->cf_in, t);
+            vec3_pow(color_filter_trans, sr->mat->cf_out, t);
         }else
         {
+            vec3_pow(color_filter_ref, sr->mat->cf_out, t);
+            vec3_pow(color_filter_trans, sr->mat->cf_in, t);
+        }
+        if(rand_float <= kr)
+        {
             calcReflectRayDir(ref_ray_dir, sr->normal, ray->direction);
+            vec3_mult(photon_power, photon_power, color_filter_ref);
+        }else
+        {
+            vec3_copy(ref_ray_dir, transmit_dir);
+            vec3_mult(photon_power, photon_power, color_filter_trans);
         }
     } break;
     case EMISSIVE:
@@ -175,7 +172,7 @@ void getPointLightPhoton(Ray *ray, vec3 photon_power, const PointLight *point_li
     calcSphereSample(ray->direction);
 }
 
-void getPointLightCausticPhoton(Ray *ray, vec3 photon_power, const PointLight *point_light)
+void getPointLightPhotonCaustic(Ray *ray, vec3 photon_power, const PointLight *point_light)
 {
     vec3_scale(photon_power, point_light->color, point_light->intensity);
     vec3_copy(ray->origin, point_light->point);
@@ -229,6 +226,11 @@ void getRectLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_light
 
     getSample3D(h_sample, h_samples, sample_index);
     getAreaLightNormal(light_normal, area_light, ORIGIN);
+    float rand_float = (float)rand() / (float)RAND_MAX;
+    if(rand_float < 0.5)
+    {
+        vec3_negate(light_normal, light_normal);
+    }
     getVec3InLocalBasis(ray->direction, h_sample, light_normal);
 
     vec2 unit_square_sample;
@@ -261,6 +263,23 @@ void getSphereLightPhoton(Ray *ray, vec3 photon_power, const AreaLight *area_lig
 }
 
 void getAreaLightPhoton(Ray *ray, vec3 photon_power, AreaLight *area_light, Samples3D *h_samples, unsigned int *sample_index)
+{
+    if(area_light->obj_type == RECTANGLE)
+    {
+        getRectLightPhoton(ray, photon_power, area_light, h_samples, *sample_index);
+        (*sample_index)++;
+    }else if(area_light->obj_type == SPHERE)
+    {
+        getSphereLightPhoton(ray, photon_power, area_light, h_samples, *sample_index);
+        (*sample_index)++;
+    }else
+    {
+        fprintf(stderr, "Wrong light geometry type.\n");
+        return;
+    }
+}
+
+void getAreaLightPhotonCaustic(Ray *ray, vec3 photon_power, AreaLight *area_light, Samples3D *h_samples, unsigned int *sample_index)
 {
     if(area_light->obj_type == RECTANGLE)
     {
@@ -382,11 +401,15 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             float t = intersectTest(&sr, so, ray);
             if(t < TMAX)
             {
+                if(sr.mat->tex_flags != NO_TEXTURE)
+                {
+                    updateShadeRecWithTexInfo(&sr);
+                }
                 /*
                 if(sr.mat->mat_type == MATTE
                    && bounce_count != 0) // Excluding first bounce so the photon map is only for indirection illum
                 */
-                if(sr.mat->mat_type == MATTE)
+                if(sr.mat->mat_type == MATTE) // Using global photon map for final gather
                 {
                     // Store photon if surface is matte
                     stored_photons++;
@@ -422,12 +445,13 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
 #endif
 }
 
-void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl)    
+void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLights *sl,
+                  const AABB *aabb, const unsigned int num_aabb)
 {
 #ifdef SHOW_TIME
     double start_time, end_time;
     start_time = glfwGetTime();
-#endif    
+#endif
     Photon *photons = photon_map->photons;
     int light_count = countLight(sl);
     int photons_per_light = photon_map->max_photons / light_count;
@@ -440,7 +464,7 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
     for(int i = 0; i < sl->num_lights; i++)
     {
         void* light_ptr = sl->light_ptrs[i];
-        LightType light_type = sl->light_types[i];        
+        LightType light_type = sl->light_types[i];
         if(light_type != POINTLIGHT && light_type != AREALIGHT)
         {
             light_ptr = NULL;
@@ -458,23 +482,58 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
         {
             if(!reflected || bounce_count == max_bounce)
             {
+                /*
                 switch(light_type)
                 {
                 case POINTLIGHT:
-                    getPointLightCausticPhoton(&ray, photon_power, (PointLight*)light_ptr);
+                    getPointLightPhotonCaustic(&ray, photon_power, (PointLight*)light_ptr);
                     break;
                 case AREALIGHT:
-                    // TODO 
-                    getAreaLightPhoton(&ray, photon_power, (AreaLight*)light_ptr, h_samples, &sample_index);                    
+                    // TODO
+                    getAreaLightPhotonCaustic(&ray, photon_power, (AreaLight*)light_ptr,
+                                              h_samples, &sample_index);
                     break;
                 }
-                bounce_count = 0;
                 emitted++;
+                bounce_count = 0;
+                */
+
+                bool hits_caustic_bb = false;
+                while(!hits_caustic_bb)
+                {
+                    switch(light_type)
+                    {
+                    case POINTLIGHT:
+                        getPointLightPhotonCaustic(&ray, photon_power, (PointLight*)light_ptr);
+                        break;
+                    case AREALIGHT:
+                        // TODO
+                        getAreaLightPhotonCaustic(&ray, photon_power, (AreaLight*)light_ptr,
+                                                  h_samples, &sample_index);
+                        break;
+                    }
+                    emitted++;
+                    for(int j = 0; j < num_aabb; j++)
+                    {
+                        if(rayIntersectAABB(&(aabb[j]), ray) < TMAX)
+                        {
+                            hits_caustic_bb = true;
+                            break;
+                        }
+                    }
+                }
+                bounce_count = 0;
+
             }
             ShadeRec sr;
             float t = intersectTest(&sr, so, ray);
             if(t < TMAX)
             {
+                if(sr.mat->tex_flags != NO_TEXTURE)
+                {
+                    updateShadeRecWithTexInfo(&sr);
+                }
+                // Problem: the order is wrong for reflection and power adjustment
                 if(sr.mat->mat_type == MATTE && reflected)
                 {
                     // Store photon if surface is diffuse
@@ -589,7 +648,7 @@ void balanceSegment(Photonmap *photon_map,
             const float tmp = photon_map->bbox.max[axis];
             photon_map->bbox.max[axis] = pbal[index]->pos[axis];
             balanceSegment(photon_map, pbal, porg, 2*index, start, median-1);
-            photon_map->bbox.max[axis] = tmp;            
+            photon_map->bbox.max[axis] = tmp;
         }else
         {
             pbal[2*index] = porg[start];
@@ -603,7 +662,7 @@ void balanceSegment(Photonmap *photon_map,
             const float tmp = photon_map->bbox.min[axis];
             photon_map->bbox.min[axis] = pbal[index]->pos[axis];
             balanceSegment(photon_map, pbal, porg, 2*index+1, median+1, end);
-            photon_map->bbox.min[axis] = tmp;                        
+            photon_map->bbox.min[axis] = tmp;
         }else
         {
             pbal[2*index+1] = porg[end];
@@ -840,25 +899,40 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
     {
         if(sr.mat->mat_type == DIFFUSE)
         {
+            if(sr.mat->tex_flags != NO_TEXTURE)
+            {
+                updateShadeRecWithTexInfo(&sr);
+            }
+
             Ray new_ray;
             vec3_copy(new_ray.origin, sr.hit_point);
             getVec3InLocalBasis(new_ray.direction, h_sample, sr.normal);
             ShadeRec new_sr;
-            t = intersectTest(&new_sr, so, new_ray);
             vec3 f;
+
+            t = intersectTest(&new_sr, so, new_ray);
             if(t < TMAX)
             {
-                vec3 irrad;
+                if(new_sr.mat->tex_flags != NO_TEXTURE)
+                {
+                    updateShadeRecWithTexInfo(&new_sr);
+                }
+                vec3 irrad = {0.0f, 0.0f, 0.0f};
                 irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
-                              query_vars.photon_radius, query_vars.nphotons);
+                query_vars.photon_radius, query_vars.nphotons);
+                //printVec3WithText("irrad", irrad);
 
                 vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
-                vec3_mult(pm_color, irrad, f);
+                vec3 inc_rad;
+                vec3_mult(inc_rad, irrad, f);
 
+                float ndotwi = vec3_dot(sr.normal, new_ray.direction);
+                float pdf = ndotwi / (float)PI;
                 // Incoming radiance from secondary point * cosine theta
-                vec3_scale(f, sr.mat->cd, sr.mat->kd * vec3_dot(sr.normal, new_ray.direction));
-                vec3_mult(pm_color, pm_color, f);
+                vec3_scale(f, sr.mat->cd, sr.mat->kd / (float)PI * ndotwi / pdf);
+                vec3_mult(pm_color, inc_rad, f);
             }
+
             if(query_vars.caustic)
             {
                 vec3 caustic_irrad, caustic_rad;
@@ -866,8 +940,103 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
                               query_vars.caustic_radius, query_vars.nphotons);
                 vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
                 vec3_mult(caustic_rad, caustic_irrad, f);
-                vec3_add(color, pm_color, caustic_rad);
+                vec3_add(pm_color, pm_color, caustic_rad);
             }
         }
+        vec3_copy(color, pm_color);
     }
+}
+
+
+void calcPhotonmapComponentNew(vec3 color, const vec3 h_sample, const PhotonQueryVars query_vars,
+                            const Photonmap *photon_map, const Photonmap *caustic_map,
+                            const SceneObjects *so, const ShadeRec *sr)
+{
+    vec3 pm_color = {0.0f, 0.0f, 0.0f};
+    if(sr->mat->mat_type == DIFFUSE)
+    {
+        Ray new_ray;
+        vec3_copy(new_ray.origin, sr->hit_point);
+        getVec3InLocalBasis(new_ray.direction, h_sample, sr->normal);
+        ShadeRec new_sr;
+        float t = intersectTest(&new_sr, so, new_ray);
+        vec3 f;
+
+        if(t < TMAX)
+        {
+            if(new_sr.mat->tex_flags != NO_TEXTURE)
+            {
+                updateShadeRecWithTexInfo(&new_sr);
+            }
+            vec3 irrad = {0.0f, 0.0f, 0.0f};
+            irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
+                          query_vars.photon_radius, query_vars.nphotons);
+            //printVec3WithText("irrad", irrad);
+
+            vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
+            vec3 inc_rad;
+            vec3_mult(inc_rad, irrad, f);
+
+            float ndotwi = vec3_dot(sr->normal, new_ray.direction);
+            float pdf = ndotwi / (float)PI;
+            // Incoming radiance from secondary point * cosine theta
+            vec3_scale(f, sr->mat->cd, sr->mat->kd / (float)PI * ndotwi / pdf);
+            vec3_mult(pm_color, inc_rad, f);
+        }
+
+        if(query_vars.caustic)
+        {
+            vec3 caustic_irrad, caustic_rad;
+            irradEstimate(caustic_irrad, caustic_map, sr->hit_point, sr->normal,
+                          query_vars.caustic_radius, query_vars.nphotons);
+            vec3_scale(f, sr->mat->cd, sr->mat->kd / PI); // NOTE: divide by PI?
+            vec3_mult(caustic_rad, caustic_irrad, f);
+            vec3_add(pm_color, pm_color, caustic_rad);
+        }
+    }
+    vec3_copy(color, pm_color);
+}
+
+void calcPhotonmapComponentNewer(vec3 color, const vec3 h_sample, const PhotonQueryVars query_vars,
+                            const Photonmap *photon_map, const Photonmap *caustic_map,
+                                 const SceneObjects *so, const ShadeRec *sr, const vec3 caustic_rad)
+{
+    vec3 pm_color = {0.0f, 0.0f, 0.0f};
+    if(sr->mat->mat_type == DIFFUSE)
+    {
+        Ray new_ray;
+        vec3_copy(new_ray.origin, sr->hit_point);
+        getVec3InLocalBasis(new_ray.direction, h_sample, sr->normal);
+        ShadeRec new_sr;
+        float t = intersectTest(&new_sr, so, new_ray);
+        vec3 f;
+
+        if(t < TMAX)
+        {
+            if(new_sr.mat->tex_flags != NO_TEXTURE)
+            {
+                updateShadeRecWithTexInfo(&new_sr);
+            }
+            vec3 irrad = {0.0f, 0.0f, 0.0f};
+            irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
+                          query_vars.photon_radius, query_vars.nphotons);
+            //printVec3WithText("irrad", irrad);
+
+            vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
+            vec3 inc_rad;
+            vec3_mult(inc_rad, irrad, f);
+
+            float ndotwi = vec3_dot(sr->normal, new_ray.direction);
+            float pdf = ndotwi / (float)PI;
+            // Incoming radiance from secondary point * cosine theta
+            vec3_scale(f, sr->mat->cd, sr->mat->kd / (float)PI * ndotwi / pdf);
+            vec3_mult(pm_color, inc_rad, f);
+        }
+
+        if(query_vars.caustic)
+        {
+            vec3_add(pm_color, pm_color, caustic_rad);
+        }
+    }
+    vec3_copy(color, pm_color);
 }

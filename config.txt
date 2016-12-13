@@ -3,18 +3,18 @@ window_width  960
 window_height  960
 image_width  480
 image_height 480
-num_samples  1024
+num_samples  4900
 num_sample_sets 83
 max_depth  8
 trace_type PATHTRACE
 accel_struct GRID
 photon_map no
-num_photons 1000000
-caustic_map no
-num_caustic_photons 2000000
-num_estimate 1500
-photon_depth 5
-photon_radius 10
-caustic_radius 0.6
-image_save no
+num_photons 500000
+caustic_map yes
+num_caustic_photons 500000
+num_estimate 500
+photon_depth 8
+photon_radius 2
+caustic_radius 0.03
+image_save yes
 

@@ -126,7 +126,7 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
     if(vec3_dot(neg_wi, light_normal) < 0.0f)
     {
         vec3_negate(light_normal, light_normal);
-    }    
+    }
     getIncRadiance(inc_radiance, AREALIGHT, area_light_ptr, sr->hit_point);    
 
     // Geometry term
@@ -141,7 +141,8 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
 
     // Specular component
     MatType mat_type = sr->mat->mat_type;
-    if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
+    //if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
+    if(mat_type == PHONG) // NOTE: figure this out
     {
         vec3 reflect_dir, wo_neg;
         vec3_negate(wo_neg, sr->wo);
@@ -178,12 +179,12 @@ void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir
     {
         return;
     }
-
+    /*
     if(vec3_dot(neg_wi, light_normal) < 0.0f)
     {
         vec3_negate(light_normal, light_normal);
     }
-
+    */
     // Geometry term
     float geo_term = vec3_dot(light_normal, neg_wi) * ndotwi /
         vec3_dot(displacement, displacement);
@@ -196,7 +197,8 @@ void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir
 
     // Specular component
     MatType mat_type = sr->mat->mat_type;
-    if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
+    //if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
+    if(mat_type == PHONG) // NOTE: figure this out
     {
         vec3 reflect_dir, wo_neg;
         vec3_negate(wo_neg, sr->wo);

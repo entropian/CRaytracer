@@ -173,7 +173,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
     mat3 inv_scale_mat, normal_mat;
     mat3_scale_inverse(inv_scale_mat, mesh_entry.scaling);
     mat3_mult(normal_mat, rotation, inv_scale_mat);
-    mat3* normal_mat_ptr =  Scene_addTransform(scene, &normal_mat);    
+    mat3* normal_mat_ptr =  Scene_addTransform(scene, &normal_mat);
     int triangle_count = 0;
     for(int i = 0; i < num_mesh_found; i++)
     {
@@ -196,7 +196,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
             index = i0 * 3;
             vec3_assign(v0, mesh->positions[index], mesh->positions[index+1],
                         mesh->positions[index+2]);
-            index = i1 * 3;    
+            index = i1 * 3;
             vec3_assign(v1, mesh->positions[index], mesh->positions[index+1],
                         mesh->positions[index+2]);
             index = i2 * 3;
@@ -210,8 +210,8 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
             vec3 new_v0, new_v1, new_v2;
             mat3_mult_vec3(new_v0, rotation, v0);
             mat3_mult_vec3(new_v1, rotation, v1);
-            mat3_mult_vec3(new_v2, rotation, v2);                
-                
+            mat3_mult_vec3(new_v2, rotation, v2);
+
             vec3_add(new_v0, mesh_entry.location, new_v0);
             vec3_add(new_v1, mesh_entry.location, new_v1);
             vec3_add(new_v2, mesh_entry.location, new_v2);
@@ -224,7 +224,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
                 mesh_tri->i2 = i2;
                 vec3_copy(mesh_tri->v0, new_v0);
                 vec3_copy(mesh_tri->v1, new_v1);
-                vec3_copy(mesh_tri->v2, new_v2);                    
+                vec3_copy(mesh_tri->v2, new_v2);
                 // Instead of computing an inverse transpose for transforming normals, I just inverted the scaling
                 // and ignored translation
                 vec3 face_normal = {mesh->face_normals[j], mesh->face_normals[j+1], mesh->face_normals[j+2]};
@@ -261,6 +261,40 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
     return triangle_count;
 }
 
+void procMatTexPairs(Scene *scene, const MatTexNamePair *pairs, const unsigned int num_pair)
+{
+    for(int i = 0; i < num_pair; i++)
+    {
+        const MatTexNamePair *pair_ptr = &(pairs[i]);
+        Material *mat_ptr = Scene_findMaterial(scene, pair_ptr->mat_name);
+        if(!mat_ptr){
+            fprintf(stderr, "Couldn't find material %s.\n", pair_ptr->mat_name);
+            continue;
+        }
+        Texture *tex_ptr = Scene_findTexture(scene, pair_ptr->tex_name);
+        if(!tex_ptr){
+            fprintf(stderr, "Couldn't find texture %s for material %s.\n",
+                    pair_ptr->tex_name, pair_ptr->mat_name);
+            continue;
+        }
+        switch(pair_ptr->tex_type)
+        {
+        case DIFFUSE:
+        {
+            setMaterialDiffuseTexPtr(mat_ptr, tex_ptr);
+        } break;
+        case NORMAL:
+        {
+            setMaterialNormalTexPtr(mat_ptr, tex_ptr);
+        } break;
+        case SPECULAR:
+        {
+            setMaterialSpecularTexPtr(mat_ptr, tex_ptr);
+        } break;
+        }
+    }
+}
+
 void initSceneObjects(Scene* scene, const char* scenefile)
 {
     SceneLights* sl = &(scene->lights);
@@ -292,8 +326,13 @@ void initSceneObjects(Scene* scene, const char* scenefile)
       pointers and store it in the material.
      */
     DBuffer mat_tex_pairs = DBuffer_create(MatTexNamePair);
-        
     int num_mat = parseMaterials(scene, fp, &mat_tex_pairs);
+
+    MatTexNamePair *pair_array = (MatTexNamePair*)DBuffer_data_ptr(mat_tex_pairs);
+    const unsigned int num_pair = DBuffer_size(mat_tex_pairs);
+    procMatTexPairs(scene, pair_array, num_pair);
+    DBuffer_erase(&mat_tex_pairs);
+
     char buffer[128];
     while(getNextTokenInFile(buffer, fp))
     {
@@ -315,7 +354,7 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                 MeshEntry mesh_entry;
                 parseMesh(&mesh_entry, &shapes, &materials, &num_mesh, &num_mat,
                           mesh_file_names, &num_file_names, fp);
-                
+
                 for(int i = 0; i < num_mat; i++)
                 {
                     const OBJMaterial *obj_mat = &(materials[i]);
@@ -400,40 +439,10 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     }
                     Scene_addMaterial(scene, &material, obj_mat->name);
                 }
-
-                MatTexNamePair *pair_array = (MatTexNamePair*)(mat_tex_pairs.data);
-                const unsigned int pair_count = DBuffer_size(mat_tex_pairs);
-                for(int i = 0; i < pair_count; i++)
-                {
-                    MatTexNamePair *pair_ptr = &(pair_array[i]);
-                    Material *mat_ptr = Scene_findMaterial(scene, pair_ptr->mat_name);
-                    if(!mat_ptr){
-                        fprintf(stderr, "Couldn't find material %s.\n", pair_ptr->mat_name);
-                        continue;
-                    }
-                    Texture *tex_ptr = Scene_findTexture(scene, pair_ptr->tex_name);
-                    if(!tex_ptr){
-                        fprintf(stderr, "Couldn't find texture %s for material %s.\n",
-                                pair_ptr->tex_name, pair_ptr->mat_name);
-                        continue;
-                    }
-                    switch(pair_ptr->tex_type)
-                    {
-                    case DIFFUSE:
-                    {
-                        setMaterialDiffuseTexPtr(mat_ptr, tex_ptr);
-                    } break;
-                    case NORMAL:
-                    {
-                        setMaterialNormalTexPtr(mat_ptr, tex_ptr);
-                    } break;
-                    case SPECULAR:
-                    {
-                        setMaterialSpecularTexPtr(mat_ptr, tex_ptr);
-                    } break;
-                    }
-                }
-                DBuffer_destroy(&mat_tex_pairs);
+                MatTexNamePair *pair_array = (MatTexNamePair*)DBuffer_data_ptr(mat_tex_pairs);
+                const unsigned int num_pair = DBuffer_size(mat_tex_pairs);
+                procMatTexPairs(scene, pair_array, num_pair);
+                DBuffer_erase(&mat_tex_pairs);
                 if(materials){free(materials);}
 
                 for(int i = 0; i < num_mesh; i++)
@@ -441,8 +450,11 @@ void initSceneObjects(Scene* scene, const char* scenefile)
                     Mesh mesh;
                     Mesh_copyOBJShape(&mesh, &(shapes[i]));
                     calcTriangleNormals(&mesh);
-                    //Material* mat = Scene_findMaterial(scene, mesh_entry.mat_name);
                     Material* mat = Scene_findMaterial(scene, mesh.mat_name);
+                    if(!mat)
+                    {
+                        mat = Scene_findMaterial(scene, mesh_entry.mat_name);
+                    }
                     if(mat->tex_flags & NORMAL)
                     {
                         calcTangentVec(&mesh);
@@ -465,22 +477,23 @@ void initSceneObjects(Scene* scene, const char* scenefile)
             }
         }
     }
+    DBuffer_destroy(&mat_tex_pairs);
 }
 
 void initAreaLights(SceneLights* sl)
 {
 
     // Area light
-    /*
+
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
-    area_light_ptr->intensity = 55.0f;
+    area_light_ptr->intensity = 10.0f;
     //area_light_ptr->intensity = 100.0f;
     //area_light_ptr->intensity = 20.0f;
     // Photon map intensity
     //area_light_ptr->intensity = 100.0f;
-    vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
+    vec3_assign(area_light_ptr->color, 1.0f, 1.0, 1.0f);
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
     // Rectangle
@@ -488,9 +501,10 @@ void initAreaLights(SceneLights* sl)
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
     rect->shadow = false;
 
-    vec3_assign(rect->point, 213.0f, 547.0f, -227.0f);
-    vec3_assign(rect->width, 130.0f, 0.0f, 0.0f);
-    vec3_assign(rect->height, 0.0f, 0.0f, -105.0f);
+    //vec3_assign(rect->point, 0.0f, 10.0f, -2.0f);
+    vec3_assign(rect->point, 0.0f, 15.0f, -2.0f);
+    vec3_assign(rect->width, 4.0f, -4.0f, 0.0f);
+    vec3_assign(rect->height, 0.0f, 0.0f, 4.0f);
 
     //vec3_assign(rect->point, 213.0f, 800.0f, -227.0f);
     /*
@@ -499,15 +513,19 @@ void initAreaLights(SceneLights* sl)
     vec3_assign(rect->width, 300.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 0.0f, -250.0f);
     */
-    /*
-    vec3_copy(rect->normal, DOWN);
+
+    //vec3_copy(rect->normal, DOWN);
+    vec3_cross(rect->normal, rect->width, rect->height);
+    vec3_normalize(rect->normal, rect->normal);
     vec3_copy(rect->mat->ce, area_light_ptr->color);
     rect->mat->ke = area_light_ptr->intensity;
     rect->mat->mat_type = EMISSIVE;
+    rect->mat->tex_flags = NO_TEXTURE;
     float width = sqrt(vec3_dot(rect->width, rect->width));
     float height = sqrt(vec3_dot(rect->height, rect->height));
 
-    area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
+    // Multiplying by 2 because both sides of the rectangle light emits photon
+    area_light_ptr->flux = area_light_ptr->intensity * width * height * PI * 2;
 
     Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
     unit_square_samples->samples = NULL;
@@ -522,7 +540,7 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-    */
+
 
     // Area light 2
     /*
@@ -557,7 +575,7 @@ void initAreaLights(SceneLights* sl)
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
     */
-
+    /*
     // Sphere
     AreaLight* sphere_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     sphere_light_ptr->intensity = 10.0f;
@@ -593,6 +611,7 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = sphere_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
+    */
 }
 
 void initEnvLight(SceneLights* sl)
@@ -700,7 +719,9 @@ void buildSceneAccel(Scene *scene)
     if(so->accel == GRID)
     {
         start = glfwGetTime();
-        UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, 2);
+        //const int multiplier = 2;
+        const int multiplier = 3;
+        UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, multiplier);
         end = glfwGetTime();
         printf("Uniform grid build time: %f sec\n", end - start);
         so->accel_ptr = rg;

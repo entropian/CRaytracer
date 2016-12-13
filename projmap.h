@@ -25,10 +25,6 @@ int calcCausticBoundingSpheres(vec3 *centers, float *radii, const SceneObjects *
     float mesh_sphere_radius = 0;
     for(int i = scene_objects->num_non_grid_obj; i < scene_objects->num_obj; i++)
     {
-        if(i == 8886)
-        {
-            printf("here\n");
-        }
         Object_t obj = scene_objects->objects[i];
         Material *mat = getObjectMatPtr(obj);        
         if(!mat)

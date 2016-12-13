@@ -42,7 +42,7 @@ void IntVector_push(IntVector* iv, const int element)
             iv->array = p;
             iv->max *= 2;
             iv->array[iv->size] = element;
-            iv->size += 1;            
+            iv->size += 1;
         }else
         {
             fprintf(stderr, "Can't reallocate memory for IntVector.\n");

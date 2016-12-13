@@ -27,6 +27,8 @@ DBuffer DBuffer_create_cap_f(const int element_size, const int max_elements);
 
 void DBuffer_erase(DBuffer* dbuf);
 void DBuffer_assume(DBuffer* dbuf, char* data_ptr, const int size, const int max, const size_t element_size);
+void* DBuffer_data_ptr_f(DBuffer* dbuf);
+#define DBuffer_data_ptr(a) DBuffer_data_ptr_f((&(a)))
 void DBuffer_destroy(DBuffer* dbuf);
 
 #ifdef OBJ_LOADER_IMPLEMENTATION    
@@ -46,7 +48,6 @@ void DBuffer_push_f(DBuffer* dbuf, const char* new_element, const size_t element
             return;
         }
     }
-    
     for(size_t i = 0; i < element_size; i++)
     {
         dbuf->data[dbuf->size] = new_element[i];
@@ -90,6 +91,11 @@ void DBuffer_assume(DBuffer* dbuf, char* data_ptr, const int size, const int max
     dbuf->size = size * element_size;
     dbuf->max = max * element_size;
     dbuf->element_size = element_size;
+}
+
+void* DBuffer_data_ptr_f(DBuffer *dbuf)
+{
+    return (void*)(dbuf->data);
 }
 
 void DBuffer_destroy(DBuffer* dbuf)

@@ -20,6 +20,7 @@ Scene Scene_create()
     scene.textures = SceneTextures_create();
     scene.meshes = SceneMeshes_create();
     scene.transforms = SceneTransforms_create();
+    scene.lights = SceneLights_create();
     return scene;
 }
 

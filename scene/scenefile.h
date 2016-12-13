@@ -146,7 +146,7 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, 
         return true;
         //if(!getNextTokenInFile(buffer, fp)){return false;}
     }
-    
+
     if(strcmp(buffer, "DIFFUSE_MAP") == 0)
     {
         char tex_file_name[MAX_NAME_LENGTH];

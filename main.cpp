@@ -33,6 +33,9 @@
 
 
 extern double g_traversal_time;
+// Reminder
+bool g_is_photon_map = false;
+ShadeRec g_primary_sr;
 
 bool EXIT = false;
 int MAX_DEPTH = 0;
@@ -48,6 +51,115 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             break;
         }
     }
+}
+
+int calcCausticAABB(AABB *aabb, const SceneObjects *so)
+{
+    int caustic_obj_count = 0;
+    Mesh *cur_mesh_ptr = NULL;
+    AABB cur_aabb;
+    vec3_assign(cur_aabb.max, K_EPSILON, K_EPSILON, K_EPSILON);
+    vec3_assign(cur_aabb.min, -K_EPSILON, -K_EPSILON, -K_EPSILON);
+    for(int i = so->num_non_grid_obj; i < so->num_obj; i++)
+    {
+        Object_t obj = so->objects[i];
+        Material *mat = getObjectMatPtr(obj);
+        if(!mat)
+        {
+            fprintf(stderr, "Null material pointer.\n");
+            continue;
+        }
+        if(mat->mat_type == REFLECTIVE || mat->mat_type == TRANSPARENT)
+        {
+            if(obj.type != FLAT_TRIANGLE && obj.type != SMOOTH_TRIANGLE)
+            {
+                if(cur_mesh_ptr)
+                {
+                    //vec3_copy(centers[caustic_obj_count], mesh_sphere_center);
+                    //radii[caustic_obj_count] = mesh_sphere_radius;
+                    aabb[caustic_obj_count] = cur_aabb;
+                    caustic_obj_count++;                    
+                    cur_mesh_ptr = NULL;
+                    //vec3_assign(mesh_sphere_center, 0.0f, 0.0f, 0.0f);
+                    //mesh_sphere_radius = 0.0f;
+                    vec3_assign(cur_aabb.max, K_EPSILON, K_EPSILON, K_EPSILON);
+                    vec3_assign(cur_aabb.min, -K_EPSILON, -K_EPSILON, -K_EPSILON);
+                }
+                //if(calcBoundingSphere(center, &radius, obj))
+                if(getObjectAABB(&cur_aabb, obj))
+                {
+                    //vec3_copy(centers[caustic_obj_count], center);
+                    //radii[caustic_obj_count] = radius;
+                    aabb[caustic_obj_count] = cur_aabb;
+                    caustic_obj_count++;
+                }else
+                {
+                    fprintf(stderr, "Cannot calculate bounding box.\n");
+                }
+            }else
+            {
+                if(obj.type == FLAT_TRIANGLE)
+                {
+                    FlatTriangle *triangle = (FlatTriangle*)(obj.ptr);
+                    if(triangle->mesh_ptr != cur_mesh_ptr && cur_mesh_ptr)
+                    {
+                        //vec3_copy(centers[caustic_obj_count], mesh_sphere_center);
+                        //radii[caustic_obj_count] = mesh_sphere_radius;
+                        aabb[caustic_obj_count] = cur_aabb;
+                        caustic_obj_count++;
+                        cur_mesh_ptr = triangle->mesh_ptr;
+                        //calcBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, obj);
+                        getObjectAABB(&cur_aabb, obj);
+                    }else if(!cur_mesh_ptr)
+                    {
+                        cur_mesh_ptr = triangle->mesh_ptr;
+                        //calcBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, obj);
+                        getObjectAABB(&cur_aabb, obj);
+                    }else
+                    {
+                        //addToBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, triangle->v0);
+                        //addToBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, triangle->v1);
+                        //addToBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, triangle->v2);
+                        AABB tri_aabb;
+                        getObjectAABB(&tri_aabb, obj);
+                        addToAABB(&cur_aabb, &tri_aabb);
+                    }
+                }else if(obj.type == SMOOTH_TRIANGLE)
+                {
+                    SmoothTriangle *triangle = (SmoothTriangle*)(obj.ptr);
+                    if(triangle->mesh_ptr != cur_mesh_ptr && cur_mesh_ptr)
+                    {
+                        //vec3_copy(centers[caustic_obj_count], mesh_sphere_center);
+                        //radii[caustic_obj_count] = mesh_sphere_radius;
+                        aabb[caustic_obj_count] = cur_aabb;
+                        caustic_obj_count++;
+                        cur_mesh_ptr = triangle->mesh_ptr;
+                        //calcBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, obj);
+                        getObjectAABB(&cur_aabb, obj);
+                    }else if(!cur_mesh_ptr)
+                    {
+                        cur_mesh_ptr = triangle->mesh_ptr;
+                        //calcBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, obj);
+                        getObjectAABB(&cur_aabb, obj);
+                    }else
+                    {
+                        //addToBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, triangle->v0);
+                        //addToBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, triangle->v1);
+                        //addToBoundingSphere(mesh_sphere_center, &mesh_sphere_radius, triangle->v2);
+                        AABB tri_aabb;
+                        getObjectAABB(&tri_aabb, obj);
+                        addToAABB(&cur_aabb, &tri_aabb);
+                    }
+                }
+            }
+        }
+    }
+    if(cur_mesh_ptr)
+    {
+        aabb[caustic_obj_count] = cur_aabb;
+        caustic_obj_count++;
+    }
+    return caustic_obj_count;
 }
 
 int main()
@@ -94,13 +206,15 @@ int main()
     // Scene data structures
     Scene scene = Scene_create();
     initScene(&scene, params.file_name, params.accel_type);
-    vec3 bsphere_centers[MAX_BOUNDING_SPHERES];
-    float bsphere_radii[MAX_BOUNDING_SPHERES];
-    // NOTE: calcCausticBoundingSpheres before building accel
-    int num_bsphere = calcCausticBoundingSpheres(bsphere_centers, bsphere_radii, &(scene.objects));
+    AABB aabbs[MAX_MESH];
+    // NOTE: calc aabb before building accel
+    int num_aabb = calcCausticAABB(aabbs, &(scene.objects));
+    for(int i = 0 ; i < num_aabb; i++)
+    {
+        printVec3WithText("min", aabbs[i].min);
+        printVec3WithText("max", aabbs[i].max);
+    }
     buildSceneAccel(&scene);
-
-    buildProjMap(&(scene.lights), bsphere_centers, bsphere_radii, num_bsphere);
 
     // Photon map
     const int num_photons = params.pm_config.num_photons;
@@ -108,8 +222,13 @@ int main()
     const int num_caustic_photons = params.pm_config.num_caustic_photons;
     Photonmap photon_map, caustic_map;
     bool photon_map_status = false;
+    float* pm_buffer = NULL;
     if(params.photon_map && params.trace_type == WHITTED)
     {
+        // Reminder
+        g_is_photon_map = true;
+        pm_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+
         photon_map_status = true;
         Photonmap_init(&photon_map, num_photons, max_bounce);
         emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
@@ -117,7 +236,7 @@ int main()
         if(params.caustic_map)
         {
             Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
-            emitCaustics(&caustic_map, &(scene.objects), &(scene.lights));
+            emitCaustics(&caustic_map, &(scene.objects), &(scene.lights), aabbs, num_aabb);
             Photonmap_balance(&caustic_map);
         }
     }
@@ -126,7 +245,11 @@ int main()
     query_vars.photon_radius = params.pm_config.photon_radius;
     query_vars.caustic_radius = params.pm_config.caustic_radius;
     query_vars.caustic = params.caustic_map;
-
+    /*
+    // Reminder
+    scene.objects.accel = GRID;
+    buildSceneAccel(&scene);
+    */
     // Camera
     Camera camera;
     initPinholeCameraDefault(&camera);
@@ -147,7 +270,7 @@ int main()
     //vec3 position = {0.0f, 50.0f, 3.0f};
     //vec3 position = {-5.0f, 40.0f, 1.0f};
     //vec3 look_point = {0.0f, 1.0f, 0.0f};
-    vec3 position = {-10.0f, 7.0f, 2.0f};
+    vec3 position = {-25.0f, 7.0f, 2.0f};
     vec3 look_point = {0.0f, 7.0f, 0.0f};
 #endif
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
@@ -169,7 +292,51 @@ int main()
     {
         trace = getTraceFunc(params.trace_type);
     }
+    /*
+    float* caustic_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+    const unsigned int num_caustic_samples = 4;
+    for(int p = 0; p < num_caustic_samples; p++)
+    {
+        for(int i = 0; i < num_pixels; i++)
+        {
+            int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
+            vec3 color = {0.0f, 0.0f, 0.0f};
+            vec2 sample, imageplane_coord;
+            getSample2D(sample, &unit_square_samples, sample_index);
+            imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
+            imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
 
+            Ray ray;
+            calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
+
+            ShadeRec sr;
+            float t = intersectTest(&sr, &(scene.objects), ray);
+            vec3 pm_color = {0.0f, 0.0f, 0.0f};
+            if(t < TMAX)
+            {
+                if(photon_map_status)
+                {
+                    vec3 caustic_irrad, caustic_rad;
+                    irradEstimate(caustic_irrad, &caustic_map, sr.hit_point, sr.normal,
+                                  query_vars.caustic_radius, query_vars.nphotons);
+                    vec3 f;
+                    vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
+                    vec3_mult(caustic_rad, caustic_irrad, f);
+                    vec3_add(pm_color, pm_color, caustic_rad);
+                }
+            }
+            pm_buffer[i*3] += pm_color[0];
+            pm_buffer[i*3+1] += pm_color[1];
+            pm_buffer[i*3+2] += pm_color[2];
+        }
+    }
+    for(int i = 0; i < num_pixels; i++)
+    {
+        pm_buffer[i*3] /= num_caustic_samples;
+        pm_buffer[i*3+1] /= num_caustic_samples;
+        pm_buffer[i*3+2] /= num_caustic_samples;
+    }
+    */
     double start_time, end_time;
     start_time = glfwGetTime();
     int prev_percent = 0;
@@ -204,12 +371,32 @@ int main()
             trace(radiance, params.max_depth, ray, trace_args);
             vec3_add(color, color, radiance);
 
+            // Planned optimizations: trace primary rays once
+            // Query caustic map once and store in a buffer for reuse -- kinda done
+            // Use different accel struct for photon emission and rendering
+            // Irradiance caching?
+
+            // Next step: try increasing the number photons and see if storing caustics in a buffer
+            // will help more
+
             // Photon map
             if(photon_map_status)
             {
-				vec3 pm_color = {0.0f, 0.0f, 0.0f};
+                // Reminder
+                vec3 pm_color = {0.0f, 0.0f, 0.0f};
+                /*
                 calcPhotonmapComponent(pm_color, h_sample, query_vars, &photon_map,
                                        &caustic_map, &(scene.objects), ray);
+                */
+                /*
+                  calcPhotonmapComponentNew(pm_color, h_sample, query_vars, &photon_map,
+                  &caustic_map, &(scene.objects), &g_primary_sr);
+                */
+                /*
+                vec3 caustic_rad = {pm_buffer[i*3], pm_buffer[i*3+1], pm_buffer[i*3+2]};
+                calcPhotonmapComponentNewer(pm_color, h_sample, query_vars, &photon_map,
+                &caustic_map, &(scene.objects), &g_primary_sr, caustic_rad);
+                */
                 vec3_add(color, color, pm_color);
             }
 

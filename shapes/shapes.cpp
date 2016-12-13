@@ -136,7 +136,7 @@ void updateAABB(AABB *out, const mat4 transform, const AABB a)
     }
 }
 
-void getObjectAABB(AABB* aabb, const Object_t obj)
+bool getObjectAABB(AABB* aabb, const Object_t obj)
 {
     switch(obj.type)
     {
@@ -300,7 +300,10 @@ void getObjectAABB(AABB* aabb, const Object_t obj)
         CompoundObject* co = (CompoundObject*)obj.ptr;
         *aabb = co->aabb;
     } break;
+    default:
+        return false;
     }
+    return true;
 }
 
 Material* getObjectMatPtr(const Object_t obj)

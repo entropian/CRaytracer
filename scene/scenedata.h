@@ -284,6 +284,16 @@ typedef struct SceneLights
     vec3 bg_color;
 } SceneLights;
 
+SceneLights SceneLights_create()
+{
+    SceneLights sl;
+    sl.num_lights = 0;
+    sl.env_light = NULL;
+    sl.amb_light = NULL;
+    vec3_copy(sl.bg_color, WHITE);
+    return sl;
+}
+
 Material* tmp_mat = (Material*)malloc(sizeof(Material));
 vec3 color = {0.4f, 0.4f, 0.4f};
 
