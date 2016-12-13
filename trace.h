@@ -13,16 +13,22 @@
 extern int MAX_DEPTH;
 #define SEPARATE_DIRECT_INDIRECT
 
-// Reminder
-extern bool g_is_photon_map;
-extern ShadeRec g_primary_sr;
-
 enum TraceType
 {
     RAYCAST,
     WHITTED,
-    PATHTRACE
+    PATHTRACE,
+    PHOTONMAP
 };
+
+// Definition in photonmap.h
+struct Photonmap_s;
+typedef struct Photonmap_s Photonmap;
+struct PhotonQueryVars_s;
+typedef struct PhotonQueryVars_s PhotonQueryVars;
+void calcPhotonmapComponentNewer(vec3, const vec3, const PhotonQueryVars*,
+                                 const Photonmap*, const Photonmap*,
+                                 const SceneObjects*, const ShadeRec*, const vec3);
 
 typedef struct TraceArgs_s
 {
@@ -32,30 +38,29 @@ typedef struct TraceArgs_s
     SceneLights *lights;
     vec3 h_sample;
 
-    // Data that may get modified during the tracing of a sample
+    // Data used for photon mapping
+    Photonmap *photon_map;
+    Photonmap *caustic_map;
+    PhotonQueryVars *query_vars;
+    vec3 caustic_rad;
+
+    // Currently not really used
     Material* medium_mat;
 }TraceArgs;
 
-/*
-  float raycast(vec3, int, const vec3, const Ray,
-  const SceneObjects*, const SceneLights*, const int, const unsignedint);
-  float whittedTrace(vec3, int, const vec3, const Ray,
-  const SceneObjects*, const SceneLights*, const int, const unsigned int);
-  float pathTrace(vec3, int, const vec3, const Ray,
-  const SceneObjects*, const SceneLights*, const int, cosnt unsigned int);
-*/
 
-float raycast(vec3, int, const Ray, TraceArgs trace_args);
-float whittedTrace(vec3, int, const Ray, TraceArgs trace_args);
-float pathTrace(vec3, int, const Ray, TraceArgs trace_args);
-float raycastMedium(vec3, int, const Ray, TraceArgs trace_args);
-float whittedTraceMedium(vec3, int, const Ray, TraceArgs trace_args);
+float raycast(vec3, int, const Ray, TraceArgs *trace_args);
+float whittedTrace(vec3, int, const Ray, TraceArgs *trace_args);
+float pathTrace(vec3, int, const Ray, TraceArgs *trace_args);
+float whittedPhotonTrace(vec3, int, const Ray, TraceArgs *trace_args);
+float raycastMedium(vec3, int, const Ray, TraceArgs *trace_args);
+float whittedTraceMedium(vec3, int, const Ray, TraceArgs *trace_args);
 
 /*
 typedef float (*traceFunc)(vec3, int, const vec3, const Ray,
  const SceneObjects*, const SceneLights*, const int, const unsigned int);
 */
-typedef float (*traceFunc)(vec3, int, const Ray, TraceArgs trace_args);
+typedef float (*traceFunc)(vec3, int, const Ray, TraceArgs *trace_args);
 
 traceFunc getTraceFunc(const TraceType trace_type)
 {
@@ -71,19 +76,22 @@ traceFunc getTraceFunc(const TraceType trace_type)
     case PATHTRACE:
         func = &pathTrace;
         break;
+    case PHOTONMAP:
+        func = &whittedPhotonTrace;
+        break;
     default:
         func = &raycast;
     }
     return func;
 }
 
-float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
+float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
+    vec3_copy(h_sample, trace_args->h_sample);
 
     vec3_copy(radiance, BLACK);
     ShadeRec min_sr;
@@ -102,12 +110,14 @@ float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
             maxToOne(radiance, radiance);
         }else if(min_sr.mat->mat_type == PARTICIPATING)
         {
+            /*
             TraceArgs new_trace_args = trace_args;
             new_trace_args.medium_mat = min_sr.mat;
             Ray new_ray;
             getPointOnRay(new_ray.origin, ray, min_t);
             vec3_copy(new_ray.direction, ray.direction);
             raycastMedium(radiance, depth-1, new_ray, new_trace_args);
+            */
         }else
         {
             // Add ambient component to radiance
@@ -140,9 +150,9 @@ float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
 // Calculate specular incident radiance and brdf
 float calcSpecRefRadiance(vec3 spec_ref_radiance,
                           const int depth,  const Ray ray, const ShadeRec* sr,
-                          TraceArgs trace_args)
+                          TraceArgs *trace_args)
 {
-    const int sample_index = trace_args.sample_index;
+    const int sample_index = trace_args->sample_index;
     vec3 reflect_dir, normal;
     vec3_copy(normal, sr->normal);
     calcReflectRayDir(reflect_dir, normal, ray.direction);
@@ -230,23 +240,117 @@ float calcFresnelReflectance(const ShadeRec* sr)
     return fresnel_reflectance;
 }
 
-float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
+void whittedShade(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args, const ShadeRec *sr)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    if(sr->mat->mat_type == EMISSIVE)
+    {
+        vec3_scale(radiance, sr->mat->ce, sr->mat->ke/1.0f);
+        if(depth == MAX_DEPTH)
+        {
+            maxToOne(radiance, radiance);
+        }
+    }else
+    {
+        ambientShading(radiance, sl->amb_light, trace_args->h_sample, so, sr);
+        // Direct illumination
+        // TODO: refactor
+        if(sr->mat->mat_type == MATTE || sr->mat->mat_type == PHONG)
+        {
+            for(int i = 0; i < sl->num_lights; i++)
+            {
+                vec3 light_dir;
+                getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], sr, trace_args->sample_index);
+                float ndotwi = vec3_dot(light_dir, sr->normal);
+                if(ndotwi > 0.0f)
+                {
+                    bool in_shadow = shadowTest(i, sl, so, light_dir, sr);
+                    if(!in_shadow)
+                    {
+                        directIllumShading(radiance, ndotwi, light_dir, sl->light_ptrs[i],
+                                           sl->light_types[i], sr);
+                    }
+                }
+            }
+        }
+
+        // Indirect illumination
+        if(depth > 0 && (sr->mat->mat_type == REFLECTIVE || sr->mat->mat_type == TRANSPARENT))
+        {
+            float reflect_t;
+            vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
+            reflect_t = calcSpecRefRadiance(reflected_illum, depth, ray, sr, trace_args);
+
+            if(sr->mat->mat_type == REFLECTIVE)
+            {
+                vec3_scale(reflected_illum, reflected_illum, sr->mat->ks);
+                vec3_add(radiance, radiance, reflected_illum);
+                // Problem?
+                return;
+            }
+            float ndotwo = vec3_dot(sr->normal, sr->wo);
+            if(!totalInternalReflection(sr))
+            {
+                // Transmitted radiance
+                vec3 transmit_dir = {0, 0, 0};
+                float eta = calcTransmitDir(transmit_dir, sr);
+                float ndotwt = fabs(vec3_dot(sr->normal, transmit_dir));
+                float kr = calcFresnelReflectance(sr);
+                float kt = 1.0f - kr;
+
+                vec3 btdf;
+                vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
+                Ray transmitted_ray;
+                vec3_copy(transmitted_ray.origin, sr->hit_point);
+                vec3_copy(transmitted_ray.direction, transmit_dir);
+
+                float transmit_t;
+                vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
+                transmit_t = whittedTrace(transmitted_illum, depth-1, transmitted_ray, trace_args);
+
+                vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
+                vec3_mult(transmitted_illum, transmitted_illum, btdf);
+                // Scaling reflection since there's no total internal reflection
+                vec3_scale(reflected_illum, reflected_illum, kr);
+
+                vec3 color_filter_ref, color_filter_trans;
+                if(ndotwo > 0.0f)
+                {
+                    vec3_pow(color_filter_ref, sr->mat->cf_out, reflect_t);
+                    vec3_pow(color_filter_trans, sr->mat->cf_in, transmit_t);
+                }else
+                {
+                    vec3_pow(color_filter_ref, sr->mat->cf_in, reflect_t);
+                    vec3_pow(color_filter_trans, sr->mat->cf_out, transmit_t);
+                }
+                vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
+                vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
+                vec3_add(radiance, radiance, transmitted_illum);
+            }else
+            {
+                vec3 color_filter;
+                if(ndotwo > 0.0f)
+                {
+                    vec3_pow(color_filter, sr->mat->cf_out, reflect_t);
+                }else
+                {
+                    vec3_pow(color_filter, sr->mat->cf_in, reflect_t);
+                }
+                vec3_mult(reflected_illum, reflected_illum, color_filter);
+            }
+            vec3_add(radiance, radiance, reflected_illum);
+        }
+    }
+}
+
+float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
+{
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
 
-    // debug variables
-    bool intersected = false, indirect = false, not_tir = false, tir = false;
-
-    float reflect_t = 0, transmit_t = 0;
-    float kr = 0.0f, kt = 0.0f;
-    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
     vec3_copy(radiance, ORIGIN);
-
     float min_t = TMAX;
     ShadeRec min_sr;
     min_t = intersectTest(&min_sr, so, ray);
@@ -257,120 +361,44 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args
         {
             updateShadeRecWithTexInfo(&min_sr);
         }
-        /*
-        // Reminder
-        if(g_is_photon_map && depth == MAX_DEPTH)
-        {
-            g_primary_sr = min_sr;
-        }
-        */
-        if(min_sr.mat->mat_type == EMISSIVE)
-        {
-            vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke/1.0f);
-            if(depth == MAX_DEPTH)
-            {
-                maxToOne(radiance, radiance);
-            }
-        }else
-        {
-            ambientShading(radiance, sl->amb_light, h_sample, so, &min_sr);
-            // Direct illumination
-            // TODO: refactor
-            if(min_sr.mat->mat_type == MATTE || min_sr.mat->mat_type == PHONG)
-            {
-                for(int i = 0; i < sl->num_lights; i++)
-                {
-                    vec3 light_dir;
-                    getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
-                    float ndotwi = vec3_dot(light_dir, min_sr.normal);
-                    if(ndotwi > 0.0f)
-                    {
-                        bool in_shadow = shadowTest(i, sl, so, light_dir, &min_sr);
-                        if(!in_shadow)
-                        {
-                            directIllumShading(radiance, ndotwi, light_dir, sl->light_ptrs[i],
-                                               sl->light_types[i], &min_sr);
-                        }
-                    }
-                }
-            }
-
-            // Indirect illumination
-            if(depth > 0 && (min_sr.mat->mat_type == REFLECTIVE || min_sr.mat->mat_type == TRANSPARENT))
-            {
-                float reflect_t;
-                vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                reflect_t = calcSpecRefRadiance(reflected_illum, depth, ray, &min_sr, trace_args);
-
-                if(min_sr.mat->mat_type == REFLECTIVE)
-                {
-                    vec3_scale(reflected_illum, reflected_illum, min_sr.mat->ks);
-                    vec3_add(radiance, radiance, reflected_illum);
-                    return min_t;
-                }
-                float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
-                if(!totalInternalReflection(&min_sr))
-                {
-                    // Transmitted radiance
-                    vec3 transmit_dir = {0, 0, 0};
-                    float eta = calcTransmitDir(transmit_dir, &min_sr);
-                    float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
-                    float kr = calcFresnelReflectance(&min_sr);
-                    float kt = 1.0f - kr;
-
-                    vec3 btdf;
-                    vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
-                    Ray transmitted_ray;
-                    vec3_copy(transmitted_ray.origin, min_sr.hit_point);
-                    vec3_copy(transmitted_ray.direction, transmit_dir);
-
-                    float transmit_t;
-                    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-                    transmit_t = whittedTrace(transmitted_illum, depth-1, transmitted_ray, trace_args);
-
-                    vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
-                    vec3_mult(transmitted_illum, transmitted_illum, btdf);
-                    // Scaling reflection since there's no total internal reflection
-                    vec3_scale(reflected_illum, reflected_illum, kr);
-
-                    vec3 color_filter_ref, color_filter_trans;
-                    if(ndotwo > 0.0f)
-                    {
-                        vec3_pow(color_filter_ref, min_sr.mat->cf_out, reflect_t);
-                        vec3_pow(color_filter_trans, min_sr.mat->cf_in, transmit_t);
-                    }else
-                    {
-                        vec3_pow(color_filter_ref, min_sr.mat->cf_in, reflect_t);
-                        vec3_pow(color_filter_trans, min_sr.mat->cf_out, transmit_t);
-                    }
-                    vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
-                    vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
-                    vec3_add(radiance, radiance, transmitted_illum);
-                }else
-                {
-                    vec3 color_filter;
-                    if(ndotwo > 0.0f)
-                    {
-                        vec3_pow(color_filter, min_sr.mat->cf_out, reflect_t);
-                    }else
-                    {
-                        vec3_pow(color_filter, min_sr.mat->cf_in, reflect_t);
-                    }
-                    vec3_mult(reflected_illum, reflected_illum, color_filter);
-                }
-                vec3_add(radiance, radiance, reflected_illum);
-            }
-        }
+        whittedShade(radiance, depth, ray, trace_args, &min_sr);
     }else
     {
         vec3_copy(radiance, sl->bg_color);
     }
     //vec3_copy(radiance, min_sr.normal);
     /*
-    float tmpf = (min_t - 800.0f) / 600.0f;
-    vec3 depth_f = {tmpf, tmpf, tmpf};
-    vec3_copy(radiance, depth_f);
+      float tmpf = (min_t - 800.0f) / 600.0f;
+      vec3 depth_f = {tmpf, tmpf, tmpf};
+      vec3_copy(radiance, depth_f);
     */
+    return min_t;
+}
+
+float whittedPhotonTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
+{
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    vec3_copy(radiance, ORIGIN);
+    float min_t = TMAX;
+    ShadeRec min_sr;
+    min_t = intersectTest(&min_sr, so, ray);
+    // Shading
+    if(min_t < TMAX)
+    {
+        if(min_sr.mat->tex_flags != NO_TEXTURE)
+        {
+            updateShadeRecWithTexInfo(&min_sr);
+        }
+        whittedShade(radiance, depth, ray, trace_args, &min_sr);
+        vec3 pm_comp;
+        calcPhotonmapComponent(pm_comp, trace_args->h_sample, trace_args->query_vars, trace_args->photon_map,
+                                    trace_args->caustic_map, so, &min_sr, trace_args->caustic_rad);
+        vec3_add(radiance, radiance, pm_comp);
+    }else
+    {
+        vec3_copy(radiance, sl->bg_color);
+    }
     return min_t;
 }
 
@@ -397,9 +425,9 @@ void cosWeightedHemisphereSample(vec3 sample, const float e)
 }
 
 float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
-                         const int depth, TraceArgs trace_args)
+                         const int depth, TraceArgs *trace_args)
 {
-    const int sample_index = trace_args.sample_index;
+    const int sample_index = trace_args->sample_index;
     vec3 reflect_dir;
     calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
     vec3 new_sample;
@@ -425,9 +453,9 @@ float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
 }
 
 float calcSpecRadiancePTGenSample(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
-                         const int depth, TraceArgs trace_args)
+                         const int depth, TraceArgs *trace_args)
 {
-    const int sample_index = trace_args.sample_index;
+    const int sample_index = trace_args->sample_index;
     vec3 reflect_dir;
     calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
     vec3 new_sample;
@@ -453,13 +481,13 @@ float calcSpecRadiancePTGenSample(vec4 ref_radiance, const Ray ray, const ShadeR
     return t;
 }
 
-float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs trace_args)
+float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
+    vec3_copy(h_sample, trace_args->h_sample);
 
     vec3_copy(radiance, ORIGIN);
     float min_t = TMAX;

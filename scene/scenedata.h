@@ -19,11 +19,11 @@ enum AccelType
 
 typedef struct 
 {
-    AccelType accel;    
+    AccelType accel;
     int num_obj;
     int num_non_grid_obj;
     int max;
-    void* accel_ptr;    
+    void* accel_ptr;
     Object_t* objects;
 } SceneObjects;
 
@@ -40,7 +40,7 @@ SceneObjects SceneObjects_create()
 void SceneObjects_push_obj(SceneObjects* so, const Object_t* obj)
 {
     DBuffer obj_buffer;
-    DBuffer_assume(&obj_buffer, (char*)so->objects, so->num_obj, so->max, sizeof(Object_t));    
+    DBuffer_assume(&obj_buffer, (char*)so->objects, so->num_obj, so->max, sizeof(Object_t));
     DBuffer_push(obj_buffer, *obj);
     so->objects = (Object_t*)(obj_buffer.data);
     so->num_obj = DBuffer_size(obj_buffer);

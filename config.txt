@@ -6,9 +6,9 @@ image_height 480
 num_samples  4900
 num_sample_sets 83
 max_depth  8
-trace_type PATHTRACE
-accel_struct GRID
-photon_map no
+trace_type PHOTONMAP
+accel_struct BVH4
+photon_map yes
 num_photons 500000
 caustic_map yes
 num_caustic_photons 500000

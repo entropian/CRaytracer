@@ -497,7 +497,7 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
                 emitted++;
                 bounce_count = 0;
                 */
-
+                // TODO
                 bool hits_caustic_bb = false;
                 while(!hits_caustic_bb)
                 {
@@ -568,8 +568,8 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
 #ifdef SHOW_TIME
     end_time = glfwGetTime();
     double seconds = end_time - start_time;
-    printf("Caustic emission %f seconds.\n", seconds);        
-#endif        
+    printf("Caustic emission %f seconds.\n", seconds);
+#endif
 }
 
 #define swap(ph, a, b) {Photon *ph2 = ph[a]; ph[a] = ph[b]; ph[b] = ph2;}
@@ -888,117 +888,8 @@ void irradEstimate(vec3 irrad, const Photonmap *photon_map, const vec3 pos, cons
     vec3_scale(irrad, irrad, tmp);
 }
 
-void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVars query_vars,
-                            const Photonmap *photon_map, const Photonmap *caustic_map,
-                            const SceneObjects *so, const Ray ray)
-{
-    vec3 pm_color = {0.0f, 0.0f, 0.0f};
-    ShadeRec sr;
-    float t = intersectTest(&sr, so, ray);
-    if(t < TMAX)
-    {
-        if(sr.mat->mat_type == DIFFUSE)
-        {
-            if(sr.mat->tex_flags != NO_TEXTURE)
-            {
-                updateShadeRecWithTexInfo(&sr);
-            }
-
-            Ray new_ray;
-            vec3_copy(new_ray.origin, sr.hit_point);
-            getVec3InLocalBasis(new_ray.direction, h_sample, sr.normal);
-            ShadeRec new_sr;
-            vec3 f;
-
-            t = intersectTest(&new_sr, so, new_ray);
-            if(t < TMAX)
-            {
-                if(new_sr.mat->tex_flags != NO_TEXTURE)
-                {
-                    updateShadeRecWithTexInfo(&new_sr);
-                }
-                vec3 irrad = {0.0f, 0.0f, 0.0f};
-                irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
-                query_vars.photon_radius, query_vars.nphotons);
-                //printVec3WithText("irrad", irrad);
-
-                vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
-                vec3 inc_rad;
-                vec3_mult(inc_rad, irrad, f);
-
-                float ndotwi = vec3_dot(sr.normal, new_ray.direction);
-                float pdf = ndotwi / (float)PI;
-                // Incoming radiance from secondary point * cosine theta
-                vec3_scale(f, sr.mat->cd, sr.mat->kd / (float)PI * ndotwi / pdf);
-                vec3_mult(pm_color, inc_rad, f);
-            }
-
-            if(query_vars.caustic)
-            {
-                vec3 caustic_irrad, caustic_rad;
-                irradEstimate(caustic_irrad, caustic_map, sr.hit_point, sr.normal,
-                              query_vars.caustic_radius, query_vars.nphotons);
-                vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
-                vec3_mult(caustic_rad, caustic_irrad, f);
-                vec3_add(pm_color, pm_color, caustic_rad);
-            }
-        }
-        vec3_copy(color, pm_color);
-    }
-}
-
-
-void calcPhotonmapComponentNew(vec3 color, const vec3 h_sample, const PhotonQueryVars query_vars,
-                            const Photonmap *photon_map, const Photonmap *caustic_map,
-                            const SceneObjects *so, const ShadeRec *sr)
-{
-    vec3 pm_color = {0.0f, 0.0f, 0.0f};
-    if(sr->mat->mat_type == DIFFUSE)
-    {
-        Ray new_ray;
-        vec3_copy(new_ray.origin, sr->hit_point);
-        getVec3InLocalBasis(new_ray.direction, h_sample, sr->normal);
-        ShadeRec new_sr;
-        float t = intersectTest(&new_sr, so, new_ray);
-        vec3 f;
-
-        if(t < TMAX)
-        {
-            if(new_sr.mat->tex_flags != NO_TEXTURE)
-            {
-                updateShadeRecWithTexInfo(&new_sr);
-            }
-            vec3 irrad = {0.0f, 0.0f, 0.0f};
-            irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
-                          query_vars.photon_radius, query_vars.nphotons);
-            //printVec3WithText("irrad", irrad);
-
-            vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
-            vec3 inc_rad;
-            vec3_mult(inc_rad, irrad, f);
-
-            float ndotwi = vec3_dot(sr->normal, new_ray.direction);
-            float pdf = ndotwi / (float)PI;
-            // Incoming radiance from secondary point * cosine theta
-            vec3_scale(f, sr->mat->cd, sr->mat->kd / (float)PI * ndotwi / pdf);
-            vec3_mult(pm_color, inc_rad, f);
-        }
-
-        if(query_vars.caustic)
-        {
-            vec3 caustic_irrad, caustic_rad;
-            irradEstimate(caustic_irrad, caustic_map, sr->hit_point, sr->normal,
-                          query_vars.caustic_radius, query_vars.nphotons);
-            vec3_scale(f, sr->mat->cd, sr->mat->kd / PI); // NOTE: divide by PI?
-            vec3_mult(caustic_rad, caustic_irrad, f);
-            vec3_add(pm_color, pm_color, caustic_rad);
-        }
-    }
-    vec3_copy(color, pm_color);
-}
-
-void calcPhotonmapComponentNewer(vec3 color, const vec3 h_sample, const PhotonQueryVars query_vars,
-                            const Photonmap *photon_map, const Photonmap *caustic_map,
+void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVars *query_vars,
+                                 const Photonmap *photon_map, const Photonmap *caustic_map,
                                  const SceneObjects *so, const ShadeRec *sr, const vec3 caustic_rad)
 {
     vec3 pm_color = {0.0f, 0.0f, 0.0f};
@@ -1019,7 +910,7 @@ void calcPhotonmapComponentNewer(vec3 color, const vec3 h_sample, const PhotonQu
             }
             vec3 irrad = {0.0f, 0.0f, 0.0f};
             irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
-                          query_vars.photon_radius, query_vars.nphotons);
+                          query_vars->photon_radius, query_vars->nphotons);
             //printVec3WithText("irrad", irrad);
 
             vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
@@ -1033,10 +924,12 @@ void calcPhotonmapComponentNewer(vec3 color, const vec3 h_sample, const PhotonQu
             vec3_mult(pm_color, inc_rad, f);
         }
 
-        if(query_vars.caustic)
+        if(query_vars->caustic)
         {
             vec3_add(pm_color, pm_color, caustic_rad);
         }
     }
     vec3_copy(color, pm_color);
 }
+
+

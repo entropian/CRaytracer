@@ -29,13 +29,8 @@
 #include "projmap.h"
 
 #define SHOW_PROGRESS 1
-#define PROG
-
 
 extern double g_traversal_time;
-// Reminder
-bool g_is_photon_map = false;
-ShadeRec g_primary_sr;
 
 bool EXIT = false;
 int MAX_DEPTH = 0;
@@ -78,7 +73,7 @@ int calcCausticAABB(AABB *aabb, const SceneObjects *so)
                     //vec3_copy(centers[caustic_obj_count], mesh_sphere_center);
                     //radii[caustic_obj_count] = mesh_sphere_radius;
                     aabb[caustic_obj_count] = cur_aabb;
-                    caustic_obj_count++;                    
+                    caustic_obj_count++;
                     cur_mesh_ptr = NULL;
                     //vec3_assign(mesh_sphere_center, 0.0f, 0.0f, 0.0f);
                     //mesh_sphere_radius = 0.0f;
@@ -187,14 +182,13 @@ int main()
     setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets
                                                                          // for every sample struct that follows
 
-#ifdef PROG
     setInterleaved(true);
     unsigned char* set_buffer = (unsigned char*)malloc(sizeof(unsigned char) * num_pixels);
     for(unsigned int i = 0; i < num_pixels; i++)
     {
         set_buffer[i] = (unsigned char)(rand() % params.num_sample_sets);
     }
-#endif
+
     srand((unsigned int)time(NULL));
     Samples2D unit_square_samples = getDefaultSamples2D();
     Samples2D disk_samples = getDefaultSamples2D();
@@ -222,19 +216,20 @@ int main()
     const int num_caustic_photons = params.pm_config.num_caustic_photons;
     Photonmap photon_map, caustic_map;
     bool photon_map_status = false;
-    float* pm_buffer = NULL;
-    if(params.photon_map && params.trace_type == WHITTED)
+    float* caustic_buffer = NULL;
+    if(params.trace_type == PHOTONMAP)
     {
-        // Reminder
-        g_is_photon_map = true;
-        pm_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
-
         photon_map_status = true;
         Photonmap_init(&photon_map, num_photons, max_bounce);
         emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
         Photonmap_balance(&photon_map);
         if(params.caustic_map)
         {
+            caustic_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+            if(!caustic_buffer)
+            {
+                fprintf(stderr, "Couldn't allocate memory for caustic buffer.\n");
+            }
             Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
             emitCaustics(&caustic_map, &(scene.objects), &(scene.lights), aabbs, num_aabb);
             Photonmap_balance(&caustic_map);
@@ -245,11 +240,15 @@ int main()
     query_vars.photon_radius = params.pm_config.photon_radius;
     query_vars.caustic_radius = params.pm_config.caustic_radius;
     query_vars.caustic = params.caustic_map;
-    /*
+
     // Reminder
+    if(scene.objects.accel == BVH4)
+    {
+        BVH4_destroy((BVHNode4*)(scene.objects.accel_ptr));
+    }
     scene.objects.accel = GRID;
     buildSceneAccel(&scene);
-    */
+
     // Camera
     Camera camera;
     initPinholeCameraDefault(&camera);
@@ -284,7 +283,7 @@ int main()
     float pixel_length = frame_length/(float)(frame_res_width);
 
     // Set trace function
-    float (*trace)(vec3, int, const Ray, TraceArgs);
+    float (*trace)(vec3, int, const Ray, TraceArgs*);
     if(medium_mat)
     {
         trace = getTraceMediumFunc(params.trace_type);
@@ -292,8 +291,8 @@ int main()
     {
         trace = getTraceFunc(params.trace_type);
     }
-    /*
-    float* caustic_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+
+    
     const unsigned int num_caustic_samples = 4;
     for(int p = 0; p < num_caustic_samples; p++)
     {
@@ -325,23 +324,22 @@ int main()
                     vec3_add(pm_color, pm_color, caustic_rad);
                 }
             }
-            pm_buffer[i*3] += pm_color[0];
-            pm_buffer[i*3+1] += pm_color[1];
-            pm_buffer[i*3+2] += pm_color[2];
+            caustic_buffer[i*3] += pm_color[0];
+            caustic_buffer[i*3+1] += pm_color[1];
+            caustic_buffer[i*3+2] += pm_color[2];
         }
     }
     for(int i = 0; i < num_pixels; i++)
     {
-        pm_buffer[i*3] /= num_caustic_samples;
-        pm_buffer[i*3+1] /= num_caustic_samples;
-        pm_buffer[i*3+2] /= num_caustic_samples;
+        caustic_buffer[i*3] /= num_caustic_samples;
+        caustic_buffer[i*3+1] /= num_caustic_samples;
+        caustic_buffer[i*3+2] /= num_caustic_samples;
     }
-    */
+
     double start_time, end_time;
     start_time = glfwGetTime();
     int prev_percent = 0;
 //#if 0
-#ifdef PROG
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
         for(int i = 0; i < num_pixels; i++)
@@ -356,51 +354,26 @@ int main()
             Ray ray;
             calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
 
-            // Hemisphere sample for ambient occlusion
-            vec3 h_sample;
-            getSample3D(h_sample, &h_samples, sample_index);
-
             TraceArgs trace_args;
             trace_args.medium_mat = medium_mat;
             trace_args.objects = &(scene.objects);
             trace_args.lights = &(scene.lights);
             trace_args.sample_index = sample_index;
-            vec3_copy(trace_args.h_sample, h_sample);
+            getSample3D(trace_args.h_sample, &h_samples, sample_index);
+            trace_args.photon_map = &photon_map;
+            trace_args.caustic_map = &caustic_map;
+            vec3_assign(trace_args.caustic_rad,
+                      caustic_buffer[i*3], caustic_buffer[i*3+1], caustic_buffer[i*3+2]);
+            trace_args.query_vars = &query_vars;
+
 
             vec3 radiance = {0.0f, 0.0f, 0.0f};
-            trace(radiance, params.max_depth, ray, trace_args);
+            trace(radiance, params.max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
 
-            // Planned optimizations: trace primary rays once
-            // Query caustic map once and store in a buffer for reuse -- kinda done
-            // Use different accel struct for photon emission and rendering
+            // Planned optimizations: 
             // Irradiance caching?
 
-            // Next step: try increasing the number photons and see if storing caustics in a buffer
-            // will help more
-
-            // Photon map
-            if(photon_map_status)
-            {
-                // Reminder
-                vec3 pm_color = {0.0f, 0.0f, 0.0f};
-                /*
-                calcPhotonmapComponent(pm_color, h_sample, query_vars, &photon_map,
-                                       &caustic_map, &(scene.objects), ray);
-                */
-                /*
-                  calcPhotonmapComponentNew(pm_color, h_sample, query_vars, &photon_map,
-                  &caustic_map, &(scene.objects), &g_primary_sr);
-                */
-                /*
-                vec3 caustic_rad = {pm_buffer[i*3], pm_buffer[i*3+1], pm_buffer[i*3+2]};
-                calcPhotonmapComponentNewer(pm_color, h_sample, query_vars, &photon_map,
-                &caustic_map, &(scene.objects), &g_primary_sr, caustic_rad);
-                */
-                vec3_add(color, color, pm_color);
-            }
-
-            // NEW
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];
             color_buffer[i*3 + 2] += color[2];
@@ -430,49 +403,6 @@ int main()
             }
         }
     }
-
-#else
-    for(int i = 0; i < num_pixels; i++)
-    {
-        vec3 color = {0.0f, 0.0f, 0.0f};
-        for(unsigned int p = 0; p < params.num_samples; p++)
-        {
-            int sample_index = calcNextSampleIndex();
-            vec2 sample, imageplane_coord;
-            //getNextSample2D(sample, &unit_square_samples);
-            getSample2D(sample, &unit_square_samples, sample_index);
-            imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
-            imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
-
-            Ray ray;
-            calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
-
-            // Hemisphere sample for ambient occlusion
-            vec3 h_sample;
-            getSample3D(h_sample, &h_samples, sample_index);
-
-            vec3 radiance;
-            trace(radiance, params.max_depth, h_sample, ray, &(scene.objects), &(scene.lights), sample_index);
-            vec3_add(color, color, radiance);
-        }
-        vec3_scale(color, color, 1.0f/params.num_samples);
-        maxToOne(color, color);
-        image[i*3] = (char)(color[0] * 255.0f);
-        image[i*3 + 1] = (char)(color[1] * 255.0f);
-        image[i*3 + 2] = (char)(color[2] * 255.0f);
-
-        if(SHOW_PROGRESS)
-        {
-            int cur_percent = (int)((float)i / (float)(num_pixels) * 100.0f);
-            if(cur_percent > prev_percent)
-            {
-                prev_percent = cur_percent;
-                printf("%d%%\n", cur_percent);
-                displayImage(window, viewport, image, frame_res_width, frame_res_height);
-            }
-        }
-    }
-#endif
 //#endif
     end_time = glfwGetTime();
     double sec = end_time - start_time;
@@ -492,12 +422,14 @@ int main()
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
     Scene_destroy(&scene);
-     Camera_destroy(&camera);
+    Camera_destroy(&camera);
     if(params.photon_map)
     {
         Photonmap_destroy(&photon_map);
         Photonmap_destroy(&caustic_map);
+        free(caustic_buffer);
     }
+    free(set_buffer);
 
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;

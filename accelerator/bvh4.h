@@ -22,7 +22,7 @@
 
 __m128 rayIntersectAABB4(__m128* less_than, const float bbox[24], const Ray ray)
 {
-    // TODO: change it so that this is done once per ray    
+    // TODO: change it so that this is done once per ray
     __m128 a = _mm_set1_ps(1.0f / ray.direction[0]);
     __m128 b = _mm_set1_ps(1.0f / ray.direction[1]);
     __m128 c = _mm_set1_ps(1.0f / ray.direction[2]);
@@ -30,7 +30,7 @@ __m128 rayIntersectAABB4(__m128* less_than, const float bbox[24], const Ray ray)
     __m128 ray_ox = _mm_set1_ps(ray.origin[0]);
     __m128 ray_oy = _mm_set1_ps(ray.origin[1]);
     __m128 ray_oz = _mm_set1_ps(ray.origin[2]);
-    
+
     __m128 min_x = _mm_load_ps(&(bbox[0]));
     __m128 min_y = _mm_load_ps(&(bbox[4]));
     __m128 min_z = _mm_load_ps(&(bbox[8]));
@@ -65,11 +65,11 @@ __m128 rayIntersectAABB4(__m128* less_than, const float bbox[24], const Ray ray)
     if(ray.direction[2] >= 0.0f)
     {
         tz_min = _mm_mul_ps(_mm_sub_ps(min_z, ray_oz), c);
-        tz_max = _mm_mul_ps(_mm_sub_ps(max_z, ray_oz), c);            
+        tz_max = _mm_mul_ps(_mm_sub_ps(max_z, ray_oz), c);
     }else
     {
         tz_min = _mm_mul_ps(_mm_sub_ps(max_z, ray_oz), c);
-        tz_max = _mm_mul_ps(_mm_sub_ps(min_z, ray_oz), c);            
+        tz_max = _mm_mul_ps(_mm_sub_ps(min_z, ray_oz), c);
     }
 
     __m128 t0, t1;
@@ -88,11 +88,11 @@ __m128 rayIntersectAABB4(__m128* less_than, const float bbox[24], const Ray ray)
     t1 = _mm_andnot_ps(epsilon_mask, t1);
     __m128 t = _mm_or_ps(t0, t1);
 
-    t = _mm_and_ps(t, hit_mask);    
+    t = _mm_and_ps(t, hit_mask);
     __m128 tmax = _mm_set1_ps(TMAX);
     tmax = _mm_andnot_ps(hit_mask, tmax);
     t = _mm_or_ps(t, tmax);
-    
+
     return t;
 }
 
@@ -109,6 +109,22 @@ typedef struct __attribute__((aligned(16))) BVHNode4_s
     // Total 128 bytes
 }BVHNode4;
 
+// TODO
+void BVH4_destroy(BVHNode4 *node)
+{
+    for(int i = 0; i < 4; i++)
+    {
+        if(node->child[i] && node->type[0] == -1)
+        {
+            BVH4_destroy((BVHNode4*)(node->child[i]));
+#ifdef _MSC_VER
+            _aligned_free((BVHNode4*)(node->child[i]));
+#else
+#endif
+        }
+    }
+}
+
 void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
 {
     assert(num_obj > 0);
@@ -120,6 +136,7 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     BVHNode4 *pNode;
     posix_memalign((void**)&pNode, 16, sizeof(BVHNode4) + 1);
 #endif
+    pNode->child[0] = pNode->child[1] = pNode->child[2] = pNode->child[3] = NULL;
     *tree = pNode;
     // Partion objects into two sets, then partition each of those two sets to produce four sets
     // Calculate the bounding box for each of the four sets
@@ -237,7 +254,7 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     // child[i] can point to the first object, and type[i] be the number of objects in this leaf
     if(left_split > 4)
     {
-        pNode->type[0] = 0;
+        pNode->type[0] = -1;
         BVH4_build((BVHNode4**)&(pNode->child[0]), objects, left_split);
     }else
     {
@@ -247,7 +264,7 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
 
     if((middle_split - left_split) > 4)
     {
-        pNode->type[1] = 0;        
+        pNode->type[1] = -1;
         BVH4_build((BVHNode4**)&(pNode->child[1]), &(objects[left_split]), middle_split - left_split);
     }else
     {
@@ -257,7 +274,7 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
 
     if((right_split - middle_split) > 4)
     {
-        pNode->type[2] = 0;        
+        pNode->type[2] = -1;
         BVH4_build((BVHNode4**)&(pNode->child[2]), &(objects[middle_split]), right_split - middle_split);
     }else
     {
@@ -267,13 +284,13 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
 
     if((num_obj - right_split) > 4)
     {
-        pNode->type[3] = 0;        
+        pNode->type[3] = -1;
         BVH4_build((BVHNode4**)&(pNode->child[3]), &(objects[right_split]), num_obj - right_split);
     }else
     {
         pNode->child[3] = &(objects[right_split]);
-        pNode->type[3] = num_obj - right_split;        
-    }            
+        pNode->type[3] = num_obj - right_split;
+    }
 }
 
 float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
@@ -335,11 +352,12 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
         {
             float t;
             ShadeRec tmp_sr;
-            if(tree->type[index] == 0)
+            //if(tree->type[index] == 0)
+            if(tree->type[index] == -1)
             {
                 t = BVH4IntersectTest(&tmp_sr, (BVHNode4*)(tree->child[index]), ray);
                 if(t < min_t)
-                {                    
+                {
                     min_t = t;
                     *sr = tmp_sr;
                 }                
@@ -354,7 +372,7 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
                     {
                         min_t = t;
                         *sr = tmp_sr;
-                    }                    
+                    }
                 }
             }
 
@@ -421,7 +439,8 @@ float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray, const float l
         if(bbox_result[index] < light_dist || (less_than[index] && bbox_result[index] < TMAX))
         {
             float t = TMAX;
-            if(tree->type[index] == 0)
+            //if(tree->type[index] == 0)
+            if(tree->type[index] == -1)
             {
                 t = BVH4ShadowIntersectTest((BVHNode4*)(tree->child[index]), ray, light_dist);
                 if(t < light_dist)

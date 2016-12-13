@@ -96,6 +96,9 @@ void parseConfigFile(ConfigParams* cp)
             }else if(strcmp(buffer, "PATHTRACE") == 0)
             {
                 cp->trace_type = PATHTRACE;
+            }else if(strcmp(buffer, "PHOTONMAP") == 0)
+            {
+                cp->trace_type = PHOTONMAP;
             }
         }else if(strcmp(buffer, "accel_struct") == 0)
         {

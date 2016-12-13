@@ -7,12 +7,6 @@
 #include "../shapes/shapes.h"
 #include "../shapes/instanced.h"
 
-typedef struct GridCell
-{
-    int length;
-    IntVector indicies;
-} GridCell;
-
 typedef struct UniformGrid
 {
     int num_cells;

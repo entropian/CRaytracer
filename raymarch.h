@@ -1,6 +1,6 @@
 #pragma once
 #include "trace.h"
-//float pathTrace(vec3, int, const Ray, TraceArgs trace_args);
+//float pathTrace(vec3, int, const Ray, TraceArgs *trace_args);
 
 traceFunc getTraceMediumFunc(const TraceType trace_type)
 {
@@ -77,11 +77,11 @@ float schlickPhaseFunc(const float cos_theta, const float k)
 }
 
 void directIllumInScatter(vec3 radiance, const vec3 point, const float extinct_coeff, const float scatter_coeff,
-                          const vec3 view_dir, TraceArgs trace_args)
+                          const vec3 view_dir, TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
 
     ShadeRec tmp_sr;
     vec3_copy(tmp_sr.hit_point, point);
@@ -106,13 +106,13 @@ void directIllumInScatter(vec3 radiance, const vec3 point, const float extinct_c
     }
 }
 
-void raymarch(vec3 radiance, const Ray ray, TraceArgs trace_args)
+void raymarch(vec3 radiance, const Ray ray, TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
+    vec3_copy(h_sample, trace_args->h_sample);
 
     vec3 view_dir;
     vec3_negate(view_dir, ray.direction);
@@ -204,13 +204,13 @@ void raymarch(vec3 radiance, const Ray ray, TraceArgs trace_args)
 
 void mediumMarch(vec3 out_rad, const vec3 entry_rad, const Ray ray, const float t_seg,
                  const float medium_dist, const float extinct_coeff,
-                 const float scatter_coeff, TraceArgs trace_args)
+                 const float scatter_coeff, TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
+    vec3_copy(h_sample, trace_args->h_sample);
     vec3 init_rad;
     vec3_copy(init_rad, entry_rad);
     vec3 view_dir;
@@ -233,13 +233,13 @@ void mediumMarch(vec3 out_rad, const vec3 entry_rad, const Ray ray, const float 
 
 void calcDirectIllumSurfaceInMedium(vec3 radiance, const ShadeRec *sr,
                                     const float extinct_coeff, const float scatter_coeff,
-                                    TraceArgs trace_args)
+                                    TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
+    vec3_copy(h_sample, trace_args->h_sample);
     for(int i = 0; i < sl->num_lights; i++)
     {
         vec3 light_dir;
@@ -265,13 +265,13 @@ void calcDirectIllumSurfaceInMedium(vec3 radiance, const ShadeRec *sr,
     }
 }
 
-void fogmarch(vec3 radiance, const Ray ray, TraceArgs trace_args)
+void fogmarch(vec3 radiance, const Ray ray, TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
+    vec3_copy(h_sample, trace_args->h_sample);
     vec3_copy(radiance, BLACK);
     vec3 view_dir;
     vec3_negate(view_dir, ray.direction);
@@ -305,17 +305,17 @@ void fogmarch(vec3 radiance, const Ray ray, TraceArgs trace_args)
 }
 
 // Called when a ray enters or originates inside a medium
-float raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs trace_args)
+float raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
+    vec3_copy(h_sample, trace_args->h_sample);
     vec3 view_dir;
     vec3_negate(view_dir, ray.direction);
-    const float extinct_coeff = trace_args.medium_mat->extinct_coeff;
-    const float scatter_coeff = trace_args.medium_mat->scatter_coeff;
+    const float extinct_coeff = trace_args->medium_mat->extinct_coeff;
+    const float scatter_coeff = trace_args->medium_mat->scatter_coeff;
     float t_seg = 5.0f;
     ShadeRec sr;
     float t = intersectTest(&sr, so, ray);
@@ -323,12 +323,14 @@ float raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs tra
     vec3 init_rad = {0.0f, 0.0f, 0.0f};
     if(sr.mat->mat_type == PARTICIPATING) // Ray passes through the medium hitting nothing
     {
+        /*
         TraceArgs new_trace_args = trace_args;
-        new_trace_args.medium_mat = NULL;
+        new_trace_args->medium_mat = NULL;
         Ray new_ray;
         vec3_copy(new_ray.direction, ray.direction);
         getPointOnRay(new_ray.origin, ray, t);
         raycast(init_rad, depth-1, new_ray, new_trace_args);
+        */
     }else if(sr.mat->mat_type == EMISSIVE)
     {
         vec3_scale(init_rad, sr.mat->ce, sr.mat->ke/1.0f);
@@ -341,13 +343,13 @@ float raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs tra
 }
 
 // Called when a ray enters or originates inside a medium
-float whittedTraceMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs trace_args)
+float whittedTraceMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs *trace_args)
 {
-    const SceneObjects *so = trace_args.objects;
-    const SceneLights *sl = trace_args.lights;
-    const int sample_index = trace_args.sample_index;
+    const SceneObjects *so = trace_args->objects;
+    const SceneLights *sl = trace_args->lights;
+    const int sample_index = trace_args->sample_index;
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args.h_sample);
+    vec3_copy(h_sample, trace_args->h_sample);
     vec3 view_dir;
     vec3_negate(view_dir, ray.direction);
     const float extinct_coeff = 0.01f;
