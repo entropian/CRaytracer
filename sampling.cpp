@@ -58,6 +58,16 @@ void freeSamples3D(Samples3D *samples)
     samples->num_sets = samples->num_samples = 0;
 }
 
+void moveSamples2D(Samples2D *dst, Samples2D *src)
+{
+    dst->num_samples = src->num_samples;
+    dst->num_sets = src->num_sets;
+    dst->samples = src->samples;
+    src->num_samples = 0;
+    src->num_sets = 0;
+    src->samples = NULL;
+}
+
 void copySamples2D(Samples2D* dst, Samples2D* src)
 {
     dst->num_samples = src->num_samples;
@@ -373,14 +383,14 @@ Samples3D* genHemisphereSamples(const SamplesType st, const float exp)
     case HAMMERSLEY:
     {
         genHammersleySamples(&unit_square_samples);
-    }break;    
+    }break;
     }
     mapSamplesToDisk(&disk_samples, &unit_square_samples);
     mapSamplesToHemisphere(&hemisphere_samples, &disk_samples, exp);
     *samples = hemisphere_samples;
     freeSamples2D(&unit_square_samples);
-    freeSamples2D(&disk_samples);    
-    return samples;    
+    freeSamples2D(&disk_samples);
+    return samples;
 }
 
 
@@ -391,9 +401,9 @@ void drawSamples(unsigned char *image, Samples2D *samples,
     {
         image[i*3] = (char)255;
         image[i*3 + 1] = (char)255;
-        image[i*3 + 2] = (char)255;        
+        image[i*3 + 2] = (char)255;
     }
-    
+
     for(int i = 0; i < samples->num_samples; i++)
     {
         vec2 sample;
@@ -401,7 +411,7 @@ void drawSamples(unsigned char *image, Samples2D *samples,
         //getNextSample2D(sample, samples);
         getSample2D(sample, samples, sample_index);
         int x = (int)(sample[0] * frame_res_width);
-        int y = (int)((1.0f - sample[1]) * frame_res_height);        
+        int y = (int)((1.0f - sample[1]) * frame_res_height);
         int index = y * frame_res_width + x;
         image[index*3] = 0;
         image[index*3 + 1] = 0;

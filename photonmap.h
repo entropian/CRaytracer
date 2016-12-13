@@ -911,7 +911,6 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
             vec3 irrad = {0.0f, 0.0f, 0.0f};
             irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
                           query_vars->photon_radius, query_vars->nphotons);
-            //printVec3WithText("irrad", irrad);
 
             vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
             vec3 inc_rad;
@@ -932,4 +931,43 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
     vec3_copy(color, pm_color);
 }
 
+void calcCausticBuffer(float* caustic_buffer, Camera *camera, Film *film, 
+                       const Scene *scene, const Photonmap *caustic_map, const PhotonQueryVars *query_vars,
+                       const unsigned char *set_buffer, const int num_caustic_samples)
+{
+    for(int p = 0; p < num_caustic_samples; p++)
+    {
+        for(int i = 0; i < film->num_pixels; i++)
+        {
+            int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
+            vec2 imageplane_coord;
+            calcImageCoord(imageplane_coord, film, sample_index, i);
 
+            Ray ray;
+            calcCameraRay(&ray, imageplane_coord, camera, sample_index);
+
+            ShadeRec sr;
+            float t = intersectTest(&sr, &(scene->objects), ray);
+            vec3 pm_color = {0.0f, 0.0f, 0.0f};
+            if(t < TMAX)
+            {
+                vec3 caustic_irrad, caustic_rad;
+                irradEstimate(caustic_irrad, caustic_map, sr.hit_point, sr.normal,
+                              query_vars->caustic_radius, query_vars->nphotons);
+                vec3 f;
+                vec3_scale(f, sr.mat->cd, sr.mat->kd / PI);
+                vec3_mult(caustic_rad, caustic_irrad, f);
+                vec3_add(pm_color, pm_color, caustic_rad);
+            }
+            caustic_buffer[i*3] += pm_color[0];
+            caustic_buffer[i*3+1] += pm_color[1];
+            caustic_buffer[i*3+2] += pm_color[2];
+        }
+    }
+    for(int i = 0; i < film->num_pixels; i++)
+    {
+        caustic_buffer[i*3] /= num_caustic_samples;
+        caustic_buffer[i*3+1] /= num_caustic_samples;
+        caustic_buffer[i*3+2] /= num_caustic_samples;
+    }
+}

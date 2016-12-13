@@ -160,3 +160,30 @@ void calcCameraRay(Ray* ray, const vec2 imageplane_coord, const Camera* camera, 
     } break;
     }
 }
+
+typedef struct Film_s
+{
+    float fov;
+    float frame_length, frame_height; // Dimension of the film inside the scene
+    int frame_res_width, frame_res_height; // Actual image resolution
+    float pixel_length;
+    int num_pixels;
+    Samples2D samples;
+}Film;
+
+void calcFilmDimension(Film *film, const Camera *camera)
+{
+    film->frame_length = 2.0f * (sin(film->fov/2.0f) * camera->focal_pt_dist);
+    film->frame_height = film->frame_length * (float)(film->frame_res_height)/(float)(film->frame_res_width);
+    film->pixel_length = (float)(film->frame_length)/(float)(film->frame_res_width);
+}
+
+void calcImageCoord(vec2 image_coord, Film *film, const int sample_index, const int pixel_index)
+{
+    vec2 sample;
+    getSample2D(sample, &(film->samples), sample_index);
+    image_coord[0] = -film->frame_length/2 + film->pixel_length *
+        ((float)(pixel_index % film->frame_res_width) + sample[0]);
+    image_coord[1] = film->frame_height/2 - film->pixel_length *
+        ((float)(pixel_index / film->frame_res_width) + sample[1]);
+}

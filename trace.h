@@ -26,7 +26,7 @@ struct Photonmap_s;
 typedef struct Photonmap_s Photonmap;
 struct PhotonQueryVars_s;
 typedef struct PhotonQueryVars_s PhotonQueryVars;
-void calcPhotonmapComponentNewer(vec3, const vec3, const PhotonQueryVars*,
+void calcPhotonmapComponent(vec3, const vec3, const PhotonQueryVars*,
                                  const Photonmap*, const Photonmap*,
                                  const SceneObjects*, const ShadeRec*, const vec3);
 

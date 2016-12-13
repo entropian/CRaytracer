@@ -170,12 +170,10 @@ int main()
     initViewport(&viewport);
 
     unsigned char *image;
-    int frame_res_width = params.image_width, frame_res_height = params.image_height;
-    int num_pixels = frame_res_width * frame_res_height;
+    int num_pixels = params.image_width * params.image_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
     float* color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
-
     //LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
 
     // Samples
@@ -203,11 +201,6 @@ int main()
     AABB aabbs[MAX_MESH];
     // NOTE: calc aabb before building accel
     int num_aabb = calcCausticAABB(aabbs, &(scene.objects));
-    for(int i = 0 ; i < num_aabb; i++)
-    {
-        printVec3WithText("min", aabbs[i].min);
-        printVec3WithText("max", aabbs[i].max);
-    }
     buildSceneAccel(&scene);
 
     // Photon map
@@ -276,11 +269,14 @@ int main()
     cameraLookAt(&camera, position, look_point, up_vec);
     Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
 
-    // TODO: throw these in a struct for camera scaling
-    float fov = 70.0f / 180.0f * PI;
-    float frame_length = 2.0f * (sin(fov/2.0f) * camera.focal_pt_dist);
-    float frame_height = frame_length * (float)(frame_res_height)/(float)(frame_res_width);
-    float pixel_length = frame_length/(float)(frame_res_width);
+    // TODO: the image buffer could be part of film
+    Film film;
+    film.frame_res_width = params.image_width;
+    film.frame_res_height = params.image_height;
+    film.num_pixels = num_pixels;
+    film.fov = 70.0f / 180.0f * PI; // TODO
+    calcFilmDimension(&film, &camera);
+    moveSamples2D(&(film.samples), &unit_square_samples);
 
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs*);
@@ -292,123 +288,16 @@ int main()
         trace = getTraceFunc(params.trace_type);
     }
 
-    
-    const unsigned int num_caustic_samples = 4;
-    for(int p = 0; p < num_caustic_samples; p++)
-    {
-        for(int i = 0; i < num_pixels; i++)
-        {
-            int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
-            vec3 color = {0.0f, 0.0f, 0.0f};
-            vec2 sample, imageplane_coord;
-            getSample2D(sample, &unit_square_samples, sample_index);
-            imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
-            imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
+    const int num_caustic_samples = 4;
+    calcCausticBuffer(caustic_buffer, &camera, &film, &scene, &caustic_map, &query_vars,
+                      set_buffer, num_caustic_samples);
 
-            Ray ray;
-            calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
-
-            ShadeRec sr;
-            float t = intersectTest(&sr, &(scene.objects), ray);
-            vec3 pm_color = {0.0f, 0.0f, 0.0f};
-            if(t < TMAX)
-            {
-                if(photon_map_status)
-                {
-                    vec3 caustic_irrad, caustic_rad;
-                    irradEstimate(caustic_irrad, &caustic_map, sr.hit_point, sr.normal,
-                                  query_vars.caustic_radius, query_vars.nphotons);
-                    vec3 f;
-                    vec3_scale(f, sr.mat->cd, sr.mat->kd / PI); // NOTE: divide by PI?
-                    vec3_mult(caustic_rad, caustic_irrad, f);
-                    vec3_add(pm_color, pm_color, caustic_rad);
-                }
-            }
-            caustic_buffer[i*3] += pm_color[0];
-            caustic_buffer[i*3+1] += pm_color[1];
-            caustic_buffer[i*3+2] += pm_color[2];
-        }
-    }
-    for(int i = 0; i < num_pixels; i++)
-    {
-        caustic_buffer[i*3] /= num_caustic_samples;
-        caustic_buffer[i*3+1] /= num_caustic_samples;
-        caustic_buffer[i*3+2] /= num_caustic_samples;
-    }
-
-    double start_time, end_time;
-    start_time = glfwGetTime();
-    int prev_percent = 0;
-//#if 0
-    for(unsigned int p = 0; p < params.num_samples; p++)
-    {
-        for(int i = 0; i < num_pixels; i++)
-        {
-            int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
-            vec3 color = {0.0f, 0.0f, 0.0f};
-            vec2 sample, imageplane_coord;
-            getSample2D(sample, &unit_square_samples, sample_index);
-            imageplane_coord[0] = -frame_length/2 + pixel_length * ((float)(i % frame_res_width) + sample[0]);
-            imageplane_coord[1] = frame_height/2 - pixel_length * ((float)(i / frame_res_width) + sample[1]);
-
-            Ray ray;
-            calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
-
-            TraceArgs trace_args;
-            trace_args.medium_mat = medium_mat;
-            trace_args.objects = &(scene.objects);
-            trace_args.lights = &(scene.lights);
-            trace_args.sample_index = sample_index;
-            getSample3D(trace_args.h_sample, &h_samples, sample_index);
-            trace_args.photon_map = &photon_map;
-            trace_args.caustic_map = &caustic_map;
-            vec3_assign(trace_args.caustic_rad,
-                      caustic_buffer[i*3], caustic_buffer[i*3+1], caustic_buffer[i*3+2]);
-            trace_args.query_vars = &query_vars;
-
-
-            vec3 radiance = {0.0f, 0.0f, 0.0f};
-            trace(radiance, params.max_depth, ray, &trace_args);
-            vec3_add(color, color, radiance);
-
-            // Planned optimizations: 
-            // Irradiance caching?
-
-            color_buffer[i*3] += color[0];
-            color_buffer[i*3 + 1] += color[1];
-            color_buffer[i*3 + 2] += color[2];
-            vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
-            vec3_scale(color, color, 1/(float)(p+1));
-            maxToOne(color, color);
-
-            image[i*3] = (char)(color[0] * 255.0f);
-            image[i*3 + 1] = (char)(color[1] * 255.0f);
-            image[i*3 + 2] = (char)(color[2] * 255.0f);
-        }
-        end_time = glfwGetTime();
-        double sec = end_time - start_time;
-        printf("%f seconds.\n", sec);
-        if(SHOW_PROGRESS)
-        {
-            displayImage(window, viewport, image, frame_res_width, frame_res_height);
-            //int cur_percent = (int)((float)i / (float)(num_pixels) * 100.0f);
-            int cur_percent = (int)((float)p / (float)(params.num_samples) * 100.0f);
-            if(cur_percent > prev_percent)
-            {
-                end_time = glfwGetTime();
-                double sec = end_time - start_time;
-                prev_percent = cur_percent;
-                printf("%d%%\t%f sec\n", cur_percent, sec);
-
-            }
-        }
-    }
 //#endif
     end_time = glfwGetTime();
     double sec = end_time - start_time;
     printf("%f seconds.\n", sec);
 
-    displayImage(window, viewport, image, frame_res_width, frame_res_height);
+    displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
     printf("Traversal time = %f\n", g_traversal_time);
 
     if(params.image_save)
@@ -418,7 +307,7 @@ int main()
     }
 
     // Clean up
-    freeSamples2D(&unit_square_samples);
+    //freeSamples2D(&unit_square_samples);
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
     Scene_destroy(&scene);
@@ -439,7 +328,7 @@ int main()
         current_time = glfwGetTime();
         if((current_time - last_draw_time) >= time_between_frames)
         {
-            displayImage(window, viewport, image, frame_res_width, frame_res_height);
+            displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
             last_draw_time = current_time;
         }
         glfwPollEvents();

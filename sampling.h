@@ -55,6 +55,7 @@ void setInterleaved(bool interleaved);
 void interleaveSampleSets2D(Samples2D* samples);
 void interleaveSampleSets3D(Samples3D* samples);
 void copySamples2D(Samples2D* dst, Samples2D* src);
+void moveSamples2D(Samples2D *dst, Samples2D *src);
 int calcNextSampleIndex();
 int calcInterleavedSampleIndex(const int sample_index, const int set_index);
 void getSample2D(vec2 r, const Samples2D* samples, const int sample_index);
