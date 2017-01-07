@@ -3,18 +3,17 @@ window_width  960
 window_height  960
 image_width  480
 image_height 480
-num_samples  4900
+num_samples  8100
 num_sample_sets 83
 max_depth  8
-trace_type PHOTONMAP
+trace_type WHITTED
 accel_struct BVH4
-photon_map yes
-num_photons 500000
+num_photons 1000000
 caustic_map yes
-num_caustic_photons 500000
+num_caustic_photons 2000000
 num_estimate 500
 photon_depth 8
 photon_radius 2
-caustic_radius 0.03
+caustic_radius 0.025
 image_save yes
 

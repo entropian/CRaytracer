@@ -109,7 +109,6 @@ typedef struct __attribute__((aligned(16))) BVHNode4_s
     // Total 128 bytes
 }BVHNode4;
 
-// TODO
 void BVH4_destroy(BVHNode4 *node)
 {
     for(int i = 0; i < 4; i++)

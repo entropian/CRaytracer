@@ -1,11 +1,9 @@
-Try final gather
-Try path tracing with photon map for importance sampling
-Edges are jaggy in photon map visualization. Filter?
+Irradiance caching
+SIMD ray triangle intersection for uniform grid
 Sample direct and indirect illumination separately. Done, now fix it.
 Cook-Torrance
 Figure out how to load san miguel.
 Optimize mesh loading
-Try different number of primitives in each BVH node
 what's the relationship between kd, ks and kr (and kt)?
 add normal type to torus
 set default background color in scene file

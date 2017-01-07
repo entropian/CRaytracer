@@ -22,6 +22,7 @@ void UniformGrid_destroy(UniformGrid* ug)
     {
         IntVector_destroy(&(ug->cells[i]));
     }
+    free(ug->cells);
 }
 
 void getSceneObjAABBs(AABB* aabb_array, int* num_aabb, const Object_t objects[], const int num_obj)

@@ -712,15 +712,102 @@ void initSceneLights(SceneLights* sl)
     initBackgroundColor(sl);
 }
 
+int calcCausticObjectsAABB(AABB *aabb, const SceneObjects *so)
+{
+    int caustic_obj_count = 0;
+    Mesh *cur_mesh_ptr = NULL;
+    AABB cur_aabb;
+    vec3_assign(cur_aabb.max, K_EPSILON, K_EPSILON, K_EPSILON);
+    vec3_assign(cur_aabb.min, -K_EPSILON, -K_EPSILON, -K_EPSILON);
+    for(int i = so->num_non_grid_obj; i < so->num_obj; i++)
+    {
+        Object_t obj = so->objects[i];
+        Material *mat = getObjectMatPtr(obj);
+        if(!mat)
+        {
+            fprintf(stderr, "Null material pointer.\n");
+            continue;
+        }
+        if(mat->mat_type == REFLECTIVE || mat->mat_type == TRANSPARENT)
+        {
+            if(obj.type != FLAT_TRIANGLE && obj.type != SMOOTH_TRIANGLE)
+            {
+                if(cur_mesh_ptr)
+                {
+                    aabb[caustic_obj_count] = cur_aabb;
+                    caustic_obj_count++;
+                    cur_mesh_ptr = NULL;
+                    vec3_assign(cur_aabb.max, K_EPSILON, K_EPSILON, K_EPSILON);
+                    vec3_assign(cur_aabb.min, -K_EPSILON, -K_EPSILON, -K_EPSILON);
+                }
+                if(getObjectAABB(&cur_aabb, obj))
+                {
+                    aabb[caustic_obj_count] = cur_aabb;
+                    caustic_obj_count++;
+                }else
+                {
+                    fprintf(stderr, "Cannot calculate bounding box.\n");
+                }
+            }else
+            {
+                if(obj.type == FLAT_TRIANGLE)
+                {
+                    FlatTriangle *triangle = (FlatTriangle*)(obj.ptr);
+                    if(triangle->mesh_ptr != cur_mesh_ptr && cur_mesh_ptr)
+                    {
+                        aabb[caustic_obj_count] = cur_aabb;
+                        caustic_obj_count++;
+                        cur_mesh_ptr = triangle->mesh_ptr;
+                        getObjectAABB(&cur_aabb, obj);
+                    }else if(!cur_mesh_ptr)
+                    {
+                        cur_mesh_ptr = triangle->mesh_ptr;
+                        getObjectAABB(&cur_aabb, obj);
+                    }else
+                    {
+                        AABB tri_aabb;
+                        getObjectAABB(&tri_aabb, obj);
+                        addToAABB(&cur_aabb, &tri_aabb);
+                    }
+                }else if(obj.type == SMOOTH_TRIANGLE)
+                {
+                    SmoothTriangle *triangle = (SmoothTriangle*)(obj.ptr);
+                    if(triangle->mesh_ptr != cur_mesh_ptr && cur_mesh_ptr)
+                    {
+                        aabb[caustic_obj_count] = cur_aabb;
+                        caustic_obj_count++;
+                        cur_mesh_ptr = triangle->mesh_ptr;
+                        getObjectAABB(&cur_aabb, obj);
+                    }else if(!cur_mesh_ptr)
+                    {
+                        cur_mesh_ptr = triangle->mesh_ptr;
+                        getObjectAABB(&cur_aabb, obj);
+                    }else
+                    {
+                        AABB tri_aabb;
+                        getObjectAABB(&tri_aabb, obj);
+                        addToAABB(&cur_aabb, &tri_aabb);
+                    }
+                }
+            }
+        }
+    }
+    if(cur_mesh_ptr)
+    {
+        aabb[caustic_obj_count] = cur_aabb;
+        caustic_obj_count++;
+    }
+    return caustic_obj_count;
+}
+
 void buildSceneAccel(Scene *scene)
 {
-    SceneObjects* so = &(scene->objects);    
-    double start, end;    
+    SceneObjects* so = &(scene->objects);
+    double start, end;
     if(so->accel == GRID)
     {
         start = glfwGetTime();
-        //const int multiplier = 2;
-        const int multiplier = 3;
+        const int multiplier = 2;
         UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, multiplier);
         end = glfwGetTime();
         printf("Uniform grid build time: %f sec\n", end - start);
@@ -745,6 +832,21 @@ void buildSceneAccel(Scene *scene)
         end = glfwGetTime();
         printf("BVH4 build time: %f sec\n", end - start);
         so->accel_ptr = tree;
+    }
+}
+
+void destroySceneAccel(Scene *scene)
+{
+    SceneObjects *so = &(scene->objects);
+    if(so->accel == GRID)
+    {
+        UniformGrid_destroy((UniformGrid*)(so->accel_ptr));
+    }else if(so->accel == BVH)
+    {
+        BVH_destroy((BVHNode*)(so->accel_ptr));
+    }else if(so->accel == BVH4)
+    {
+        BVH4_destroy((BVHNode4*)(so->accel_ptr));
     }
 }
 
