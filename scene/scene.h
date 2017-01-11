@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scenedata.h"
+#include "../camera.h"
 
 typedef struct Scene_s
 {
@@ -10,6 +11,7 @@ typedef struct Scene_s
     SceneMeshes meshes;
     SceneTransforms transforms;
     SceneLights lights;
+    Camera camera;
 }Scene;
 
 Scene Scene_create()
@@ -31,7 +33,8 @@ void Scene_destroy(Scene* scene)
     SceneTextures_destroy(&(scene->textures));
     SceneMeshes_destroy(&(scene->meshes));
     SceneTransforms_destroy(&(scene->transforms));
-    freeSceneLights(&(scene->lights));    
+    freeSceneLights(&(scene->lights));
+    Camera_destroy(&(scene->camera));
 }
 
 

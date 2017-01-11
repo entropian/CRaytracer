@@ -295,7 +295,7 @@ void procMatTexPairs(Scene *scene, const MatTexNamePair *pairs, const unsigned i
     }
 }
 
-void initSceneObjects(Scene* scene, const char* scenefile)
+void loadSceneFile(Scene* scene, const char* scenefile)
 {
     SceneLights* sl = &(scene->lights);
     for(int i = 0; i < sl->num_lights; i++)
@@ -318,6 +318,22 @@ void initSceneObjects(Scene* scene, const char* scenefile)
     {
         return;
     }
+    char buffer[128];
+    // Setup camera
+    initPinholeCameraDefault(&(scene->camera));
+    vec3 cam_pos = {0.0f, 0.0f, 0.0f};
+    vec3 look_point = {0.0f, 0.0f, 0.0f};
+    getNextTokenInFile(buffer, fp);
+    while(strcmp(buffer, "CAMERA_POS") != 0)
+    {
+        getNextTokenInFile(buffer, fp);
+    }
+    parseVec3(cam_pos, fp);
+    getNextTokenInFile(buffer, fp); // Skip over LOOK_POINT
+    parseVec3(look_point, fp);
+    vec3 up_vec = {0.0f, 1.0f, 0.0f};
+    cameraLookAt(&(scene->camera), cam_pos, look_point, up_vec);
+    
     /*
       Load textures as we parse materials, but defer storing texture pointers in materials
       until all texture loadings are done.
@@ -333,7 +349,7 @@ void initSceneObjects(Scene* scene, const char* scenefile)
     procMatTexPairs(scene, pair_array, num_pair);
     DBuffer_erase(&mat_tex_pairs);
 
-    char buffer[128];
+    //char buffer[128];
     while(getNextTokenInFile(buffer, fp))
     {
         if(buffer[0] == '#')
@@ -854,7 +870,7 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
 {
     // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
     initSceneLights(&(scene->lights));    
-    initSceneObjects(scene, scenefile);
+    loadSceneFile(scene, scenefile);
     SceneObjects* so = &(scene->objects);
     so->accel = accel_type;
     mvNonGridObjToStart(so);

@@ -128,31 +128,6 @@ int main()
     scene.objects.accel = GRID;
     buildSceneAccel(&scene);
 
-    // Camera
-    Camera camera;
-    initPinholeCameraDefault(&camera);
-    //initThinLensCameraDefault(&camera, DEFAULT_FOCAL_LENGTH, DEFAULT_LENS_RADIUS);
-    //initThinLensCameraDefault(&camera, 8.2, 1, params.num_samples, params.num_sample_sets);
-
-#ifdef CORNELL_BOX
-    //vec3 position = {278.0f, 273.0f, 800.0f};
-    vec3 position = {278.0f, 600.0f, 800.0f};
-    vec3 look_point = {278.0f, 273.0f, 0.0f};
-    /*
-      // PM test
-    vec3 position = {340.0f, 500.0f, 200.0f};
-    vec3 look_point = {340.0f, 500.0f, 0.0f};
-    */
-#else
-    //vec3 position = {0.0f, 2.0f, 5.0f};
-    //vec3 position = {0.0f, 50.0f, 3.0f};
-    //vec3 position = {-5.0f, 40.0f, 1.0f};
-    //vec3 look_point = {0.0f, 1.0f, 0.0f};
-    vec3 position = {-25.0f, 7.0f, 2.0f};
-    vec3 look_point = {0.0f, 7.0f, 0.0f};
-#endif
-    vec3 up_vec = {0.0f, 1.0f, 0.0f};
-    cameraLookAt(&camera, position, look_point, up_vec);
     Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
 
     // TODO: the image buffer could be part of film
@@ -161,7 +136,8 @@ int main()
     film.frame_res_height = params.image_height;
     film.num_pixels = num_pixels;
     film.fov = 70.0f / 180.0f * PI; // TODO
-    calcFilmDimension(&film, &camera);
+    Camera *camera = &(scene.camera);
+    calcFilmDimension(&film, camera);
     moveSamples2D(&(film.samples), &unit_square_samples);
 
     // Set trace function
@@ -176,7 +152,7 @@ int main()
     if(params.trace_type == PHOTONMAP && params.caustic_map)
     {
         const int num_caustic_samples = 4;
-        calcCausticBuffer(caustic_buffer, &camera, &film, &scene, &caustic_map, &query_vars,
+        calcCausticBuffer(caustic_buffer, camera, &film, &scene, &caustic_map, &query_vars,
                           set_buffer, num_caustic_samples);
     }
 
@@ -195,7 +171,7 @@ int main()
             calcImageCoord(imageplane_coord, &film, sample_index, i);
 
             Ray ray;
-            calcCameraRay(&ray, imageplane_coord, &camera, sample_index);
+            calcCameraRay(&ray, imageplane_coord, camera, sample_index);
 
             TraceArgs trace_args;
             trace_args.medium_mat = medium_mat;
@@ -271,7 +247,6 @@ int main()
     freeSamples2D(&disk_samples);
     freeSamples3D(&h_samples);
     Scene_destroy(&scene);
-    Camera_destroy(&camera);
     if(params.trace_type == PHOTONMAP)
     {
         Photonmap_destroy(&photon_map);

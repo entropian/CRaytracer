@@ -1,3 +1,7 @@
+# Camera
+CAMERA_POS -25.0 7.0 2.0
+LOOK_POINT 0.0 7.0 0.0
+
 # Materials
 
 MATERIAL TRANSPARENT
@@ -135,7 +139,7 @@ LOCATION 0.5 1.0 -1
 Orientation 0 0 0
 MATERIAL matte1
 
-OBJECT MESH
+#OBJECT MESH
 FILE models/lucy.obj
 CAST_SHADOW yes
 SMOOTH yes
