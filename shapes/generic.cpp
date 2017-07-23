@@ -310,7 +310,7 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
     float tx_max, ty_max, tz_max;
     
     // NOTE: put the code below into a fuction
-    float a = 1.0f/ray.direction[0];
+    float a = 1.0f/ray.direction[0];  // 1/ray_dir.x
     if(a >= 0)
     {
         tx_min = (aabox->min[0] - ray.origin[0]) * a;

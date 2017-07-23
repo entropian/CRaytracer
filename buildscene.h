@@ -498,9 +498,8 @@ void loadSceneFile(Scene* scene, const char* scenefile)
 
 void initAreaLights(SceneLights* sl)
 {
-
+    
     // Area light
-
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
@@ -722,8 +721,8 @@ void initSceneLights(SceneLights* sl)
     (sl->num_lights)++;    
     */
 
-    initAreaLights(sl);
-    //initEnvLight(sl);
+    //initAreaLights(sl);
+    initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
 }

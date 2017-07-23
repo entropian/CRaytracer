@@ -128,7 +128,7 @@ int main()
     scene.objects.accel = GRID;
     buildSceneAccel(&scene);
 
-    Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
+    //Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
 
     // TODO: the image buffer could be part of film
     Film film;
@@ -142,7 +142,8 @@ int main()
 
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs*);
-    if(medium_mat)
+    //if(medium_mat)
+    if(NULL)
     {
         trace = getTraceMediumFunc(params.trace_type);
     }else
@@ -174,7 +175,7 @@ int main()
             calcCameraRay(&ray, imageplane_coord, camera, sample_index);
 
             TraceArgs trace_args;
-            trace_args.medium_mat = medium_mat;
+            //trace_args.medium_mat = medium_mat;
             trace_args.objects = &(scene.objects);
             trace_args.lights = &(scene.lights);
             trace_args.sample_index = sample_index;

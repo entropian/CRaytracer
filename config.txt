@@ -5,11 +5,11 @@ image_width  480
 image_height 480
 num_samples  8100
 num_sample_sets 83
-max_depth  8
-trace_type WHITTED
+max_depth  6
+trace_type PATHTRACE
 accel_struct BVH4
 num_photons 1000000
-caustic_map yes
+caustic_map no
 num_caustic_photons 2000000
 num_estimate 500
 photon_depth 8
