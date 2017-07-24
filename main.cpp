@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
+#include <pthread.h>
 #include "util/vec.h"
 #include "util/ray.h"
 #include "util/mat.h"
@@ -45,6 +46,83 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             EXIT = true;
             break;
         }
+    }
+}
+
+typedef struct GlobalData_s
+{
+    int p;
+    unsigned char* set_buffer;
+    Film* film;
+    Camera* camera;
+    Scene* scene;
+    Samples3D* h_samples;
+    Photonmap* photon_map;
+    Photonmap* caustic_map;
+    PhotonQueryVars *query_vars;
+    float* caustic_buffer;
+    float* color_buffer;
+    unsigned char* image;
+    ConfigParams* params;
+    float (*trace)(vec3, int, const Ray, TraceArgs*);
+}GlobalData;
+GlobalData g;
+
+void* threadFunc(void* vargp)
+{
+    int* start_end = (int*)vargp;
+    int start_index = start_end[0];
+    int end_index = start_end[1];
+    
+    //for(int i = 0; i < num_pixels; i++)
+    // p, set_buffer, film, camera, scene, h_samples, photon_map, query_vars
+    // caustic_map, caustic_buffer, color_buffer, image
+    for(int i = start_index; i < end_index; i++)
+    {
+        int sample_index = calcInterleavedSampleIndex(g.p, g.set_buffer[i]);
+        vec3 color = {0.0f, 0.0f, 0.0f};
+        vec2 imageplane_coord;
+        calcImageCoord(imageplane_coord, g.film, sample_index, i);
+
+        Ray ray;
+        calcCameraRay(&ray, imageplane_coord, g.camera, sample_index);
+
+        TraceArgs trace_args;
+        //trace_args.medium_mat = medium_mat;
+        trace_args.objects = &(g.scene->objects);
+        trace_args.lights = &(g.scene->lights);
+        trace_args.sample_index = sample_index;
+        getSample3D(trace_args.h_sample, g.h_samples, sample_index);
+        if(g.params->trace_type == PHOTONMAP)
+        {
+            trace_args.photon_map = g.photon_map;
+            trace_args.query_vars = g.query_vars;
+            if(g.params->caustic_map)
+            {
+                trace_args.caustic_map = g.caustic_map;
+                vec3_assign(trace_args.caustic_rad,
+                            g.caustic_buffer[i*3], g.caustic_buffer[i*3+1], g.caustic_buffer[i*3+2]);
+            }
+        }
+
+        vec3 radiance = {0.0f, 0.0f, 0.0f};
+        g.trace(radiance, g.params->max_depth, ray, &trace_args);
+        vec3_add(color, color, radiance);
+
+        // Planned optimizations: 
+        // Irradiance caching?
+        // SIMD triangle intersection for uniform grid?
+
+        g.color_buffer[i*3] += color[0];
+        g.color_buffer[i*3 + 1] += color[1];
+        g.color_buffer[i*3 + 2] += color[2];
+        vec3_assign(color, g.color_buffer[i*3], g.color_buffer[i*3 +1], g.color_buffer[i*3 + 2]);
+        vec3_scale(color, color, 1/(float)(g.p+1));
+        maxToOne(color, color);
+
+        g.image[i*3] = (char)(color[0] * 255.0f);
+        g.image[i*3 + 1] = (char)(color[1] * 255.0f);
+        g.image[i*3 + 2] = (char)(color[2] * 255.0f);
     }
 }
 
@@ -157,11 +235,68 @@ int main()
                           set_buffer, num_caustic_samples);
     }
 
+    g.set_buffer = set_buffer;
+    g.film = &film;
+    g.camera = camera;
+    g.scene = &scene;
+    g.h_samples = &h_samples;
+    g.photon_map = &photon_map;
+    g.caustic_map = &caustic_map;
+    g.query_vars = &query_vars;
+    g.caustic_buffer = caustic_buffer;
+    g.color_buffer = color_buffer;
+    g.image = image;
+    g.params = &params;
+    g.trace = trace;
+
+    int num_patches = 4;
+    int num_pixels_per_patch = num_pixels / num_patches;
+    pthread_t threads[10];
+    int patches[11];
+    for(int i = 0; i < num_patches + 1; i++)
+    {
+        patches[i] = i * num_pixels_per_patch;
+    }
+
     double start_time, end_time;
     start_time = glfwGetTime();
     end_time = start_time;
     int prev_percent = 0;
-//#if 0
+
+#define MULTITHREAD
+#ifdef MULTITHREAD
+    for(unsigned int p = 0; p < params.num_samples; p++)
+    {
+        g.p = p;
+        // Thread stuff
+        for(int i = 0; i < num_patches; i++)
+        {
+            pthread_create(&(threads[i]), NULL, threadFunc, &(patches[i]));
+        }
+        for(int i = 0; i < num_patches; i++)
+        {
+            pthread_join(threads[i], NULL);
+        }
+        
+        if(SHOW_PROGRESS)
+        {
+            displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
+            int cur_percent = (int)((float)p / (float)(params.num_samples) * 100.0f);
+            double new_end_time = glfwGetTime();
+            double single_iteration_time = new_end_time - end_time;
+            double whole_duration = new_end_time - start_time;
+            end_time = new_end_time;
+            if(cur_percent > prev_percent)
+            {
+                prev_percent = cur_percent;
+                printf("%d%%\t%f sec\n", cur_percent, whole_duration);
+            }else
+            {
+                printf("%f sec\t%f sec\n", single_iteration_time, whole_duration);
+            }
+        }
+    }
+#else
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
         for(int i = 0; i < num_pixels; i++)
@@ -229,7 +364,7 @@ int main()
             }
         }
     }
-//#endif
+#endif
     end_time = glfwGetTime();
     double sec = end_time - start_time;
     printf("%f seconds.\n", sec);
