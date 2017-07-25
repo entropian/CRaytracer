@@ -1,6 +1,6 @@
 CC=g++
 LFLAGS = -lGL -lGLEW -lglfw -lGLU -lpthread
-CFLAGS = -std=c++11 -c
+CFLAGS = -std=c++11 -c 
 
 OS = $(shell uname)
 

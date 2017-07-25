@@ -7,6 +7,7 @@
 #include <cmath>
 #include <ctime>
 #include <pthread.h>
+#include <unistd.h>
 #include "util/vec.h"
 #include "util/ray.h"
 #include "util/mat.h"
@@ -49,7 +50,48 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
-typedef struct GlobalData_s
+const int MAX_JOBS = 1000;
+typedef struct JobQueue_s
+{
+    int indices[MAX_JOBS *2];
+    int num_jobs;
+    int head;
+    pthread_mutex_t mtx;
+}JobQueue;
+
+void JobQueue_init(JobQueue* job_queue)
+{
+    job_queue->num_jobs = 0;
+    job_queue->head = 0;
+    job_queue->mtx = PTHREAD_MUTEX_INITIALIZER;
+}
+
+void JobQueue_addJob(JobQueue* job_queue, int start, int end)
+{
+    pthread_mutex_lock(&(job_queue->mtx));
+    int queue_end = job_queue->num_jobs * 2;
+    job_queue->indices[queue_end] = start;
+    job_queue->indices[queue_end+1] = end;
+    job_queue->num_jobs += 1;
+    pthread_mutex_unlock(&(job_queue->mtx));
+}
+
+int JobQueue_getJob(JobQueue* job_queue, int* start, int* end)
+{
+    pthread_mutex_lock(&(job_queue->mtx));
+    if(job_queue->head == job_queue->num_jobs * 2)
+    {
+        pthread_mutex_unlock(&(job_queue->mtx));
+        return 0;
+    }
+    *start = job_queue->indices[job_queue->head];
+    *end = job_queue->indices[job_queue->head + 1];
+    job_queue->head += 2;
+    pthread_mutex_unlock(&(job_queue->mtx));
+    return 1;
+}
+
+typedef struct ThreadData_s
 {
     int p;
     unsigned char* set_buffer;
@@ -65,65 +107,59 @@ typedef struct GlobalData_s
     unsigned char* image;
     ConfigParams* params;
     float (*trace)(vec3, int, const Ray, TraceArgs*);
-}GlobalData;
-GlobalData g;
+    JobQueue* job_queue;
+}ThreadData;
 
 void* threadFunc(void* vargp)
 {
-    int* start_end = (int*)vargp;
-    int start_index = start_end[0];
-    int end_index = start_end[1];
-    
-    //for(int i = 0; i < num_pixels; i++)
-    // p, set_buffer, film, camera, scene, h_samples, photon_map, query_vars
-    // caustic_map, caustic_buffer, color_buffer, image
-    for(int i = start_index; i < end_index; i++)
+    ThreadData* thread_data = (ThreadData*)vargp;
+    int start_index, end_index;
+    while(JobQueue_getJob(thread_data->job_queue, &start_index, &end_index))
     {
-        int sample_index = calcInterleavedSampleIndex(g.p, g.set_buffer[i]);
-        vec3 color = {0.0f, 0.0f, 0.0f};
-        vec2 imageplane_coord;
-        calcImageCoord(imageplane_coord, g.film, sample_index, i);
-
-        Ray ray;
-        calcCameraRay(&ray, imageplane_coord, g.camera, sample_index);
-
-        TraceArgs trace_args;
-        //trace_args.medium_mat = medium_mat;
-        trace_args.objects = &(g.scene->objects);
-        trace_args.lights = &(g.scene->lights);
-        trace_args.sample_index = sample_index;
-        getSample3D(trace_args.h_sample, g.h_samples, sample_index);
-        if(g.params->trace_type == PHOTONMAP)
+        for(int i = start_index; i < end_index; i++)
         {
-            trace_args.photon_map = g.photon_map;
-            trace_args.query_vars = g.query_vars;
-            if(g.params->caustic_map)
+            int sample_index = calcInterleavedSampleIndex(thread_data->p, thread_data->set_buffer[i]);
+            vec3 color = {0.0f, 0.0f, 0.0f};
+            vec2 imageplane_coord;
+            calcImageCoord(imageplane_coord, thread_data->film, sample_index, i);
+
+            Ray ray;
+            calcCameraRay(&ray, imageplane_coord, thread_data->camera, sample_index);
+
+            TraceArgs trace_args;
+            trace_args.objects = &(thread_data->scene->objects);
+            trace_args.lights = &(thread_data->scene->lights);
+            trace_args.sample_index = sample_index;
+            getSample3D(trace_args.h_sample, thread_data->h_samples, sample_index);
+            if(thread_data->params->trace_type == PHOTONMAP)
             {
-                trace_args.caustic_map = g.caustic_map;
-                vec3_assign(trace_args.caustic_rad,
-                            g.caustic_buffer[i*3], g.caustic_buffer[i*3+1], g.caustic_buffer[i*3+2]);
+                trace_args.photon_map = thread_data->photon_map;
+                trace_args.query_vars = thread_data->query_vars;
+                if(thread_data->params->caustic_map)
+                {
+                    trace_args.caustic_map = thread_data->caustic_map;
+                    vec3_assign(trace_args.caustic_rad,
+                                thread_data->caustic_buffer[i*3], thread_data->caustic_buffer[i*3+1], thread_data->caustic_buffer[i*3+2]);
+                }
             }
+
+            vec3 radiance = {0.0f, 0.0f, 0.0f};
+            thread_data->trace(radiance, thread_data->params->max_depth, ray, &trace_args);
+            vec3_add(color, color, radiance);
+
+            thread_data->color_buffer[i*3] += color[0];
+            thread_data->color_buffer[i*3 + 1] += color[1];
+            thread_data->color_buffer[i*3 + 2] += color[2];
+            vec3_assign(color, thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 +1], thread_data->color_buffer[i*3 + 2]);
+            vec3_scale(color, color, 1/(float)(thread_data->p+1));
+            maxToOne(color, color);
+
+            thread_data->image[i*3] = (char)(color[0] * 255.0f);
+            thread_data->image[i*3 + 1] = (char)(color[1] * 255.0f);
+            thread_data->image[i*3 + 2] = (char)(color[2] * 255.0f);
         }
-
-        vec3 radiance = {0.0f, 0.0f, 0.0f};
-        g.trace(radiance, g.params->max_depth, ray, &trace_args);
-        vec3_add(color, color, radiance);
-
-        // Planned optimizations: 
-        // Irradiance caching?
-        // SIMD triangle intersection for uniform grid?
-
-        g.color_buffer[i*3] += color[0];
-        g.color_buffer[i*3 + 1] += color[1];
-        g.color_buffer[i*3 + 2] += color[2];
-        vec3_assign(color, g.color_buffer[i*3], g.color_buffer[i*3 +1], g.color_buffer[i*3 + 2]);
-        vec3_scale(color, color, 1/(float)(g.p+1));
-        maxToOne(color, color);
-
-        g.image[i*3] = (char)(color[0] * 255.0f);
-        g.image[i*3 + 1] = (char)(color[1] * 255.0f);
-        g.image[i*3 + 2] = (char)(color[2] * 255.0f);
     }
+
 }
 
 int main()
@@ -234,25 +270,26 @@ int main()
         calcCausticBuffer(caustic_buffer, camera, &film, &scene, &caustic_map, &query_vars,
                           set_buffer, num_caustic_samples);
     }
+    ThreadData thread_data;
+    thread_data.set_buffer = set_buffer;
+    thread_data.film = &film;
+    thread_data.camera = camera;
+    thread_data.scene = &scene;
+    thread_data.h_samples = &h_samples;
+    thread_data.photon_map = &photon_map;
+    thread_data.caustic_map = &caustic_map;
+    thread_data.query_vars = &query_vars;
+    thread_data.caustic_buffer = caustic_buffer;
+    thread_data.color_buffer = color_buffer;
+    thread_data.image = image;
+    thread_data.params = &params;
+    thread_data.trace = trace;
 
-    g.set_buffer = set_buffer;
-    g.film = &film;
-    g.camera = camera;
-    g.scene = &scene;
-    g.h_samples = &h_samples;
-    g.photon_map = &photon_map;
-    g.caustic_map = &caustic_map;
-    g.query_vars = &query_vars;
-    g.caustic_buffer = caustic_buffer;
-    g.color_buffer = color_buffer;
-    g.image = image;
-    g.params = &params;
-    g.trace = trace;
-
-    int num_patches = 4;
+    int num_patches = 16;
+    int num_threads = 4;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[10];
-    int patches[11];
+    int patches[64];
     for(int i = 0; i < num_patches + 1; i++)
     {
         patches[i] = i * num_pixels_per_patch;
@@ -265,15 +302,24 @@ int main()
 
 #define MULTITHREAD
 #ifdef MULTITHREAD
+    JobQueue job_queue;
+    JobQueue_init(&job_queue);
+    thread_data.job_queue = &job_queue;
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
-        g.p = p;
-        // Thread stuff
+        job_queue.num_jobs = 0;
+        job_queue.head = 0;
+        thread_data.p = p;
         for(int i = 0; i < num_patches; i++)
         {
-            pthread_create(&(threads[i]), NULL, threadFunc, &(patches[i]));
+            JobQueue_addJob(&job_queue, patches[i], patches[i+1]);
         }
-        for(int i = 0; i < num_patches; i++)
+        // Thread stuff
+        for(int i = 0; i < num_threads; i++)
+        {
+            pthread_create(&(threads[i]), NULL, threadFunc, &thread_data);
+        }
+        for(int i = 0; i < num_threads; i++)
         {
             pthread_join(threads[i], NULL);
         }
@@ -289,7 +335,7 @@ int main()
             if(cur_percent > prev_percent)
             {
                 prev_percent = cur_percent;
-                printf("%d%%\t%f sec\n", cur_percent, whole_duration);
+                printf("%d%%\t%f sec\t%f sec\n", cur_percent, single_iteration_time, whole_duration);
             }else
             {
                 printf("%f sec\t%f sec\n", single_iteration_time, whole_duration);
@@ -357,7 +403,7 @@ int main()
             if(cur_percent > prev_percent)
             {
                 prev_percent = cur_percent;
-                printf("%d%%\t%f sec\n", cur_percent, whole_duration);
+                printf("%d%%\t%f sec\t%f sec\n", cur_percent, single_iteration_time, whole_duration);
             }else
             {
                 printf("%f sec\t%f sec\n", single_iteration_time, whole_duration);
