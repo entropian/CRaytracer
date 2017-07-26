@@ -238,9 +238,9 @@ int main()
     }
 
     // Reminder
-    destroySceneAccel(&scene);
-    scene.objects.accel = GRID;
-    buildSceneAccel(&scene);
+    //destroySceneAccel(&scene);
+    //scene.objects.accel = GRID;
+    //buildSceneAccel(&scene);
 
     //Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
 

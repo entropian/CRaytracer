@@ -233,7 +233,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
                 mat3_mult_vec3(new_face_normal, normal_mat, face_normal);
                 vec3_normalize(new_face_normal, new_face_normal);
                 vec3_copy(mesh_tri->normal, new_face_normal);                     
-                mesh_tri->shadow = mesh_entry.shadow;
+                //mesh_tri->shadow = mesh_entry.shadow;
                 mesh_tri->mesh_ptr = mesh;
                 mesh_tri->mat = mat_for_mesh;
                 Object_t obj = {FLAT_TRIANGLE, mesh_tri};
@@ -250,7 +250,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
                 vec3_copy(mesh_tri->v1, new_v1);
                 vec3_copy(mesh_tri->v2, new_v2);
 
-                mesh_tri->shadow = mesh_entry.shadow;
+                //mesh_tri->shadow = mesh_entry.shadow;
                 mesh_tri->mesh_ptr = mesh;
                 mesh_tri->mat = mat_for_mesh;
                 Object_t obj = {SMOOTH_TRIANGLE, mesh_tri};

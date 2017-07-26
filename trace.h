@@ -632,8 +632,10 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     if(rand_float <= kr) // Reflection
                     {
                         reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, depth, trace_args);
+                        /*
                         assert(reflected_illum[0] >= 0.0f && reflected_illum[1] >= 0.0f &&
                                reflected_illum[2] >= 0.0f);
+                        */
                     }else // Transmission
                     {
                         vec3 transmit_dir = {0, 0, 0};

@@ -105,8 +105,8 @@ typedef struct __attribute__((aligned(16))) BVHNode4_s
     float bbox[2*3*4]; // 96 bytes
     void *child[4]; // 16 bytes
     char type[4]; // 4 bytes
-    int axis0, axis1, axis2; // 12 bytes
-    // Total 128 bytes
+    unsigned char axis;
+    // Total 117 bytes
 }BVHNode4;
 
 void BVH4_destroy(BVHNode4 *node)
@@ -143,7 +143,8 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     float x_extent = tmp_aabb.max[0] - tmp_aabb.min[0];
     float y_extent = tmp_aabb.max[1] - tmp_aabb.min[1];
     float z_extent = tmp_aabb.max[2] - tmp_aabb.min[2];    
-    int axis_index;
+    //int axis_index;
+    unsigned char axis_index;
     if(x_extent > y_extent && x_extent > z_extent)
     {
         axis_index = 0;
@@ -154,7 +155,8 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     {
         axis_index = 2;
     }
-    pNode->axis0 = axis_index;
+    pNode->axis = 0;
+    pNode->axis |= axis_index;
     int middle_split = partitionObjects(objects, num_obj, axis_index);
     
     tmp_aabb = calcBoundingVolume(objects, middle_split);
@@ -170,8 +172,9 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     }else
     {
         axis_index = 2;
-    }
-    pNode->axis1 = axis_index;
+    }    
+    pNode->axis = pNode->axis << 4;
+    pNode->axis = axis_index;
     int left_split = partitionObjects(objects, middle_split, axis_index);
 
     tmp_aabb = calcBoundingVolume(&(objects[left_split]), num_obj - middle_split);
@@ -187,8 +190,9 @@ void BVH4_build(BVHNode4 **tree, Object_t objects[], int num_obj)
     }else
     {
         axis_index = 2;
-    }
-    pNode->axis2 = axis_index;
+    }    
+    pNode->axis = pNode->axis << 4;
+    pNode->axis = axis_index;
     int right_split = partitionObjects(&(objects[middle_split]), num_obj - middle_split, axis_index);
     right_split += middle_split;
 
@@ -300,10 +304,14 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
     __m128 tmp = rayIntersectAABB4(tmp_ptr, tree->bbox, ray);
     _mm_store_ps(bbox_result, tmp);
     int indices[4];
+    unsigned char axis0, axis1, axis2;
+    axis2 = tree->axis & 0x03;
+    axis1 = (tree->axis & 0x0C) >> 4;
+    axis0 = (tree->axis & 0x30) >> 8 ;
     
-    if(ray.direction[tree->axis0] > 0.0f)
+    if(ray.direction[axis0] > 0.0f)
     {
-        if(ray.direction[tree->axis1] > 0.0f)
+        if(ray.direction[axis1] > 0.0f)
         {
             indices[0] = 0;
             indices[1] = 1;
@@ -312,7 +320,7 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
             indices[0] = 1;
             indices[1] = 0;
         }
-        if(ray.direction[tree->axis2] > 0.0f)
+        if(ray.direction[axis2] > 0.0f)
         {
             indices[2] = 2;
             indices[3] = 3;
@@ -323,7 +331,7 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
         }
     }else
     {
-        if(ray.direction[tree->axis2] > 0.0f)
+        if(ray.direction[axis2] > 0.0f)
         {
             indices[0] = 2;
             indices[1] = 3;
@@ -332,7 +340,7 @@ float BVH4IntersectTest(ShadeRec* sr, const BVHNode4* tree, const Ray ray)
             indices[0] = 3;
             indices[1] = 2;
         }
-        if(ray.direction[tree->axis1] > 0.0f)
+        if(ray.direction[axis1] > 0.0f)
         {
             indices[2] = 0;
             indices[3] = 1;
@@ -389,10 +397,14 @@ float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray, const float l
     __m128 tmp = rayIntersectAABB4(tmp_ptr, tree->bbox, ray);    
     _mm_store_ps(bbox_result, tmp);
     int indices[4];
+    unsigned char axis0, axis1, axis2;
+    axis2 = tree->axis & 0x03;
+    axis1 = (tree->axis & 0x0C) >> 4;
+    axis0 = (tree->axis & 0x30) >> 8 ;
     
-    if(ray.direction[tree->axis0] > 0.0f)
+    if(ray.direction[axis0] > 0.0f)
     {
-        if(ray.direction[tree->axis1] > 0.0f)
+        if(ray.direction[axis1] > 0.0f)
         {
             indices[0] = 0;
             indices[1] = 1;
@@ -401,7 +413,7 @@ float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray, const float l
             indices[0] = 1;
             indices[1] = 0;
         }
-        if(ray.direction[tree->axis2] > 0.0f)
+        if(ray.direction[axis2] > 0.0f)
         {
             indices[2] = 2;
             indices[3] = 3;
@@ -412,7 +424,7 @@ float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray, const float l
         }
     }else
     {
-        if(ray.direction[tree->axis2] > 0.0f)
+        if(ray.direction[axis2] > 0.0f)
         {
             indices[0] = 2;
             indices[1] = 3;
@@ -421,7 +433,7 @@ float BVH4ShadowIntersectTest(const BVHNode4* tree, const Ray ray, const float l
             indices[0] = 3;
             indices[1] = 2;
         }
-        if(ray.direction[tree->axis1] > 0.0f)
+        if(ray.direction[axis1] > 0.0f)
         {
             indices[2] = 0;
             indices[3] = 1;
