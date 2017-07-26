@@ -414,7 +414,9 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                         material.mat_type = TRANSPARENT;
                     }else
                     {
-                        material.mat_type = INVALID_MAT_TYPE;
+                        // Fudge
+                        //material.mat_type = INVALID_MAT_TYPE;
+                        material.mat_type = MATTE;
                     }
                     // Load textures
                     if(obj_mat->diffuse_map[0] != '\0')

@@ -23,7 +23,6 @@ typedef struct Triangle
 
 typedef struct FlatTriangle_s
 {
-    //bool shadow;
     int i0, i1, i2;
     vec3 v0, v1, v2;
     vec3 normal;
@@ -33,7 +32,6 @@ typedef struct FlatTriangle_s
 
 typedef struct SmoothTriangle_s
 {
-    //bool shadow;
     int i0, i1, i2;
     vec3 v0, v1, v2;
     mat3* normal_mat;
