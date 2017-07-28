@@ -430,6 +430,7 @@ bool parseTriangleEntry(Object_t* obj,  FILE* fp, Scene* scene)
     Triangle* tri_ptr = (Triangle*)malloc(sizeof(Triangle));
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
     if(!getNextTokenInFile(buffer, fp)){return false;}
+    /*
     if(strcmp(buffer, "yes") == 0)
     {
         tri_ptr->shadow = true;
@@ -437,6 +438,7 @@ bool parseTriangleEntry(Object_t* obj,  FILE* fp, Scene* scene)
     {
         tri_ptr->shadow = false;
     }
+    */
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word V0
     if(!parseVec3(tri_ptr->v0, fp)){return false;}

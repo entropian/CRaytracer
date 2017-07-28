@@ -181,7 +181,7 @@ inline void vec2_normalize(vec2 r, const vec2 a)
     vec2_scale(r, a, 1.0f/length);
 }
 
-inline void vec3_normalize(vec2 r, const vec3 a)
+inline void vec3_normalize(vec3 r, const vec3 a)
 {
     float length = (float)sqrt(vec3_dot(a, a));
     if(length == 0)

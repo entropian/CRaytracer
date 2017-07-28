@@ -104,19 +104,6 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
                 }
             }
         }
-        /*
-        AABox* aabox = (AABox*)malloc(sizeof(AABox));
-        aabox->shadow = true;
-        vec3_copy(aabox->min, aabb_array[i].min);
-        vec3_copy(aabox->max, aabb_array[i].max);
-        float tmp = 0.5f;
-        vec3 color;
-        vec3_assign(color, tmp, tmp, tmp);
-        initDefaultPhongMat(&(aabox->mat), color);
-        obj_ptrs[*num_obj] = aabox;
-        obj_types[*num_obj] = AABOX;
-        (*num_obj)++;
-        */
     }
     free(aabb_array);
     printf("wx = %f, wy = %f, wz = %f\n", ug->wx, ug->wy, ug->wz);
