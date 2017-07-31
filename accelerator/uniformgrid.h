@@ -62,13 +62,15 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
     getSceneObjAABBs(aabb_array, &num_aabb, objects, *num_obj);
     ug->aabb = calcUniformGridAABB(aabb_array, num_aabb);
 
+    // Grid dimensions
     ug->wx = ug->aabb.max[0] - ug->aabb.min[0];
     ug->wy = ug->aabb.max[1] - ug->aabb.min[1];
     ug->wz = ug->aabb.max[2] - ug->aabb.min[2];
     printVec3WithText("Uniform grid max", ug->aabb.max);
     printVec3WithText("Uniform grid min", ug->aabb.min);
 
-    float s = powf(ug->wx * ug->wy * ug->wz / *num_obj, 0.33333f);
+    // Number of cells per dimension
+    float s = powf(ug->wx * ug->wy * ug->wz / *num_obj, 0.33333f);    
     ug->nx = (int)(ug->wx * multiplier / s + 1);
     ug->ny = (int)(ug->wy * multiplier / s + 1);
     ug->nz = (int)(ug->wz * multiplier / s + 1);
@@ -76,6 +78,10 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
 
     int nx = ug->nx, ny = ug->ny, nz = ug->nz;
     float wx = ug->wx, wy = ug->wy, wz = ug->wz;
+    // grid cell dimension
+    float unit_x = wx / ug->nx;
+    float unit_y = wy / ug->ny;
+    float unit_z = wz / ug->nz;
 
     ug->cells = (IntVector*)malloc(ug->num_cells * sizeof(IntVector));
     for(int i = 0; i < ug->num_cells; ++i)
@@ -92,18 +98,31 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
         int max_ix = (int)clamp(((aabb_array[i].max[0] - ug->aabb.min[0]) / wx) * nx, 0.0f, (float)nx - 1);
         int max_iy = (int)clamp(((aabb_array[i].max[1] - ug->aabb.min[1]) / wy) * ny, 0.0f, (float)ny - 1);
         int max_iz = (int)clamp(((aabb_array[i].max[2] - ug->aabb.min[2]) / wz) * nz, 0.0f, (float)nz - 1);
-
+        
+        int num_good = 0;
+        int num_bad = 0;
         for(int j = min_iy; j <= max_iy; ++j)
         {
             for(int k = min_iz; k <= max_iz; ++k)
             {
                 for(int p = min_ix; p <= max_ix; ++p)
                 {
-                    int cell_index = j*nx*nz + k*nx + p;
-                    IntVector_push(&(ug->cells[j*nx*nz + k*nx + p]), i + num_non_grid_obj);
+                    Object_t obj = objects[i + num_non_grid_obj];
+                    AABB aabb;
+                    vec3 min_disp = {p * unit_x, j * unit_y, k * unit_z};
+                    vec3_add(aabb.min, ug->aabb.min, min_disp);
+                    vec3 unit_span = {unit_x, unit_y, unit_z};
+                    vec3_add(aabb.max, aabb.min, unit_span);
+                    if((obj.type == TRIANGLE || obj.type == FLAT_TRIANGLE || obj.type == SMOOTH_TRIANGLE)
+                       && triangleAABBIntersect(obj, &aabb))
+                    {
+                        int cell_index = j*nx*nz + k*nx + p;
+                        IntVector_push(&(ug->cells[j*nx*nz + k*nx + p]), i + num_non_grid_obj);
+                    }
                 }
             }
         }
+        //printf("num_good %d num_bad %d\n", num_good, num_bad);
     }
     free(aabb_array);
     printf("wx = %f, wy = %f, wz = %f\n", ug->wx, ug->wy, ug->wz);

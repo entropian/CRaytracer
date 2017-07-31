@@ -62,7 +62,7 @@ NORMAL_MAP textures/sponza_arch_ddn.png
 END_MATERIALS
 
 
-#OBJECT PLANE
+OBJECT PLANE
 CAST_SHADOW yes
 POINT 0.0 -1.0 -14.0
 NORMAL 0.0 1.0 0.0
@@ -141,7 +141,7 @@ LOCATION 0.5 1.0 -1
 Orientation 0 0 0
 MATERIAL matte1
 
-OBJECT MESH
+#OBJECT MESH
 FILE models/sanMiguel.obj
 CAST_SHADOW yes
 SMOOTH yes
@@ -150,7 +150,7 @@ LOCATION 0.5 1.0 -1
 Orientation 0 0 0
 MATERIAL matte1
 
-#OBJECT MESH
+OBJECT MESH
 FILE models/lucy.obj
 CAST_SHADOW yes
 SMOOTH yes

@@ -13,3 +13,4 @@ typedef struct AABB
 float rayIntersectAABB(const AABB* aabb, const Ray ray);
 bool isInsideAABB(const AABB* aabb, const vec3 point);
 void addToAABB(AABB* r, const AABB* a);
+int testAABB(AABB a, AABB b);

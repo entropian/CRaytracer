@@ -191,3 +191,10 @@ void addToAABB(AABB* r, const AABB* a)
     if(a->max[2] > r->max[2]){r->max[2] = a->max[2];}        
 }
    
+int testAABB(AABB a, AABB b)
+{
+    if(a.max[0] < b.min[0] || a.min[0] > b.max[0]) return 0;
+    if(a.max[1] < b.min[1] || a.min[1] > b.max[1]) return 0;
+    if(a.max[2] < b.min[2] || a.min[2] > b.max[2]) return 0;
+    return 1;
+}

@@ -424,7 +424,7 @@ int testAABBPlane(AABB* aabb, vec3 plane_normal, float plane_d)
 }
  
 //int testTriangleBox(const Triangle& triangle, const Box& box, bool& hasZeroVector)
-int testTriangleAABB(vec3 tv0, vec3 tv1, vec3 tv2, AABB* aabb, int has_zero_vector)
+int testTriangleAABB(vec3 tv0, vec3 tv1, vec3 tv2, AABB* aabb, int* has_zero_vector)
 {
     //Vec3 center = (box.max - box.min) * 0.5f + box.min;
     vec3 span;
@@ -461,35 +461,35 @@ int testTriangleAABB(vec3 tv0, vec3 tv1, vec3 tv2, AABB* aabb, int has_zero_vect
     vec3 a00, a01, a02;
     //Vec3 a00 = cross(u0, edge_0);
     vec3_cross(a00, u0, e0);
-    has_zero_vector |= isZeroVector(a00);
+    *has_zero_vector |= isZeroVector(a00);
     //Vec3 a01 = cross(u0, edge_1);
     vec3_cross(a01, u0, e1);
-    has_zero_vector |= isZeroVector(a01);
+    *has_zero_vector |= isZeroVector(a01);
     //Vec3 a02 = cross(u0, edge_2);
     vec3_cross(a02, u0, e2);
-    has_zero_vector |= isZeroVector(a02);
+    *has_zero_vector |= isZeroVector(a02);
 
     vec3 a10, a11, a12;
     //Vec3 a10 = cross(u1, edge_0);
     vec3_cross(a10, u1, e0);
-    has_zero_vector |= isZeroVector(a10);
+    *has_zero_vector |= isZeroVector(a10);
     //Vec3 a11 = cross(u1, edge_1);
     vec3_cross(a11, u1, e1);
-    has_zero_vector |= isZeroVector(a11);
+    *has_zero_vector |= isZeroVector(a11);
     //Vec3 a12 = cross(u1, edge_2);
     vec3_cross(a12, u1, e2);
-    has_zero_vector |= isZeroVector(a12);
+    *has_zero_vector |= isZeroVector(a12);
 
     vec3 a20, a21, a22;
     //Vec3 a20 = cross(u2, edge_0);
     vec3_cross(a20, u2, e0);
-    has_zero_vector |= isZeroVector(a20);
+    *has_zero_vector |= isZeroVector(a20);
     //Vec3 a21 = cross(u2, edge_1);
     vec3_cross(a21, u2, e1);
-    has_zero_vector |= isZeroVector(a21);
+    *has_zero_vector |= isZeroVector(a21);
     //Vec3 a22 = cross(u2, edge_2);
     vec3_cross(a22, u2, e2);
-    has_zero_vector |= isZeroVector(a22);
+    *has_zero_vector |= isZeroVector(a22);
  
     float p0 = vec3_dot(v0, a00);
     float p1 = vec3_dot(v1, a00);
@@ -501,58 +501,84 @@ int testTriangleAABB(vec3 tv0, vec3 tv1, vec3 tv2, AABB* aabb, int has_zero_vect
     p1 = vec3_dot(v1, a01);
     p2 = vec3_dot(v2, a01);
     r = x_extent * fabs(a01[0]) + y_extent * fabs(a01[1]) + z_extent * fabs(a01[2]);
-    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return false;
+    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return 0;
  
     p0 = vec3_dot(v0, a02);
     p1 = vec3_dot(v1, a02);
     p2 = vec3_dot(v2, a02);
     r = x_extent * fabs(a02[0]) + y_extent * fabs(a02[1]) + z_extent * fabs(a02[2]);
-    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return false;
+    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return 0;
  
     p0 = vec3_dot(v0, a10);
     p1 = vec3_dot(v1, a10);
     p2 = vec3_dot(v2, a10);
     r = x_extent * fabs(a10[0]) + y_extent * fabs(a10[1]) + z_extent * fabs(a10[2]);
-    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return false;
+    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return 0;
  
     p0 = vec3_dot(v0, a11);
     p1 = vec3_dot(v1, a11);
     p2 = vec3_dot(v2, a11);
     r = x_extent * fabs(a11[0]) + y_extent * fabs(a11[1]) + z_extent * fabs(a11[2]);
-    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return false;
+    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return 0;
  
     p0 = vec3_dot(v0, a12);
     p1 = vec3_dot(v1, a12);
     p2 = vec3_dot(v2, a12);
     r = x_extent * fabs(a12[0]) + y_extent * fabs(a12[1]) + z_extent * fabs(a12[2]);
-    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return false;
+    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return 0;
  
     p0 = vec3_dot(v0, a20);
     p1 = vec3_dot(v1, a20);
     p2 = vec3_dot(v2, a20);
     r = x_extent * fabs(a20[0]) + y_extent * fabs(a20[1]) + z_extent * fabs(a20[2]);
-    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return false;
+    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return 0;
  
     p0 = vec3_dot(v0, a21);
     p1 = vec3_dot(v1, a21);
     p2 = vec3_dot(v2, a21);
     r = x_extent * fabs(a21[0]) + y_extent * fabs(a21[1]) + z_extent * fabs(a21[2]);
-    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return false;
+    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return 0;
  
     p0 = vec3_dot(v0, a22);
     p1 = vec3_dot(v1, a22);
     p2 = vec3_dot(v2, a22);
     r = x_extent * fabs(a22[0]) + y_extent * fabs(a22[1]) + z_extent * fabs(a22[2]);
-    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return false;
+    if (max(-max3(p0, p1, p2), min3(p0, p1, p2)) > r) return 0;
  
-    if (max3(v0[0], v1[0], v2[0]) < -x_extent || min3(v0[0], v1[0], v2[0]) > x_extent) return false;
-    if (max3(v0[1], v1[1], v2[1]) < -y_extent || min3(v0[1], v1[1], v2[1]) > y_extent) return false;
-    if (max3(v0[2], v1[2], v2[2]) < -z_extent || min3(v0[2], v1[2], v2[2]) > z_extent) return false;
+    if (max3(v0[0], v1[0], v2[0]) < -x_extent || min3(v0[0], v1[0], v2[0]) > x_extent) return 0;
+    if (max3(v0[1], v1[1], v2[1]) < -y_extent || min3(v0[1], v1[1], v2[1]) > y_extent) return 0;
+    if (max3(v0[2], v1[2], v2[2]) < -z_extent || min3(v0[2], v1[2], v2[2]) > z_extent) return 0;
  
     //Vec3 plane_normal = normalize(vec3_cross(edge_0, edge_1));
     vec3 plane_normal;
     vec3_cross(plane_normal, e0, e1);
     vec3_normalize(plane_normal, plane_normal);
-    float plane_d = vec3_dot(plane_normal, v0);
+    float plane_d = vec3_dot(plane_normal, tv0);
     return testAABBPlane(aabb, plane_normal, plane_d);
+}
+
+int triangleAABBIntersect(Object_t obj, AABB* aabb)
+{
+    switch(obj.type)
+    {
+    case TRIANGLE:
+    {
+        Triangle* tri_ptr = (Triangle*)obj.ptr;
+        int has_zero_vector;
+        return testTriangleAABB(tri_ptr->v0, tri_ptr->v1, tri_ptr->v2, aabb, &has_zero_vector);
+    } break;
+    case FLAT_TRIANGLE:
+    {
+        FlatTriangle* tri_ptr = (FlatTriangle*)obj.ptr;
+        int has_zero_vector;
+        return testTriangleAABB(tri_ptr->v0, tri_ptr->v1, tri_ptr->v2, aabb, &has_zero_vector);
+    } break;
+    case SMOOTH_TRIANGLE:
+    {
+        SmoothTriangle* tri_ptr = (SmoothTriangle*)obj.ptr;
+        int has_zero_vector;
+        return testTriangleAABB(tri_ptr->v0, tri_ptr->v1, tri_ptr->v2, aabb, &has_zero_vector);
+    } break;
+    }
+    return 0;
 }
