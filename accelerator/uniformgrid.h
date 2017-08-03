@@ -124,6 +124,7 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
         }
         //printf("num_good %d num_bad %d\n", num_good, num_bad);
     }
+    
     free(aabb_array);
     printf("wx = %f, wy = %f, wz = %f\n", ug->wx, ug->wy, ug->wz);
     printf("nx = %d, ny = %d, nz = %d\n", nx, ny, nz);

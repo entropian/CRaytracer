@@ -139,6 +139,7 @@ float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     }
                 }
             }
+
         }
     }else
     {

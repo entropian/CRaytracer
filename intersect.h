@@ -12,6 +12,52 @@
 
 double g_traversal_time = 0.0f;
 
+/*
+            if(so->num_non_grid_obj - i > 4)
+            {
+                printf("we here\n");
+                CACHE_ALIGN float beta[4];
+                CACHE_ALIGN float gamma[4];
+                vec3_4 v0;
+                vec3_4 v1;
+                vec3_4 v2;
+                vec3_4 ray_o;
+                vec3_4 ray_d;
+
+                SmoothTriangle* tri_ptrs[4];
+                tri_ptrs[0] = (SmoothTriangle*)so->objects[i].ptr;
+                tri_ptrs[1] = (SmoothTriangle*)so->objects[i+1].ptr;
+                tri_ptrs[2] = (SmoothTriangle*)so->objects[i+2].ptr;
+                tri_ptrs[3] = (SmoothTriangle*)so->objects[i+3].ptr;
+                vec3_4_assign(&(v0), tri_ptrs[0]->v0, tri_ptrs[1]->v0, tri_ptrs[2]->v0, tri_ptrs[3]->v0);
+                vec3_4_assign(&(v1), tri_ptrs[0]->v1, tri_ptrs[1]->v1, tri_ptrs[2]->v1, tri_ptrs[3]->v1);
+                vec3_4_assign(&(v2), tri_ptrs[0]->v2, tri_ptrs[1]->v2, tri_ptrs[2]->v2, tri_ptrs[3]->v2);
+                vec3_4_assign(&(ray_o), ray.origin, ray.origin, ray.origin);
+                vec3_4_assign(&(ray_d), ray.direction, ray.direction, ray.direction);
+
+                __m128 tmp = calcTriangleIntersect4((__m128*)beta, (__m128*)gamma, &v0, &v1, &v2, &ray_o, &ray_d);
+                CACHE_ALIGN float t[4];
+                _mm_store_ps(t, tmp);
+                float tmp_min_t = TMAX;
+                int min_index = -1;
+                for(int j = 0; j < 4; j++)
+                {
+                    if(t[j] < tmp_min_t)
+                    {
+                        tmp_min_t = t[j];
+                        min_index = j;
+                    }
+                }
+                if(tmp_min_t < min_t)
+                {
+                    min_t = tmp_min_t;
+                    getSmoothTriangleShadeRec(sr, tri_ptrs[min_index], ray, beta[min_index],
+                                              gamma[min_index], tmp_min_t);
+                }
+                // TODO get sr
+v            }else
+ */
+
 float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 {
     // first find where the ray intersects with the aabb or if its origin is inside the aabb
@@ -89,7 +135,7 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
             float obj_t = TMAX;
             ShadeRec obj_sr;
             if(rg->cells[cell_index].size > 0)
-            {
+            {                
                 float tmp_t = TMAX;
                 ShadeRec tmp_sr;
                 for(int i = 0; i < rg->cells[cell_index].size; i++)
@@ -101,6 +147,7 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
                         obj_t = tmp_t;
                         obj_sr = tmp_sr;
                     }
+
                 }
             }
             if(min(obj_t, min(tx_next, min(ty_next, tz_next))) == obj_t)                
@@ -289,10 +336,10 @@ float BVHIntersectTest(ShadeRec* sr, const SceneObjects* so, const BVHNode* tree
             return t1;
         }else
         {
-			if (t2 < TMAX)
-			{
-				*sr = sr2;
-			}
+            if (t2 < TMAX)
+            {
+                *sr = sr2;
+            }
             return t2;
         }
         // TODO
@@ -369,10 +416,12 @@ float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
         goto RETURN;
     }else
     {
-        float tmp_t = TMAX;
-        ShadeRec tmp_sr, min_sr;
+
+        ShadeRec min_sr;
         for(int i = 0; i < so->num_obj; i++)
         {
+            float tmp_t = TMAX;
+            ShadeRec tmp_sr;
             tmp_t = rayIntersectObject(&tmp_sr, so->objects[i], ray);
             if(tmp_t < min_t)
             {
@@ -385,6 +434,66 @@ float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
             *sr = min_sr;
         }
         return min_t;
+
+        /*
+        ShadeRec min_sr; // min out of all objects
+        for(int i = 0; i < so->num_obj; i++)
+        {
+            if(so->num_obj - i >=4)
+            {
+
+                CACHE_ALIGN float beta[4];
+                CACHE_ALIGN float gamma[4];
+                vec3_4 v0;
+                vec3_4 v1;
+                vec3_4 v2;
+                vec3_4 ray_o;
+                vec3_4 ray_d;
+
+                SmoothTriangle* tri_ptrs[4];
+                tri_ptrs[0] = (SmoothTriangle*)so->objects[i].ptr;
+                tri_ptrs[1] = (SmoothTriangle*)so->objects[i+1].ptr;
+                tri_ptrs[2] = (SmoothTriangle*)so->objects[i+2].ptr;
+                tri_ptrs[3] = (SmoothTriangle*)so->objects[i+3].ptr;
+                vec3_4_assignv(&(v0), tri_ptrs[0]->v0, tri_ptrs[1]->v0, tri_ptrs[2]->v0, tri_ptrs[3]->v0);
+                vec3_4_assignv(&(v1), tri_ptrs[0]->v1, tri_ptrs[1]->v1, tri_ptrs[2]->v1, tri_ptrs[3]->v1);
+                vec3_4_assignv(&(v2), tri_ptrs[0]->v2, tri_ptrs[1]->v2, tri_ptrs[2]->v2, tri_ptrs[3]->v2);
+                vec3_4_assignv(&(ray_o), ray.origin, ray.origin, ray.origin, ray.origin);
+                vec3_4_assignv(&(ray_d), ray.direction, ray.direction, ray.direction, ray.direction);
+
+                __m128 tmp = calcTriangleIntersect4((__m128*)beta, (__m128*)gamma, &v0, &v1, &v2, &ray_o, &ray_d);
+                CACHE_ALIGN float t[4];
+                _mm_store_ps(t, tmp);
+                //printf("we out here t %f\n", t[0]);
+                float tmp_min_t = TMAX;
+                int min_index = -1;
+                for(int j = 0; j < 4; j++)
+                {
+                    if(t[j] < tmp_min_t)
+                    {
+                        tmp_min_t = t[j];
+                        min_index = j;
+                    }
+                }
+                //printf("tmp_min_t %f\n", tmp_min_t);
+                if(min_index != -1 && tmp_min_t < min_t)
+                {
+                    min_t = tmp_min_t;
+                    getSmoothTriangleShadeRec(&min_sr, tri_ptrs[min_index], ray, beta[min_index],
+                                              gamma[min_index], tmp_min_t);
+                }
+            }
+            i += 3;
+        }
+
+        //printf("i guess we succeeded?\n");
+        //exit(0);
+        if(min_t < TMAX)
+        {
+            *sr = min_sr;
+        }
+        return min_t;
+        */
     }
 RETURN:
 #ifdef MEASURE_TRAVERSAL_TIME
@@ -438,6 +547,7 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray, const fl
         return t;        
     }else
     {
+
         float t = TMAX;
         for(int i = 0; i < so->num_obj; i++)
         {
@@ -448,5 +558,50 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray, const fl
             }
         }
         return t;        
+
+        /*
+        for(int i = 0; i < so->num_obj; i++)
+        {
+            if(so->num_obj - i >= 4)
+            {
+                CACHE_ALIGN float beta[4];
+                CACHE_ALIGN float gamma[4];
+                vec3_4 v0;
+                vec3_4 v1;
+                vec3_4 v2;
+                vec3_4 ray_o;
+                vec3_4 ray_d;
+
+                SmoothTriangle* tri_ptrs[4];
+                tri_ptrs[0] = (SmoothTriangle*)so->objects[i].ptr;
+                tri_ptrs[1] = (SmoothTriangle*)so->objects[i+1].ptr;
+                tri_ptrs[2] = (SmoothTriangle*)so->objects[i+2].ptr;
+                tri_ptrs[3] = (SmoothTriangle*)so->objects[i+3].ptr;
+                vec3_4_assignv(&(v0), tri_ptrs[0]->v0, tri_ptrs[1]->v0, tri_ptrs[2]->v0, tri_ptrs[3]->v0);
+                vec3_4_assignv(&(v1), tri_ptrs[0]->v1, tri_ptrs[1]->v1, tri_ptrs[2]->v1, tri_ptrs[3]->v1);
+                vec3_4_assignv(&(v2), tri_ptrs[0]->v2, tri_ptrs[1]->v2, tri_ptrs[2]->v2, tri_ptrs[3]->v2);
+                vec3_4_assignv(&(ray_o), shadow_ray.origin,
+                               shadow_ray.origin, shadow_ray.origin, shadow_ray.origin);
+                vec3_4_assignv(&(ray_d), shadow_ray.direction,
+                               shadow_ray.direction, shadow_ray.direction, shadow_ray.direction);
+
+                __m128 tmp = calcTriangleIntersect4((__m128*)beta, (__m128*)gamma, &v0, &v1, &v2, &ray_o, &ray_d);
+                CACHE_ALIGN float t[4];
+                _mm_store_ps(t, tmp);
+                for(int j = 0; j < 4; j++)
+                {
+                    if(t[j] < light_dist)
+                    {
+                        //printf("%f\n", t[j]);
+                        return t[j];
+                    }
+                }
+                i += 3;
+            }
+
+        }
+        return TMAX;
+        */
+
     }
 }

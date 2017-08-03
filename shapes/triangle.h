@@ -78,3 +78,6 @@ __m128 calcTriangleIntersect4(__m128* beta_out, __m128* gamma_out, const vec3_4*
                               const vec3_4* v2, const vec3_4* ray_origin, const vec3_4* ray_direction);
 float calcTriangleIntersect(float* beta_out, float* gamma_out,
                             const vec3 v0, const vec3 v1, const vec3 v2, const Ray ray);
+
+float getSmoothTriangleShadeRec(ShadeRec* sr, SmoothTriangle* tri, const Ray ray,
+                                const float beta, const float gamma, const float t);

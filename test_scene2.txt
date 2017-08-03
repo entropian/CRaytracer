@@ -1,8 +1,10 @@
 # Camera
-CAMERA_POS 0 4.0 12.0
-LOOK_POINT -1.5 4.0 0.0
-#CAMERA_POS -25.0 7.0 2.0
-#LOOK_POINT 0.0 7.0 0.0
+#CAMERA_POS 0 4.0 12.0
+#LOOK_POINT -1.5 4.0 0.0
+CAMERA_POS -25.0 7.0 2.0
+LOOK_POINT 0.0 7.0 0.0
+#CAMERA_POS 0 1.0 4.0
+#LOOK_POINT 0 0.0 0.0    
 
 # Materials
 
@@ -62,7 +64,7 @@ NORMAL_MAP textures/sponza_arch_ddn.png
 END_MATERIALS
 
 
-OBJECT PLANE
+#OBJECT PLANE
 CAST_SHADOW yes
 POINT 0.0 -1.0 -14.0
 NORMAL 0.0 1.0 0.0
@@ -92,9 +94,9 @@ FILE models/teapot.obj
 CAST_SHADOW yes
 SMOOTH yes
 SCALING 0.03 0.03 0.03
-LOCATION 0.5 0.0 -1
+LOCATION -1.5 0.5 -1
 Orientation 0 0 0
-MATERIAL trans1
+MATERIAL matte1
 
 #OBJECT MESH
 FILE models/buddha.obj
@@ -132,7 +134,7 @@ LOCATION 0.5 1.0 -1
 Orientation 0 0 0
 MATERIAL matte2
 
-#OBJECT MESH
+OBJECT MESH
 FILE models/sponza/sponza.obj
 CAST_SHADOW yes
 SMOOTH yes
