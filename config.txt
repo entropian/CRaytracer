@@ -5,7 +5,7 @@ image_width  960
 image_height 960
 num_samples  400
 num_sample_sets 83
-max_depth  6
+max_depth  10
 trace_type PATHTRACE
 accel_struct GRID
 num_photons 1000000

@@ -552,17 +552,23 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     vec3_copy(sample_ray.origin, min_sr.hit_point);
 
                     vec3 inc_radiance;
-                    pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
-                    assert(inc_radiance[0] >= 0.0f && inc_radiance[1] >= 0.0f && inc_radiance[2] >= 0.0f);
-                    vec3 brdf;
-                    vec3_scale(brdf, min_sr.mat->cd, min_sr.mat->kd / (float)PI);
-                    float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
-                    float pdf = ndotwi / (float)PI;
+                    float rand_float = (float)rand() / (float)RAND_MAX;
+                    float cd_avg = (min_sr.mat->cd[0] + min_sr.mat->cd[1] + min_sr.mat->cd[2]) / 3.0f;
+                    if(rand_float <= cd_avg)
+                    {
+                        pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
+                        assert(inc_radiance[0] >= 0.0f && inc_radiance[1] >= 0.0f && inc_radiance[2] >= 0.0f);
+                        vec3 brdf;
+                        vec3_scale(brdf, min_sr.mat->cd, min_sr.mat->kd / (float)PI);
+                        float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
+                        float pdf = ndotwi / (float)PI;
 
-                    vec3 tmp;
-                    vec3_mult(tmp, inc_radiance, brdf);
-                    vec3_scale(tmp, tmp, ndotwi / pdf);
-                    vec3_add(radiance, radiance, tmp);
+                        vec3 tmp;
+                        vec3_mult(tmp, inc_radiance, brdf);
+                        vec3_scale(tmp, tmp, ndotwi / pdf);
+                        vec3_scale(tmp, tmp, 1.0 / cd_avg);
+                        vec3_add(radiance, radiance, tmp);
+                    }
                 }
 
                 if(min_sr.mat->mat_type == REFLECTIVE)
@@ -576,6 +582,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     vec3_add(radiance, radiance, reflected_illum);
                 }
 
+                // TODO incorporate russian roulette
                 if(min_sr.mat->mat_type == PHONG)
                 {
                     vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
@@ -677,7 +684,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                 }
             }else
             {
-                vec3_copy(radiance, sl->bg_color);
+                //vec3_copy(radiance, sl->bg_color);
             }
         }
     }else
