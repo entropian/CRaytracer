@@ -155,3 +155,31 @@ float calcLightDistance(const LightType light_type, const void* light_ptr, const
     }
     return t;
 }
+
+void genMeshLightSample(vec3 sample, vec3 normal, MeshLight* mesh_light)
+{
+    float rand_float = (float)rand() / (float)RAND_MAX;
+    int i;
+    float probability_sum = 0.0f;
+    for(i = 0; probability_sum < rand_float; i++)
+    {
+        probability_sum += mesh_light->probability_distribution[i];
+    }
+   
+    // p = (1 - sqrt(r1))v0 + (sqrt(r1)(1 - sqrt(r2))v1 + (r2*sqrt(r1))v2
+    float r1 = (float)rand() / (float)RAND_MAX;;
+    float r2 = (float)rand() / (float)RAND_MAX;;
+    float sqrt_r1 = sqrtf(r1);
+    vec3 a, b, c;
+    if(mesh_light->obj_type == FLAT_TRIANGLE)
+    {
+        FlatTriangle* tri_ptr = (FlatTriangle*)(mesh_light->triangles[i]);
+        vec3_scale(a, tri_ptr->v0, 1.0 - sqrt_r1);
+        vec3_scale(b, tri_ptr->v1, sqrt_r1 * sqrtf(r2));
+        vec3_scale(c, tri_ptr->v2, r2 * sqrt_r1);
+        vec3 a_plus_b;
+        vec3_add(a_plus_b, a, b);
+        vec3_add(sample, a_plus_b, c);
+        vec3_copy(normal, tri_ptr->normal);
+    }
+}

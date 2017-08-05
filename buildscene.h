@@ -635,7 +635,7 @@ void initEnvLight(SceneLights* sl)
 {
     if(sl->num_lights == MAX_LIGHTS){return;}
     EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
-    env_light->intensity = 2.0f;
+    env_light->intensity = 4.0f;
     vec3_copy(env_light->color, WHITE);
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);

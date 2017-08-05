@@ -10,7 +10,8 @@ enum LightType
     DIRECTIONAL,
     POINTLIGHT,
     AREALIGHT,
-    ENVLIGHT
+    ENVLIGHT,
+    MESHLIGHT
 };
 
 typedef struct DirLight_s
@@ -58,6 +59,19 @@ typedef struct AmbientLight_s
     vec3 color;
 }AmbientLight;
 
+typedef struct MeshLight_s
+{
+    float power;
+    float surface_area;
+    float intensity;
+    vec3 color;
+    int num_triangles;
+    float* probability_distribution; // TODO rename
+    void** triangles;
+    ObjectType obj_type;
+}MeshLight;
+
+void genMeshLightSample(vec3 sample, vec3 normal, MeshLight* mesh_light);
 void getAreaLightNormal(vec3 r, const AreaLight* area_light_ptr, const vec3 hit_point);
 void assignDirLight(DirLight *dir_light, const float intensity, const vec3 color, const vec3 direction);
 void assignPointLight(PointLight *point_light, const float intensity, const vec3 color, const vec3 point);
