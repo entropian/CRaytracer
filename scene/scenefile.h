@@ -197,6 +197,7 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip NAME
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get name
     stringCopy(*name, NAME_LENGTH, buffer);
+    stringCopy(mat->name, NAME_LENGTH, buffer);
     if(mat->mat_type == EMISSIVE)
     {
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word COLOR

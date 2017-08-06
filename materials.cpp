@@ -30,9 +30,11 @@ MatType getMatTypeFromString(const char* str)
 
 void printMaterial(const Material* mat)
 {
+    printf("%s\n", mat->name);
     printf("shadow %s\n", mat->shadow ? "true" : "false");
     printf("ka %f, kd %f\n", mat->ka, mat->kd);
     printf("ks %f, ke %f\n", mat->ks, mat->ke);
+    printf("exp %f\n", mat->exp);
     printVec3WithText("ca", mat->cd);
     printVec3WithText("cd", mat->cd);
     printVec3WithText("cs", mat->cs);

@@ -391,7 +391,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     material.tex_flags = NO_TEXTURE;
                     // TODO: fix exponent
                     //material.h_samples = genHemisphereSamples(MULTIJITTERED, material.exp);
-                    material.h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+                    //material.h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
                     stringCopy(material.name, MAX_NAME_LENGTH, obj_mat->name);
 
                     if(obj_mat->illum == 2)
@@ -409,7 +409,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                         material.mat_type = REFLECTIVE;
                         // TODO: Not sure how to set kr
                         material.kr = 1.0f;
-                    }else if(obj_mat->illum == 7)
+                    }else if(obj_mat->illum == 7 || obj_mat->illum == 9)
                     {
                         material.mat_type = TRANSPARENT;
                     }else
@@ -417,6 +417,13 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                         // Fudge
                         //material.mat_type = INVALID_MAT_TYPE;
                         material.mat_type = MATTE;
+                    }
+                    if(material.mat_type == MATTE)
+                    {
+                        material.h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+                    }else
+                    {
+                        material.h_samples = genHemisphereSamples(MULTIJITTERED, material.exp);
                     }
                     // Load textures
                     if(obj_mat->diffuse_map[0] != '\0')
@@ -457,6 +464,16 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     }
                     Scene_addMaterial(scene, &material, obj_mat->name);
                 }
+                /*
+                for(int i = 0; i < scene->materials.size; i++)
+                {
+                    Material* mat_ptr = &(scene->materials.materials[i]);
+                    if(mat_ptr->mat_type == TRANSPARENT)
+                    {
+                        printMaterial(mat_ptr);
+                    }
+                }
+                */
                 MatTexNamePair *pair_array = (MatTexNamePair*)DBuffer_data_ptr(mat_tex_pairs);
                 const unsigned int num_pair = DBuffer_size(mat_tex_pairs);
                 procMatTexPairs(scene, pair_array, num_pair);
@@ -739,6 +756,11 @@ int calcCausticObjectsAABB(AABB *aabb, const SceneObjects *so)
     for(int i = so->num_non_grid_obj; i < so->num_obj; i++)
     {
         Object_t obj = so->objects[i];
+        if(i == 3325724)
+        {
+            // TODO problem
+            printf("here! fine!\n");
+        }
         Material *mat = getObjectMatPtr(obj);
         if(!mat)
         {
@@ -877,7 +899,6 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
     mvNonGridObjToStart(so);
     printf("num_obj %d\n", so->num_obj);
     printf("non bounded obj %d\n", so->num_non_grid_obj);
-
     // NOTE: taken out to main so that projection map can be built before the
     // mesh triangles are scrambled.
     //buildSceneAccel(scene);

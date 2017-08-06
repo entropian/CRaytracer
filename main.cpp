@@ -205,7 +205,8 @@ int main()
     initScene(&scene, params.file_name, params.accel_type);
     AABB aabbs[MAX_MESH];
     // NOTE: calc aabb before building accel
-    int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
+    // TODO fix calcCausticObjectsAABB
+    //int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
     buildSceneAccel(&scene);
 
     // Photon map
@@ -232,7 +233,8 @@ int main()
                 fprintf(stderr, "Couldn't allocate memory for caustic buffer.\n");
             }
             Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
-            emitCaustics(&caustic_map, &(scene.objects), &(scene.lights), aabbs, num_aabb);
+            // TODO enable after fixing calcCausticObjectsAABB()
+            //emitCaustics(&caustic_map, &(scene.objects), &(scene.lights), aabbs, num_aabb);
             Photonmap_balance(&caustic_map);
         }
     }

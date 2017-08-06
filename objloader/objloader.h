@@ -523,14 +523,15 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         }
 
         // Transmittance
-        if(line_ptr[0] == 'K' && line_ptr[1] == 'e' && line_ptr[2] == ' ')
+        if(line_ptr[0] == 'T' && line_ptr[1] == 'f' && line_ptr[2] == ' ')
         {
             line_ptr += 3;
             float r, g, b;
             OBJParseFloat3(&r, &g, &b, &line_ptr);
-            material.transmittance[0] = r;
-            material.transmittance[1] = g;
-            material.transmittance[2] = b;
+            // Changed to 1 - Tf based on sanMiguel.mtl
+            material.transmittance[0] = 1.0f - r;
+            material.transmittance[1] = 1.0f - g;
+            material.transmittance[2] = 1.0f - b;
             continue;
         }
 
@@ -538,7 +539,7 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         if(line_ptr[0] == 'N' && line_ptr[1] == 'i' && line_ptr[2] == ' ')
         {
             line_ptr += 3;
-            material.ior = OBJParseInt(&line_ptr);
+            material.ior = OBJParseFloat(&line_ptr);
             continue;
         }
 
@@ -546,7 +547,7 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         if(line_ptr[0] == 'N' && line_ptr[1] == 's' && line_ptr[2] == ' ')
         {
             line_ptr += 3;
-            material.shininess = OBJParseInt(&line_ptr);
+            material.shininess = OBJParseFloat(&line_ptr);
             continue;
         }
 
