@@ -75,6 +75,8 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
     ug->ny = (int)(ug->wy * multiplier / s + 1);
     ug->nz = (int)(ug->wz * multiplier / s + 1);
     ug->num_cells = ug->nx * ug->ny * ug->nz;
+    // TODO find out how many cells are empty and the average number of indices per cell
+    printf("num_cells %d\n", ug->num_cells);
 
     int nx = ug->nx, ny = ug->ny, nz = ug->nz;
     float wx = ug->wx, wy = ug->wy, wz = ug->wz;
@@ -124,6 +126,20 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
         }
         //printf("num_good %d num_bad %d\n", num_good, num_bad);
     }
+    int empty_count = 0;
+    unsigned long long total_count = 0;
+    for(int i = 0; i < ug->num_cells; i++)
+    {
+        total_count += ug->cells[i].size;
+        if(ug->cells[i].size == 0)
+        {
+            empty_count++;
+        }
+    }
+    float avg = (float)total_count / (float)(ug->num_cells - empty_count);
+    printf("Number of empty cells %d\n", empty_count);
+    printf("Fraction of empty cells %f\n", (float)empty_count / (float)ug->num_cells);
+    printf("Average number of primitives in non-empty cells %f\n", avg);
     
     free(aabb_array);
     printf("wx = %f, wy = %f, wz = %f\n", ug->wx, ug->wy, ug->wz);

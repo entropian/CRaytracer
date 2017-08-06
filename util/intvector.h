@@ -15,8 +15,10 @@ typedef struct IntVector
 IntVector IntVector_create()
 {
     IntVector r;
-    r.array = (int*)malloc(sizeof(int) * INITIAL_CAPACITY);
-    r.max = INITIAL_CAPACITY;
+    //r.array = (int*)malloc(sizeof(int) * INITIAL_CAPACITY);
+    r.array = NULL;
+    //r.max = INITIAL_CAPACITY;
+    r.max = 0;
     r.size = 0;
     return r;
 }
@@ -30,6 +32,12 @@ void IntVector_destroy(IntVector* iv)
 
 void IntVector_push(IntVector* iv, const int element)
 {
+    if(iv->array == NULL)
+    {
+        iv->array = (int*)malloc(sizeof(int) * INITIAL_CAPACITY);
+        iv->max = INITIAL_CAPACITY;
+    }
+    
     if(iv->size < iv->max)
     {
         iv->array[iv->size] = element;
