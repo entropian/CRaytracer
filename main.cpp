@@ -287,12 +287,12 @@ int main()
     thread_data.params = &params;
     thread_data.trace = trace;
 
-    int num_patches = 16;
-    //int num_patches = 64;
+    //int num_patches = 16;
+    int num_patches = 64;
     int num_threads = 4;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[10];
-    int patches[64];
+    int patches[128];
     for(int i = 0; i < num_patches + 1; i++)
     {
         patches[i] = i * num_pixels_per_patch;

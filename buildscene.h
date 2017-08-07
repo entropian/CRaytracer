@@ -650,14 +650,39 @@ void initAreaLights(SceneLights* sl)
 
 void initEnvLight(SceneLights* sl)
 {
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
-    env_light->intensity = 4.0f;
+    env_light->type = CONSTANT;
+    env_light->intensity = 1.0f;
     vec3_copy(env_light->color, WHITE);
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
 
     env_light->samples3D = samples;
+    sl->shadow[sl->num_lights] = true;
+    sl->light_ptrs[sl->num_lights] = env_light;
+    sl->light_types[sl->num_lights] = ENVLIGHT;
+    (sl->num_lights)++;
+    sl->env_light = env_light;
+    */
+    
+    if(sl->num_lights == MAX_LIGHTS){return;}
+    EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
+    env_light->type = CUBEMAP;
+    env_light->intensity = 1.0f;
+
+    Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+    char paths[6][256];
+    stringCopy(paths[0], 256, "models/cubemap/sanMiguel-NZ.png");
+    stringCopy(paths[1], 256, "models/cubemap/sanMiguel-PZ.png");
+    stringCopy(paths[2], 256, "models/cubemap/sanMiguel-NX.png");
+    stringCopy(paths[3], 256, "models/cubemap/sanMiguel-PX.png");
+    stringCopy(paths[4], 256, "models/cubemap/sanMiguel-NY.png");
+    stringCopy(paths[5], 256, "models/cubemap/sanMiguel-PY.png");
+    EnvLight_init_cubemap(env_light, paths);
+
+    env_light->samples3D = samples;    
     sl->shadow[sl->num_lights] = true;
     sl->light_ptrs[sl->num_lights] = env_light;
     sl->light_types[sl->num_lights] = ENVLIGHT;

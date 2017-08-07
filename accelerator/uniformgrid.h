@@ -110,13 +110,19 @@ UniformGrid* UniformGrid_create(Object_t* objects, int* num_obj, const int num_n
                 for(int p = min_ix; p <= max_ix; ++p)
                 {
                     Object_t obj = objects[i + num_non_grid_obj];
-                    AABB aabb;
-                    vec3 min_disp = {p * unit_x, j * unit_y, k * unit_z};
-                    vec3_add(aabb.min, ug->aabb.min, min_disp);
-                    vec3 unit_span = {unit_x, unit_y, unit_z};
-                    vec3_add(aabb.max, aabb.min, unit_span);
-                    if((obj.type == TRIANGLE || obj.type == FLAT_TRIANGLE || obj.type == SMOOTH_TRIANGLE)
-                       && triangleAABBIntersect(obj, &aabb))
+                    if((obj.type == TRIANGLE || obj.type == FLAT_TRIANGLE || obj.type == SMOOTH_TRIANGLE))
+                    {
+                        AABB aabb;
+                        vec3 min_disp = {p * unit_x, j * unit_y, k * unit_z};
+                        vec3_add(aabb.min, ug->aabb.min, min_disp);
+                        vec3 unit_span = {unit_x, unit_y, unit_z};
+                        vec3_add(aabb.max, aabb.min, unit_span);
+                        if(triangleAABBIntersect(obj, &aabb))
+                        {
+                            int cell_index = j*nx*nz + k*nx + p;
+                            IntVector_push(&(ug->cells[j*nx*nz + k*nx + p]), i + num_non_grid_obj);
+                        }
+                    }else
                     {
                         int cell_index = j*nx*nz + k*nx + p;
                         IntVector_push(&(ug->cells[j*nx*nz + k*nx + p]), i + num_non_grid_obj);

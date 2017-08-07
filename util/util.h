@@ -1,5 +1,5 @@
 #pragma once
-
+#include <string.h>
 #include <stdio.h>
 #include "vec.h"
 #include "constants.h"
@@ -47,4 +47,22 @@ inline int isZeroVector(vec3 v)
     //if (fabs(v[0]) < K_EPSILON && fabs(v[1]) < K_EPSILON && fabs(v[2]) < K_EPSILON) return true;
     if (fabs(v[0]) < K_EPSILON && fabs(v[1]) < K_EPSILON && fabs(v[2]) < K_EPSILON) return true;   
     return false;
+}
+
+static void stringCopy(char* dest, const int max_len, const char* src)
+{
+#ifdef _MSC_VER
+    strcpy_s(dest, max_len, src);
+#else
+    strcpy(dest, src);
+#endif
+}
+
+static void stringNCopy(char* dest, const int max_len, const char*src, const int len)
+{
+#ifdef _MSC_VER
+    strncpy_s(dest, max_len, src, len);
+#else
+    strncpy(dest, src, len);
+#endif
 }

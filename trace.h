@@ -733,7 +733,8 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
         }
     }else
     {
-        vec3_copy(radiance, sl->bg_color);
+        //vec3_copy(radiance, sl->bg_color);
+        getEnvLightIncRadiance(radiance, ray.direction, sl->env_light);
     }
     assert(radiance[0] >= 0.0f && radiance[1] >= 0.0f && radiance[2] >= 0.0f);
     return min_t;

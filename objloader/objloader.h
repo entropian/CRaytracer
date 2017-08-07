@@ -10,7 +10,7 @@
 #define OBJ_NAME_LENGTH 64
 #define OBJ_PATH_LENGTH 128
 
-static void stringCopy(char* dest, const int max_len, const char* src)
+static void OBJ_stringCopy(char* dest, const int max_len, const char* src)
 {
 #ifdef _MSC_VER
     strcpy_s(dest, max_len, src);
@@ -19,7 +19,7 @@ static void stringCopy(char* dest, const int max_len, const char* src)
 #endif
 }
 
-static void stringNCopy(char* dest, const int max_len, const char*src, const int len)
+static void OBJ_stringNCopy(char* dest, const int max_len, const char*src, const int len)
 {
 #ifdef _MSC_VER
     strncpy_s(dest, max_len, src, len);
@@ -241,7 +241,7 @@ static void OBJParseString(char buffer[], const char** str)
 {
     *str += strspn(*str, " \t");
     int length = strcspn(*str, " \t\r\0");
-    stringNCopy(buffer, 128, *str, length);
+    OBJ_stringNCopy(buffer, 128, *str, length);
     //strncpy_s(buffer, 128, *str, length);
     buffer[length] = '\0';
     *str += length;
@@ -431,7 +431,7 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
     unsigned int char_index;
     for(char_index = 0; file_name[char_index] != '\0'; char_index++){}
     for(; char_index > 0 && file_name[char_index] != '\\' && file_name[char_index] != '/'; char_index--){}
-    stringNCopy(base_path, OBJ_PATH_LENGTH, file_name, char_index + 1);
+    OBJ_stringNCopy(base_path, OBJ_PATH_LENGTH, file_name, char_index + 1);
     
     OBJMaterial material;
     OBJMaterial_init(&material);
@@ -470,7 +470,7 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
 #else
             sscanf(line_ptr, "%s", name_buffer);
 #endif
-            stringCopy(material.name, OBJ_NAME_LENGTH, name_buffer);
+            OBJ_stringCopy(material.name, OBJ_NAME_LENGTH, name_buffer);
             continue;
         }
 
@@ -577,8 +577,8 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         if(strncmp(line_ptr, "map_Ka", 6) == 0 && line_ptr[6] == ' ')
         {
             line_ptr += 7;
-            //stringCopy(material.ambient_map, OBJ_PATH_LENGTH, line_ptr);
-            stringCopy(material.ambient_map, OBJ_PATH_LENGTH, base_path);
+            //OBJ_stringCopy(material.ambient_map, OBJ_PATH_LENGTH, line_ptr);
+            OBJ_stringCopy(material.ambient_map, OBJ_PATH_LENGTH, base_path);
 #ifdef _MSC_VER
             strcat_s(material.ambient_map, OBJ_NAME_LENGTH, line_ptr);
 #else
@@ -591,8 +591,8 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         if(strncmp(line_ptr, "map_Kd", 6) == 0 && line_ptr[6] == ' ')
         {
             line_ptr += 7;
-            stringCopy(material.diffuse_map, OBJ_PATH_LENGTH, line_ptr);
-            stringCopy(material.diffuse_map, OBJ_PATH_LENGTH, base_path);
+            OBJ_stringCopy(material.diffuse_map, OBJ_PATH_LENGTH, line_ptr);
+            OBJ_stringCopy(material.diffuse_map, OBJ_PATH_LENGTH, base_path);
 #ifdef _MSC_VER
             strcat_s(material.diffuse_map, OBJ_NAME_LENGTH, line_ptr);
 #else
@@ -605,8 +605,8 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         if(strncmp(line_ptr, "map_Ks", 6) == 0 && line_ptr[6] == ' ')
         {
             line_ptr += 7;
-            stringCopy(material.specular_map, OBJ_PATH_LENGTH, line_ptr);
-            stringCopy(material.specular_map, OBJ_PATH_LENGTH, base_path);
+            OBJ_stringCopy(material.specular_map, OBJ_PATH_LENGTH, line_ptr);
+            OBJ_stringCopy(material.specular_map, OBJ_PATH_LENGTH, base_path);
 #ifdef _MSC_VER
             strcat_s(material.specular_map, OBJ_NAME_LENGTH, line_ptr);
 #else
@@ -619,8 +619,8 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         if(strncmp(line_ptr, "map_Ns", 6) == 0 && line_ptr[6] == ' ')
         {
             line_ptr += 7;
-            stringCopy(material.shininess_map, OBJ_PATH_LENGTH, line_ptr);
-            stringCopy(material.shininess_map, OBJ_PATH_LENGTH, base_path);
+            OBJ_stringCopy(material.shininess_map, OBJ_PATH_LENGTH, line_ptr);
+            OBJ_stringCopy(material.shininess_map, OBJ_PATH_LENGTH, base_path);
 #ifdef _MSC_VER
             strcat_s(material.shininess_map, OBJ_NAME_LENGTH, line_ptr);
 #else
@@ -633,8 +633,8 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         if(strncmp(line_ptr, "map_bump", 8) == 0 && line_ptr[8] == ' ')
         {
             line_ptr += 9;
-            stringCopy(material.normal_map, OBJ_PATH_LENGTH, line_ptr);
-            stringCopy(material.normal_map, OBJ_PATH_LENGTH, base_path);
+            OBJ_stringCopy(material.normal_map, OBJ_PATH_LENGTH, line_ptr);
+            OBJ_stringCopy(material.normal_map, OBJ_PATH_LENGTH, base_path);
 #ifdef _MSC_VER
             strcat_s(material.normal_map, OBJ_NAME_LENGTH, line_ptr);
 #else
@@ -647,8 +647,8 @@ bool loadMTL(DBuffer *obj_materials, const char *file_name)
         if(strncmp(line_ptr, "map_d", 5) == 0 && line_ptr[5] == ' ')
         {
             line_ptr += 6;
-            stringCopy(material.alpha_map, OBJ_PATH_LENGTH, line_ptr);
-            stringCopy(material.alpha_map, OBJ_PATH_LENGTH, base_path);
+            OBJ_stringCopy(material.alpha_map, OBJ_PATH_LENGTH, line_ptr);
+            OBJ_stringCopy(material.alpha_map, OBJ_PATH_LENGTH, base_path);
 #ifdef _MSC_VER
             strcat_s(material.alpha_map, OBJ_NAME_LENGTH, line_ptr);
 #else
@@ -683,7 +683,7 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
     char mesh_name[128];
     int i;
     for(i = 0; file_name[i] != '.'; i++){}
-    stringNCopy(mesh_name, OBJ_NAME_LENGTH, file_name, i);
+    OBJ_stringNCopy(mesh_name, OBJ_NAME_LENGTH, file_name, i);
     mesh_name[i] = '\0';
 
     DBuffer obj_shapes = DBuffer_create(OBJShape);
@@ -784,8 +784,8 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
             OBJShape shape;
             if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
             {
-                stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
-                stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
+                OBJ_stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+                OBJ_stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
                 DBuffer_push(obj_shapes, shape);
             }
         }
@@ -795,8 +795,8 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
             OBJShape shape;
             if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
             {
-                stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
-                stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
+                OBJ_stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+                OBJ_stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);
                 DBuffer_push(obj_shapes, shape);
             }
             line_ptr += 6;    // Skip over "usemtl"
@@ -828,7 +828,7 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
             char mtl_path[OBJ_PATH_LENGTH];
             if(char_index > 0)
             {
-                stringNCopy(mtl_path, OBJ_PATH_LENGTH, file_name, char_index + 1);
+                OBJ_stringNCopy(mtl_path, OBJ_PATH_LENGTH, file_name, char_index + 1);
             }else
             {
                 mtl_path[0] = '\0';
@@ -844,61 +844,10 @@ bool loadOBJ(OBJShape** shapes, OBJMaterial ** materials, int *num_shape, int *n
     OBJShape shape;
     if(exportGroupToShape(&shape, &in_positions, &in_normals, &in_texcoords, &in_face_group))
     {
-        stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
-        stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);        
+        OBJ_stringCopy(shape.mesh_name, OBJ_NAME_LENGTH, mesh_name);
+        OBJ_stringCopy(shape.mat_name, OBJ_NAME_LENGTH, cur_mat_name);        
         DBuffer_push(obj_shapes, shape);
     }
-#if 0
-    OBJShape* obj_shape = (OBJShape*)(obj_shapes.data);
-    for(int i = 0; i < DBuffer_size(obj_shapes); i++)
-    {
-        
-        printf("Shape %d\n", i);
-        printf("position\n");
-        for(int j = 0; j < obj_shape[i].num_positions; j++)
-        {
-            if(j > 0 && j % 3 == 0)
-            {
-                printf("\n");
-            }
-            printf("%f ", obj_shape[i].positions[j]);
-        }
-        printf("\n");        
-        
-        printf("texcoords\n");
-        for(int j = 0; j < obj_shape[i].num_texcoords; j++)
-        {
-            if(j > 0 && j % 2 == 0)
-            {
-                printf("\n");
-            }
-            printf("%f ", obj_shape[i].texcoords[j]);
-        }
-        printf("\n");
-
-        printf("normal\n");
-        for(int j = 0; j < obj_shape[i].num_normals; j++)
-        {
-            if(j > 0 && j % 3 == 0)
-            {
-                printf("\n");
-            }
-            printf("%f ", obj_shape[i].normals[j]);
-        }
-        printf("\n");
-        
-        printf("indices\n");
-        for(int j = 0; j < obj_shape[i].num_indices; j++)
-        {
-            if(j > 0 && j % 3 == 0)
-            {
-                printf("\n");
-            }
-            printf("%d ", obj_shape[i].indices[j]);
-        }
-        printf("\n");
-    }
-#endif
     DBuffer* face_ptr = (DBuffer*)(in_face_group.data);
     DBuffer_destroy(&in_positions);
     DBuffer_destroy(&in_normals);

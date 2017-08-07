@@ -4,6 +4,7 @@
 #include "util/math.h"
 #include "shapes/shapes.h"
 #include "sampling.h"
+#include "texture.h"
 
 enum LightType
 {
@@ -45,11 +46,27 @@ typedef struct AreaLight_s
     vec3 color;
 }AreaLight;
 
+enum EnvLightType
+{
+    CONSTANT,
+    CUBEMAP
+};
+
 typedef struct EnvLight_s
 {
     float intensity;
     Samples3D* samples3D;
     vec3 color;
+    /*
+      0 -z
+      1 z
+      2 -x
+      3 x
+      4 -y
+      5 y
+     */
+    Texture cubemap[6];
+    EnvLightType type;
 }EnvLight;
 
 typedef struct AmbientLight_s
@@ -83,4 +100,6 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
 void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr, const vec3 hit_point);
 
 float calcLightDistance(const LightType light_type, const void* light_ptr, const vec3 hit_point);
-
+void getEnvLightIncRadiance(vec3 r, const vec3 dir, EnvLight* env_light);
+void EnvLight_init_cubemap(EnvLight* env_light, char paths[][256]);
+void EnvLight_destroy(EnvLight* env_light);

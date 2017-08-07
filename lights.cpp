@@ -183,3 +183,91 @@ void genMeshLightSample(vec3 sample, vec3 normal, MeshLight* mesh_light)
         vec3_copy(normal, tri_ptr->normal);
     }
 }
+void getEnvLightIncRadiance(vec3 r, const vec3 dir, EnvLight* env_light)
+{
+    if(env_light->type == CONSTANT)
+    {
+        vec3_scale(r, env_light->color, env_light->intensity);
+    }else if(env_light->type == CUBEMAP)
+    {
+        Texture* tex;
+        float x_mag = fabs(dir[0]);
+        float y_mag = fabs(dir[1]);
+        float z_mag = fabs(dir[2]);
+        static float max_non_dominant_mag = sinf(M_PI * 0.25);
+        float x = dir[0] / max_non_dominant_mag;
+        float y = dir[1] / max_non_dominant_mag;
+        float z = dir[2] / max_non_dominant_mag;
+        vec2 uv;
+        if(x_mag > y_mag && x_mag > z_mag) 
+        {
+            // x
+            if(dir[0] < 0.0f)
+            {
+                // -x
+                tex = &(env_light->cubemap[2]);
+                uv[0] = (-z + 1.0f) * 0.5f;
+                uv[1] = (y + 1.0f) * 0.5f;
+            }else
+            {
+                // x
+                tex = &(env_light->cubemap[3]);
+                uv[0] = (z + 1.0f) * 0.5f;
+                uv[1] = (y + 1.0f) * 0.5f;
+            }
+        }else if(y_mag > z_mag)
+        {
+            // y
+            if(dir[1] < 0.0f)
+            {
+                // -y
+                tex = &(env_light->cubemap[4]);
+                uv[0] = (-x + 1.0f) * 0.5f;
+                uv[1] = (z + 1.0f) * 0.5f;
+            }else
+            {
+                // y
+                tex = &(env_light->cubemap[5]);
+                uv[0] = (x + 1.0f) * 0.5f;
+                uv[1] = (z + 1.0f) * 0.5f;
+            }
+        }else
+        {
+            // Z
+            if(dir[2] < 0.0f)
+            {
+                // -z
+                tex = &(env_light->cubemap[0]);
+                uv[0] = (x + 1.0f) * 0.5f;
+                uv[1] = (y + 1.0f) * 0.5f;
+            }else
+            {
+                // z
+                tex = &(env_light->cubemap[1]);
+                uv[0] = (-x + 1.0f) * 0.5f;
+                uv[1] = (y + 1.0f) * 0.5f;
+            }
+        }
+        vec3 tex_color;
+        getTexColor(tex_color, tex, uv);
+        vec3_scale(r, tex_color, env_light->intensity);
+    }
+}
+
+
+void EnvLight_init_cubemap(EnvLight* env_light, char paths[][256])
+{
+    for(int i = 0; i < 6; i++)
+    {
+        loadTexture(&(env_light->cubemap[i]), paths[i]);
+    }
+}
+
+void EnvLight_destroy(EnvLight* env_light)
+{
+    for(int i = 0; i < 6; i++)
+    {
+        freeTexture(&(env_light->cubemap[i]));
+    }
+    env_light->intensity = 0.0f;
+}

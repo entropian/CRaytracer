@@ -1,3 +1,6 @@
+Environment map
+multithreading obj loading
+
 Use a pointer into mesh index array instead of using three ints for indices
 Irradiance caching
 SIMD ray triangle intersection for uniform grid

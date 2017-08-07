@@ -334,6 +334,7 @@ void freeSceneObjects(SceneObjects* so)
 
 void freeSceneLights(SceneLights* sl)
 {
+    EnvLight_destroy(sl->env_light);
     for(int i = 0; i < sl->num_lights; i++)
     {
         if(sl->light_ptrs[i] != NULL)

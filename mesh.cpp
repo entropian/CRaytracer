@@ -1,4 +1,5 @@
 #include "mesh.h"
+#include "util/util.h"
 #define OBJ_LOADER_IMPLEMENTATION    
 #include "objloader/objloader.h"
 
