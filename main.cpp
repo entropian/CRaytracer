@@ -203,10 +203,10 @@ int main()
     // Scene data structures
     Scene scene = Scene_create();
     initScene(&scene, params.file_name, params.accel_type);
-    AABB aabbs[MAX_MESH];
+    AABB aabbs[MAX_CAUSTIC_OBJECTS];
     // NOTE: calc aabb before building accel
     // TODO fix calcCausticObjectsAABB
-    //int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
+    int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
     buildSceneAccel(&scene);
 
     // Photon map
