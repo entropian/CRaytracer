@@ -161,9 +161,8 @@ void MeshLight_init(MeshLight* mesh_light, Mesh* mesh)
     mesh_light->num_triangles = 0;
     mesh_light->surface_area = 0.0f;
     printf("num pre allocated %d\n", mesh->num_indices / 3);
-    mesh_light->triangle_areas = (float*)malloc(mesh->num_indices / 3 * sizeof(int));
+    mesh_light->cdf = (float*)malloc(mesh->num_indices / 3 * sizeof(float));
     mesh_light->triangles = (void**)malloc(mesh->num_indices / 3 * sizeof(void*));
-
 }
 
 int MeshLight_addTriangle(MeshLight* mesh_light, Object_t obj)
@@ -197,18 +196,27 @@ int MeshLight_addTriangle(MeshLight* mesh_light, Object_t obj)
     vec3 cross_product;
     vec3_cross(cross_product, e0, e1);
     float tri_area = vec3_length(cross_product) * 0.5f;
-    mesh_light->triangle_areas[mesh_light->num_triangles] = tri_area;
+    mesh_light->cdf[mesh_light->num_triangles] = tri_area + mesh_light->surface_area;
     mesh_light->triangles[mesh_light->num_triangles] = obj.ptr;
     mesh_light->surface_area += tri_area;
     mesh_light->num_triangles++;
     return 1;
 }
 
+void MeshLight_normalizeCDF(MeshLight* mesh_light)
+{
+    float norm_factor = 1.0f / mesh_light->cdf[mesh_light->num_triangles - 1];
+    for(int i = 0; i < mesh_light->num_triangles; i++)
+    {
+        mesh_light->cdf[i] *= norm_factor;
+    }
+}
+
 void MeshLight_destroy(MeshLight* mesh_light)
 {
-    if(mesh_light->triangle_areas)
+    if(mesh_light->cdf)
     {
-        free(mesh_light->triangle_areas);
+        free(mesh_light->cdf);
     }
     if(mesh_light->triangles)
     {
@@ -218,17 +226,39 @@ void MeshLight_destroy(MeshLight* mesh_light)
     mesh_light->surface_area = 0.0f;
 }
 
-int gen_sample_count = 0;
 void MeshLight_genSample(vec3 sample, vec3 normal, MeshLight* mesh_light)
 {
-    gen_sample_count++;
     float rand_float = (float)rand() / (float)RAND_MAX;
-    float rand_area = rand_float * mesh_light->surface_area;
-    int i;
-    float area_sum = 0.0f;
-    for(i = 0; area_sum + mesh_light->triangle_areas[i] < rand_area; i++)
+
+    int i = (mesh_light->num_triangles-1) / 2;
+    int upper = mesh_light->num_triangles - 1;
+    int lower = 0;
+    while(1)
     {
-        area_sum += mesh_light->triangle_areas[i];
+        if(rand_float > mesh_light->cdf[i])
+        {
+            if(i+1 == mesh_light->num_triangles-1)
+            {
+                i++;
+                break;
+            }
+            lower = i;
+            i = (i + upper) / 2;
+        }else
+        {
+            if(i > 0)
+            {
+                if(mesh_light->cdf[i-1] < rand_float)
+                {
+                    break;
+                }
+            }else
+            {
+                break;
+            }
+            upper = i;
+            i = (i + lower) / 2;
+        }
     }
    
     // p = (1 - sqrt(r1))v0 + (sqrt(r1)(1 - sqrt(r2))v1 + (r2*sqrt(r1))v2

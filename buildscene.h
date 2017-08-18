@@ -951,10 +951,11 @@ void initMeshLights(Scene* scene)
             {
                 // Encountering a new mesh light when already in another one
                 // TODO what happens two mesh lights with the same mesh are next to each other?
-                cur_light_mesh_ptr = tri_mesh_ptr;
+                MeshLight_normalizeCDF(cur_mesh_light);
                 SceneLights_addLight(cur_mesh_light, MESHLIGHT, sl);
-                cur_mesh_light->obj_type = obj.type;
+                cur_light_mesh_ptr = tri_mesh_ptr;         
                 cur_mesh_light = (MeshLight*)malloc(sizeof(MeshLight));
+                cur_mesh_light->obj_type = obj.type;
                 cur_mesh_light->intensity = mat->ke;
                 vec3_copy(cur_mesh_light->color, mat->ce);
                 MeshLight_init(cur_mesh_light, tri_mesh_ptr);
@@ -964,18 +965,17 @@ void initMeshLights(Scene* scene)
         {
             if(inAMeshLight && cur_mesh_light)
             {
-                printf("adding mesh light\n");
+                MeshLight_normalizeCDF(cur_mesh_light);
                 SceneLights_addLight(cur_mesh_light, MESHLIGHT, sl);
                 inAMeshLight = 0;
                 cur_mesh_light = NULL;
                 cur_light_mesh_ptr = NULL;
             }    
-        }
-        
+        }        
     }
     if(inAMeshLight && cur_mesh_light)
     {
-        printf("adding mesh light\n");
+        MeshLight_normalizeCDF(cur_mesh_light);        
         SceneLights_addLight(cur_mesh_light, MESHLIGHT, sl);
         inAMeshLight = 0;
         cur_mesh_light = NULL;

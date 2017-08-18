@@ -161,7 +161,6 @@ void* threadFunc(void* vargp)
     }
 
 }
-extern int gen_sample_count;
 int main()
 {
     ConfigParams params;
@@ -326,7 +325,6 @@ int main()
         {
             pthread_join(threads[i], NULL);
         }
-        printf("gen_sample_count %d\n", gen_sample_count);
         
         if(SHOW_PROGRESS)
         {

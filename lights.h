@@ -83,7 +83,8 @@ typedef struct MeshLight_s
     float intensity;
     vec3 color;
     int num_triangles;
-    float* triangle_areas; // TODO rename
+    //float* triangle_areas; // TODO rename
+    float* cdf;
     void** triangles;
     ObjectType obj_type;    
 }MeshLight;
@@ -91,6 +92,7 @@ typedef struct MeshLight_s
 void MeshLight_genSample(vec3 sample, vec3 normal, MeshLight* mesh_light);
 void MeshLight_init(MeshLight* mesh_light, Mesh* mesh);
 int MeshLight_addTriangle(MeshLight* mesh_light, Object_t obj);
+void MeshLight_normalizeCDF(MeshLight* mesh_light);
 void MeshLight_destroy(MeshLight* mesh_light);
 
 void getAreaLightNormal(vec3 r, const AreaLight* area_light_ptr, const vec3 hit_point);
