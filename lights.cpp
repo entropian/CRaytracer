@@ -156,32 +156,139 @@ float calcLightDistance(const LightType light_type, const void* light_ptr, const
     return t;
 }
 
-void genMeshLightSample(vec3 sample, vec3 normal, MeshLight* mesh_light)
+void MeshLight_init(MeshLight* mesh_light, Mesh* mesh)
 {
-    float rand_float = (float)rand() / (float)RAND_MAX;
-    int i;
-    float probability_sum = 0.0f;
-    for(i = 0; probability_sum < rand_float; i++)
+    mesh_light->num_triangles = 0;
+    mesh_light->surface_area = 0.0f;
+    printf("num pre allocated %d\n", mesh->num_indices / 3);
+    mesh_light->triangle_areas = (float*)malloc(mesh->num_indices / 3 * sizeof(int));
+    mesh_light->triangles = (void**)malloc(mesh->num_indices / 3 * sizeof(void*));
+
+}
+
+int MeshLight_addTriangle(MeshLight* mesh_light, Object_t obj)
+{
+    vec3 v0, v1, v2;
+    if(obj.type != mesh_light->obj_type)
     {
-        probability_sum += mesh_light->probability_distribution[i];
+        fprintf(stderr, "Geometry type don't match.\n");
+        return 0;
+    }
+    if(obj.type == FLAT_TRIANGLE)
+    {
+        FlatTriangle* tri_ptr = (FlatTriangle*)(obj.ptr);
+        vec3_copy(v0, tri_ptr->v0);
+        vec3_copy(v1, tri_ptr->v1);
+        vec3_copy(v2, tri_ptr->v2);
+    }else if(obj.type == SMOOTH_TRIANGLE)
+    {
+        SmoothTriangle* tri_ptr = (SmoothTriangle*)(obj.ptr);
+        vec3_copy(v0, tri_ptr->v0);
+        vec3_copy(v1, tri_ptr->v1);
+        vec3_copy(v2, tri_ptr->v2);        
+    }else
+    {
+        fprintf(stderr, "Wrong geometry type.\n");
+        return 0;
+    }
+    vec3 e0, e1;
+    vec3_sub(e0, v1, v0);
+    vec3_sub(e1, v2, v0);
+    vec3 cross_product;
+    vec3_cross(cross_product, e0, e1);
+    float tri_area = vec3_length(cross_product) * 0.5f;
+    mesh_light->triangle_areas[mesh_light->num_triangles] = tri_area;
+    mesh_light->triangles[mesh_light->num_triangles] = obj.ptr;
+    mesh_light->surface_area += tri_area;
+    mesh_light->num_triangles++;
+    return 1;
+}
+
+void MeshLight_destroy(MeshLight* mesh_light)
+{
+    if(mesh_light->triangle_areas)
+    {
+        free(mesh_light->triangle_areas);
+    }
+    if(mesh_light->triangles)
+    {
+        free(mesh_light->triangles);
+    }
+    mesh_light->num_triangles = 0;
+    mesh_light->surface_area = 0.0f;
+}
+
+int gen_sample_count = 0;
+void MeshLight_genSample(vec3 sample, vec3 normal, MeshLight* mesh_light)
+{
+    gen_sample_count++;
+    float rand_float = (float)rand() / (float)RAND_MAX;
+    float rand_area = rand_float * mesh_light->surface_area;
+    int i;
+    float area_sum = 0.0f;
+    for(i = 0; area_sum + mesh_light->triangle_areas[i] < rand_area; i++)
+    {
+        area_sum += mesh_light->triangle_areas[i];
     }
    
     // p = (1 - sqrt(r1))v0 + (sqrt(r1)(1 - sqrt(r2))v1 + (r2*sqrt(r1))v2
-    float r1 = (float)rand() / (float)RAND_MAX;;
-    float r2 = (float)rand() / (float)RAND_MAX;;
+    float r1 = (float)rand() / (float)RAND_MAX;
+    float r2 = (float)rand() / (float)RAND_MAX;
     float sqrt_r1 = sqrtf(r1);
     vec3 a, b, c;
+    vec3 v0, v1, v2;
     if(mesh_light->obj_type == FLAT_TRIANGLE)
     {
         FlatTriangle* tri_ptr = (FlatTriangle*)(mesh_light->triangles[i]);
         vec3_scale(a, tri_ptr->v0, 1.0 - sqrt_r1);
-        vec3_scale(b, tri_ptr->v1, sqrt_r1 * sqrtf(r2));
+        vec3_scale(b, tri_ptr->v1, sqrt_r1 * (1.0f - r2));
         vec3_scale(c, tri_ptr->v2, r2 * sqrt_r1);
         vec3 a_plus_b;
         vec3_add(a_plus_b, a, b);
         vec3_add(sample, a_plus_b, c);
         vec3_copy(normal, tri_ptr->normal);
+        vec3_copy(v0, tri_ptr->v0);
+        vec3_copy(v1, tri_ptr->v1);
+        vec3_copy(v2, tri_ptr->v2);
+    }else if(mesh_light->obj_type == SMOOTH_TRIANGLE)
+    {
+        // TODO add interploated normal
+        SmoothTriangle* tri_ptr = (SmoothTriangle*)(mesh_light->triangles[i]);
+        vec3 e0, e1;
+        vec3_sub(e0, tri_ptr->v1, tri_ptr->v0);
+        vec3_sub(e1, tri_ptr->v2, tri_ptr->v0);
+        vec3_cross(normal, e0, e1);
+        vec3_normalize(normal, normal);
+
+        vec3_scale(a, tri_ptr->v0, 1.0 - sqrt_r1);
+        vec3_scale(b, tri_ptr->v1, sqrt_r1 * (1.0f - r2));
+        vec3_scale(c, tri_ptr->v2, r2 * sqrt_r1);
+        vec3 a_plus_b;
+        vec3_add(a_plus_b, a, b);
+        vec3_add(sample, a_plus_b, c);
+        vec3_copy(v0, tri_ptr->v0);
+        vec3_copy(v1, tri_ptr->v1);
+        vec3_copy(v2, tri_ptr->v2);
     }
+    /*
+    AABB aabb;
+    vec3_copy(aabb.min, v0);
+    vec3_copy(aabb.max, v0);
+    AABB_coverPoint(&aabb, v1);
+    AABB_coverPoint(&aabb, v2);
+    vec3 offset = {K_EPSILON, K_EPSILON, K_EPSILON};
+    vec3_sub(aabb.min, aabb.min, offset);
+    vec3_add(aabb.max, aabb.max, offset);
+
+    if(!isInsideAABB(&aabb, sample))
+    {
+        printf("not inside aabb\n");
+        printVec3WithText("sample", sample);
+        printVec3WithText("v0", v0);
+        printVec3WithText("v1", v1);    
+        printVec3WithText("v2", v2);
+    }
+    */
 }
 void getEnvLightIncRadiance(vec3 r, const vec3 dir, EnvLight* env_light)
 {
@@ -271,3 +378,4 @@ void EnvLight_destroy(EnvLight* env_light)
     }
     env_light->intensity = 0.0f;
 }
+

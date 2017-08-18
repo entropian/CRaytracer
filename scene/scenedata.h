@@ -294,6 +294,19 @@ SceneLights SceneLights_create()
     return sl;
 }
 
+int SceneLights_addLight(void* light_ptr, LightType light_type, SceneLights* sl)
+{
+    if(sl->num_lights == MAX_LIGHTS)
+    {
+        return 0;
+    }
+    sl->shadow[sl->num_lights] = true;
+    sl->light_types[sl->num_lights] = light_type;
+    sl->light_ptrs[sl->num_lights] = light_ptr;
+    sl->num_lights++;
+    return 1;
+}
+
 Material* tmp_mat = (Material*)malloc(sizeof(Material));
 vec3 color = {0.4f, 0.4f, 0.4f};
 

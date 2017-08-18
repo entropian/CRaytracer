@@ -1,14 +1,11 @@
-Environment map
+mesh light
+glossy object edge don't look right. lack fresnel
 multithreading obj loading
 
 Use a pointer into mesh index array instead of using three ints for indices
 Irradiance caching
 SIMD ray triangle intersection for uniform grid
-Sample direct and indirect illumination separately. Done, now fix it.
-Cook-Torrance
-Figure out how to load san miguel.
 Optimize mesh loading
-what's the relationship between kd, ks and kr (and kt)?
 add normal type to torus
 set default background color in scene file
 Combine light pointer and light type into a struct?
@@ -18,30 +15,9 @@ the eventual image plane struct could have a samples pointer of its own.
 Update the clean up section.
 
 
-
-SSE BVH:
-Try converting BVH to an array based representation?
 Look into stack based traversal
 
 
 Concerns:
 Cache? Alignment?
-
-Features:
-each BVH node contains 4 bounding boxes instead of one
-four child pointers and the three split axes are stored for each inner node
-Construct a sorted index array for triangles?
-
-Questions:
-Not sure why the split axes are needed.
-    Answer: Storing the split axes allows exploiting the spatial order of the boxes for a more efficient
-    pruning using the sign of the ray direction during tree traversal. However, the advantaged gain by this compared to
-    sorting by intersection distance is small. So perhaps I won't need to store the axes in the nodes.
-The paper is big on storing leaf informations elsewhere and keeping the BVH small.
-How to deal with different primitives
-    1. One option is to split the leaf, so that each new leaf node only contains one type of primitive
-SIMD triangle intersection -- is it worth the trouble?
-     try testing by shooting rays at a bunch of triangles with no accelerator
-     doesn't seem worth it right now, at least not at the level that I can get it to.
-
 

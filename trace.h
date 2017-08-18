@@ -503,13 +503,15 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
         }
         if(min_sr.mat->mat_type == EMISSIVE)
         {
+            //TODO this
 #ifdef SEPARATE_DIRECT_INDIRECT
             if(depth == MAX_DEPTH - 1)
             {
                 vec3_copy(radiance, BLACK);
             }else
             {
-                vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke);
+                float ndotwi = clamp(-vec3_dot(min_sr.normal, ray.direction), 0.0f, 1.0f);
+                vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke * ndotwi);
             }
 #else
             vec3_scale(radiance, min_sr.mat->ce, min_sr.mat->ke);
@@ -541,47 +543,62 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                             }
                         }else if(sl->light_types[i] == MESHLIGHT)
                         {
+                            //printf("here\n");
                             MeshLight* mesh_light_ptr = (MeshLight*)(sl->light_ptrs[i]);                            
                             // 1. Generate sample
                             vec3 sample, sample_normal;
                             vec3 hit_to_sample;
                             vec3 sample_to_hit;
-                            do{
-                                genMeshLightSample(sample, sample_normal, mesh_light_ptr);
+                            //do{
+                            MeshLight_genSample(sample, sample_normal, mesh_light_ptr);
                                 // 2. check if hit surface faces sample point. if not go back to 1
 
-                                vec3_sub(hit_to_sample, sample, min_sr.hit_point);
+                            //vec3_sub(hit_to_sample, sample, min_sr.hit_point);
+                            vec3_sub(hit_to_sample, min_sr.hit_point, sample);
                                 // 3. check if sample surface faces hit point. if not go back to 1
 
-                                vec3_negate(sample_to_hit, hit_to_sample);
+                            vec3_negate(sample_to_hit, hit_to_sample);
+                                /*
                             }while(vec3_dot(sample_normal, hit_to_sample) <= 0.0f ||
                                    vec3_dot(min_sr.normal, sample_to_hit) <= 0.0f);
+                                */
                             // 4. check if sample point is visible from hit point. if not, terminate
-                            Ray ray;
-                            vec3_copy(ray.origin, min_sr.hit_point);
-                            vec3_normalize(ray.direction, sample_to_hit);
-                            float light_dist = vec3_length(sample_to_hit);
-                            float t = shadowIntersectTest(so, ray, light_dist);                            
-                            // 5. shade
-                            if(t + K_EPSILON >= light_dist && min_sr.mat->mat_type == MATTE)
+                            if(vec3_dot(sample_normal, hit_to_sample) > 0.0f &&
+                                   vec3_dot(min_sr.normal, sample_to_hit) > 0.0f)
                             {
-                                vec3 f;
-                                diffuseBRDF(f, &min_sr);
-                                // Incident radiance
-                                vec3 inc_radiance = {0.0f, 0.0f, 0.0f};
-                                vec3_scale(inc_radiance, mesh_light_ptr->color, mesh_light_ptr->intensity);
-                                vec3 wi, neg_wi;
-                                vec3_normalize(wi, sample_to_hit);
-                                vec3_normalize(neg_wi, hit_to_sample);
-                                float geo_term = vec3_dot(sample_normal, neg_wi) * vec3_dot(min_sr.normal, wi) /
-                                    vec3_dot(sample_to_hit, sample_to_hit);
+                                Ray ray;
+                                vec3_copy(ray.origin, min_sr.hit_point);
+                                vec3_normalize(ray.direction, sample_to_hit);
+                                float light_dist = vec3_length(sample_to_hit);
+                                float t = shadowIntersectTest(so, ray, light_dist);                            
+                                // 5. shade
+                                if(min_sr.mat->mat_type == MATTE)
+                                {
+                                    if(t + K_EPSILON >= light_dist)
+                                    {
+                                        vec3 f;
+                                        diffuseBRDF(f, &min_sr);
+                                        // Incident radiance
+                                        vec3 inc_radiance = {0.0f, 0.0f, 0.0f};
+                                        vec3_scale(inc_radiance, mesh_light_ptr->color, mesh_light_ptr->intensity);
+                                        vec3 wi, neg_wi;
+                                        vec3_normalize(wi, sample_to_hit);
+                                        vec3_normalize(neg_wi, hit_to_sample);
+                                        float geo_term = vec3_dot(sample_normal, neg_wi) * vec3_dot(min_sr.normal, wi) /
+                                            vec3_dot(sample_to_hit, sample_to_hit);
 
-                                // f * L * G / pdf
-                                vec3 tmp;
-                                vec3_mult(tmp, f, inc_radiance);
-                                float pdf = 1.0f / mesh_light_ptr->surface_area;
-                                vec3_scale(tmp, tmp, geo_term * 1.0f / pdf);
-                                vec3_add(radiance, radiance, tmp);
+                                        // f * L * G / pdf
+                                        vec3 tmp;
+                                        vec3_mult(tmp, f, inc_radiance);
+                                        float pdf = 1.0f / mesh_light_ptr->surface_area;
+                                        vec3_scale(tmp, tmp, geo_term * 1.0f / pdf);
+                                        if(tmp[0] < 0.0f || tmp[1] < 0.0f || tmp[2] < 0.0f)
+                                        {
+                                            printf("negative\n");
+                                        }
+                                        vec3_add(radiance, radiance, tmp);
+                                    }
+                                }
                             }
                         }
                     }

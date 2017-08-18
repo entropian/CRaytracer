@@ -233,7 +233,6 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
                 mat3_mult_vec3(new_face_normal, normal_mat, face_normal);
                 vec3_normalize(new_face_normal, new_face_normal);
                 vec3_copy(mesh_tri->normal, new_face_normal);                     
-                //mesh_tri->shadow = mesh_entry.shadow;
                 mesh_tri->mesh_ptr = mesh;
                 mesh_tri->mat = mat_for_mesh;
                 Object_t obj = {FLAT_TRIANGLE, mesh_tri};
@@ -250,7 +249,6 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
                 vec3_copy(mesh_tri->v1, new_v1);
                 vec3_copy(mesh_tri->v2, new_v2);
 
-                //mesh_tri->shadow = mesh_entry.shadow;
                 mesh_tri->mesh_ptr = mesh;
                 mesh_tri->mat = mat_for_mesh;
                 Object_t obj = {SMOOTH_TRIANGLE, mesh_tri};
@@ -464,16 +462,6 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     }
                     Scene_addMaterial(scene, &material, obj_mat->name);
                 }
-                /*
-                for(int i = 0; i < scene->materials.size; i++)
-                {
-                    Material* mat_ptr = &(scene->materials.materials[i]);
-                    if(mat_ptr->mat_type == TRANSPARENT)
-                    {
-                        printMaterial(mat_ptr);
-                    }
-                }
-                */
                 MatTexNamePair *pair_array = (MatTexNamePair*)DBuffer_data_ptr(mat_tex_pairs);
                 const unsigned int num_pair = DBuffer_size(mat_tex_pairs);
                 procMatTexPairs(scene, pair_array, num_pair);
@@ -650,7 +638,7 @@ void initAreaLights(SceneLights* sl)
 
 void initEnvLight(SceneLights* sl)
 {
-    /*
+
     if(sl->num_lights == MAX_LIGHTS){return;}
     EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
     env_light->type = CONSTANT;
@@ -665,8 +653,8 @@ void initEnvLight(SceneLights* sl)
     sl->light_types[sl->num_lights] = ENVLIGHT;
     (sl->num_lights)++;
     sl->env_light = env_light;
-    */
-    
+
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
     env_light->type = CUBEMAP;
@@ -688,13 +676,14 @@ void initEnvLight(SceneLights* sl)
     sl->light_types[sl->num_lights] = ENVLIGHT;
     (sl->num_lights)++;
     sl->env_light = env_light;
+    */
 }
 
 void initAmbLight(SceneLights *sl)
 {
     sl->amb_light = (AmbientLight*)malloc(sizeof(AmbientLight));
     vec3_copy(sl->amb_light->color, WHITE);
-    sl->amb_light->intensity = 0.0f;
+    sl->amb_light->intensity = 1.0f;
     sl->amb_light->amb_occlusion = false;
 }
 
@@ -781,11 +770,6 @@ int calcCausticObjectsAABB(AABB *aabb, const SceneObjects *so)
     for(int i = so->num_non_grid_obj; i < so->num_obj; i++)
     {
         Object_t obj = so->objects[i];
-        if(i == 3325724)
-        {
-            // TODO problem
-            printf("here! fine!\n");
-        }
         Material *mat = getObjectMatPtr(obj);
         if(!mat)
         {
@@ -795,7 +779,7 @@ int calcCausticObjectsAABB(AABB *aabb, const SceneObjects *so)
         if(mat->mat_type == REFLECTIVE || mat->mat_type == TRANSPARENT)
         {
             if(obj.type != FLAT_TRIANGLE && obj.type != SMOOTH_TRIANGLE)
-            {
+            {                
                 if(cur_mesh_ptr)
                 {
                     aabb[caustic_obj_count] = cur_aabb;
@@ -914,6 +898,90 @@ void destroySceneAccel(Scene *scene)
     }
 }
 
+// Assumes that triangles from a mesh are in a contiguous chunk
+void initMeshLights(Scene* scene)
+{
+    MeshLight* cur_mesh_light;
+    Mesh* cur_light_mesh_ptr = NULL;
+    SceneObjects* so = &(scene->objects);
+    SceneLights* sl = &(scene->lights);
+    int inAMeshLight = 0;
+    for(int i = 0; i < so->num_obj; i++)
+    {
+        Object_t obj = so->objects[i];
+        Material* mat = getObjectMatPtr(obj);
+        if(!mat)
+        {
+            fprintf(stderr, "Null material pointer.\n");
+            continue;
+        }
+        if(mat->mat_type == EMISSIVE && (obj.type == FLAT_TRIANGLE || obj.type == SMOOTH_TRIANGLE))
+        {
+            Mesh* tri_mesh_ptr = NULL;
+            vec3 v0, v1, v2;
+            if(obj.type == FLAT_TRIANGLE)
+            {
+                FlatTriangle* tri_ptr = (FlatTriangle*)(obj.ptr);
+                tri_mesh_ptr = tri_ptr->mesh_ptr;
+                vec3_copy(v0, tri_ptr->v0);
+                vec3_copy(v1, tri_ptr->v1);
+                vec3_copy(v2, tri_ptr->v2);
+            }else if(obj.type == SMOOTH_TRIANGLE)
+            {
+                SmoothTriangle* tri_ptr = (SmoothTriangle*)(obj.ptr);
+                tri_mesh_ptr = tri_ptr->mesh_ptr;
+                vec3_copy(v0, tri_ptr->v0);
+                vec3_copy(v1, tri_ptr->v1);
+                vec3_copy(v2, tri_ptr->v2);
+            }
+                
+            if(!inAMeshLight)
+            {
+                // TODO clean up
+                // Encountering a new mesh light when not previously in one
+                cur_light_mesh_ptr = tri_mesh_ptr;
+                cur_mesh_light = (MeshLight*)malloc(sizeof(MeshLight));
+                cur_mesh_light->intensity = mat->ke;
+                vec3_copy(cur_mesh_light->color, mat->ce);
+                MeshLight_init(cur_mesh_light, tri_mesh_ptr);
+                cur_mesh_light->obj_type = obj.type;
+                cur_light_mesh_ptr = tri_mesh_ptr;
+                inAMeshLight = 1;                
+            }else if(cur_light_mesh_ptr != tri_mesh_ptr)
+            {
+                // Encountering a new mesh light when already in another one
+                // TODO what happens two mesh lights with the same mesh are next to each other?
+                cur_light_mesh_ptr = tri_mesh_ptr;
+                SceneLights_addLight(cur_mesh_light, MESHLIGHT, sl);
+                cur_mesh_light->obj_type = obj.type;
+                cur_mesh_light = (MeshLight*)malloc(sizeof(MeshLight));
+                cur_mesh_light->intensity = mat->ke;
+                vec3_copy(cur_mesh_light->color, mat->ce);
+                MeshLight_init(cur_mesh_light, tri_mesh_ptr);
+            }
+            MeshLight_addTriangle(cur_mesh_light, obj);
+        }else
+        {
+            if(inAMeshLight && cur_mesh_light)
+            {
+                printf("adding mesh light\n");
+                SceneLights_addLight(cur_mesh_light, MESHLIGHT, sl);
+                inAMeshLight = 0;
+                cur_mesh_light = NULL;
+                cur_light_mesh_ptr = NULL;
+            }    
+        }
+        
+    }
+    if(inAMeshLight && cur_mesh_light)
+    {
+        printf("adding mesh light\n");
+        SceneLights_addLight(cur_mesh_light, MESHLIGHT, sl);
+        inAMeshLight = 0;
+        cur_mesh_light = NULL;
+    }
+}
+
 void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
 {
     // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights
@@ -922,6 +990,7 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
     SceneObjects* so = &(scene->objects);
     so->accel = accel_type;
     mvNonGridObjToStart(so);
+    initMeshLights(scene);
     printf("num_obj %d\n", so->num_obj);
     printf("non bounded obj %d\n", so->num_non_grid_obj);
     // NOTE: taken out to main so that projection map can be built before the

@@ -1,13 +1,13 @@
 scene_file test_scene2.txt
 window_width  960
 window_height  960
-image_width  960
-image_height 960
+image_width  480
+image_height 480
 num_samples  1600
 num_sample_sets 83
 max_depth  6
 trace_type PATHTRACE
-accel_struct BVH4
+accel_struct GRID
 num_photons 1000000
 caustic_map no
 num_caustic_photons 2000000

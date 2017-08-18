@@ -190,6 +190,17 @@ void addToAABB(AABB* r, const AABB* a)
     if(a->max[1] > r->max[1]){r->max[1] = a->max[1];}
     if(a->max[2] > r->max[2]){r->max[2] = a->max[2];}        
 }
+
+void AABB_coverPoint(AABB *r, vec3 p)
+{
+    if(p[0] < r->min[0]){r->min[0] = p[0];}
+    if(p[1] < r->min[1]){r->min[1] = p[1];}
+    if(p[2] < r->min[2]){r->min[2] = p[2];}
+
+    if(p[0] > r->max[0]){r->max[0] = p[0];}
+    if(p[1] > r->max[1]){r->max[1] = p[1];}
+    if(p[2] > r->max[2]){r->max[2] = p[2];}        
+}
    
 int testAABB(AABB a, AABB b)
 {

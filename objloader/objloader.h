@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
+#include <pthread.h>
 #include "dbuffer.h"
 #include "hashindex.h"
 
@@ -309,6 +311,72 @@ static int UpdateVertexCache(DBuffer* positions, DBuffer* normals, DBuffer* texc
     HashIndex_add(hash_index, key, index);
     DBuffer_push(*vi_cache, *vi);
     return index;
+}
+const int OBJ_MAX_JOBS = 1000;
+typedef struct OBJJobQueue_s
+{
+    DBuffer jobs[OBJ_MAX_JOBS];
+    int tail;
+    int head;
+    pthread_mutex_t mtx;
+}OBJJobQueue;
+
+static int OBJ_addJob(DBuffer job, OBJJobQueue* job_queue)
+{
+    pthread_mutex_lock(&(job_queue->mtx));
+    if(job_queue->tail - job_queue->head == OBJ_MAX_JOBS)
+    {
+        pthread_mutex_unlock(&(job_queue->mtx));
+        return 0;
+    }
+    if(job_queue->tail + job_queue->head == OBJ_MAX_JOBS)
+    {
+        for(int i = 0; i < job_queue->tail; i++)
+        {
+            job_queue->jobs[i] = job_queue->jobs[job_queue->head + i];
+            job_queue->jobs[job_queue->head + i].data = NULL;
+            job_queue->jobs[job_queue->head + i].max = 0;
+            job_queue->jobs[job_queue->head + i].size = 0;
+            job_queue->jobs[job_queue->head + i].element_size = 0;
+        }
+        job_queue->tail -= job_queue->head;
+        job_queue->head = 0;
+    }
+    job_queue->jobs[job_queue->tail] = job;
+    job_queue->tail += 1;    
+    pthread_mutex_unlock(&(job_queue->mtx));
+    return 1;
+}
+
+static int OBJ_getJob(DBuffer* in_face_group, OBJJobQueue* job_queue)
+{
+    pthread_mutex_lock(&(job_queue->mtx));
+    if(job_queue->tail - job_queue->head == 0)
+    {
+        pthread_mutex_unlock(&(job_queue->mtx));
+        return 0;
+    }
+    *in_face_group = job_queue->jobs[job_queue->head];    
+    job_queue->jobs[job_queue->head].data = NULL;
+    job_queue->jobs[job_queue->head].max = 0;
+    job_queue->jobs[job_queue->head].size = 0;
+    job_queue->jobs[job_queue->head].element_size = 0;    
+    job_queue->head += 1;    
+    pthread_mutex_unlock(&(job_queue->mtx));
+    return 1;
+}
+
+typedef struct OBJThreadData_s
+{
+    DBuffer* in_positions;
+    DBuffer* in_normals;
+    DBuffer* in_texcoords;
+    OBJJobQueue* job_queue;
+}OBJThreadData;
+
+static void* OBJ_threadFunc(void* vargp)
+{
+    // Need to reconsider
 }
 
 static bool exportGroupToShape(OBJShape* shape, const DBuffer* in_positions, const DBuffer* in_normals,
