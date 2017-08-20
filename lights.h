@@ -83,7 +83,6 @@ typedef struct MeshLight_s
     float intensity;
     vec3 color;
     int num_triangles;
-    //float* triangle_areas; // TODO rename
     float* cdf;
     void** triangles;
     ObjectType obj_type;    

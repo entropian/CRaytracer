@@ -1,4 +1,4 @@
-mesh light
+dragon ugh
 glossy object edge don't look right. lack fresnel
 multithreading obj loading
 

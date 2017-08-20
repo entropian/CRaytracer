@@ -48,10 +48,24 @@ void calcTriangleNormals(Mesh* mesh)
                     mesh->positions[index+2]);
         vec3 face_normal;
         calcTriangleNormal(face_normal, v0, v1, v2);
+        /*
+        if(face_normal[0] == 0.0f && face_normal[1] == 0.0f && face_normal[2])
+        {
+            v0[0] += 2*K_EPSILON;
+            v1[1] += 2*K_EPSILON;
+            v2[2] += 2*K_EPSILON;
+            calcTriangleNormal(face_normal, v0, v1, v2);
+        }
+        */
         mesh->face_normals[num_face_normals++] = face_normal[0];
         mesh->face_normals[num_face_normals++] = face_normal[1];
         mesh->face_normals[num_face_normals++] = face_normal[2];
-
+        /*
+        if(face_normal[0] == 0.0f && face_normal[1] == 0.0f && face_normal[2])
+        {
+            printf("degenerate face normal\n");
+        }
+        */
     }
     mesh->num_face_normals = num_face_normals;
 
@@ -88,6 +102,10 @@ void calcTriangleNormals(Mesh* mesh)
     {
         vec3 normal = {mesh->normals[i], mesh->normals[i+1], mesh->normals[i+2]};
         vec3_normalize(normal, normal);
+        if(normal[0] == 0.0f && normal[1] == 0.0f && normal[2])
+        {
+            printf("degenerate calc normal\n");
+        }        
         mesh->normals[i] = normal[0];
         mesh->normals[i+1] = normal[1];
         mesh->normals[i+2] = normal[2];        
@@ -505,8 +523,47 @@ void loadSceneFile(Scene* scene, const char* scenefile)
 
 void initAreaLights(SceneLights* sl)
 {
+ if(sl->num_lights == MAX_LIGHTS){return;}
+    AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
+    // Cornell rectangle light intensity
+    area_light_ptr->intensity = 55.0f;
+    //area_light_ptr->intensity = 20.0f;
+    // Photon map intensity
+    //area_light_ptr->intensity = 100.0f;    
+    vec3_assign(area_light_ptr->color, 1.0f, 0.85f, 0.5f);
+    vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
+
+    // Rectangle
+    Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
+    rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
+    rect->shadow = false;
+    vec3_assign(rect->point, 213.0f, 547.0f, -227.0f);
+    vec3_assign(rect->width, 130.0f, 0.0f, 0.0f);
+    vec3_assign(rect->height, 0.0f, 0.0f, -105.0f);    
+    vec3_copy(rect->normal, DOWN);
+    vec3_copy(rect->mat->ce, area_light_ptr->color);
+    rect->mat->ke = area_light_ptr->intensity;    
+    rect->mat->mat_type = EMISSIVE;
+    float width = sqrt(vec3_dot(rect->width, rect->width));
+    float height = sqrt(vec3_dot(rect->height, rect->height));
+
+    area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
     
+    Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
+    unit_square_samples->samples = NULL;
+    genMultijitteredSamples(unit_square_samples);
+
+    area_light_ptr->pdf = 1.0f/(width * height);
+    area_light_ptr->samples2D = unit_square_samples;
+    area_light_ptr->samples3D = NULL;
+    area_light_ptr->obj_ptr = rect;
+    area_light_ptr->obj_type = RECTANGLE;
+    sl->shadow[sl->num_lights] = true;    
+    sl->light_ptrs[sl->num_lights] = area_light_ptr;
+    sl->light_types[sl->num_lights] = AREALIGHT;
+(sl->num_lights)++;
     // Area light
+    /*
     if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
@@ -519,7 +576,7 @@ void initAreaLights(SceneLights* sl)
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
     // Rectangle
-    Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
+    rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
     rect->shadow = false;
 
@@ -527,7 +584,7 @@ void initAreaLights(SceneLights* sl)
     vec3_assign(rect->point, 0.0f, 15.0f, -2.0f);
     vec3_assign(rect->width, 4.0f, -4.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 0.0f, 4.0f);
-
+    */
     //vec3_assign(rect->point, 213.0f, 800.0f, -227.0f);
     /*
     // pm test 
@@ -535,7 +592,7 @@ void initAreaLights(SceneLights* sl)
     vec3_assign(rect->width, 300.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 0.0f, -250.0f);
     */
-
+    /*
     //vec3_copy(rect->normal, DOWN);
     vec3_cross(rect->normal, rect->width, rect->height);
     vec3_normalize(rect->normal, rect->normal);
@@ -562,10 +619,14 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
-
-
-    // Area light 2
+    */
     /*
+    // Area light 2
+    Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
+    unit_square_samples->samples = NULL;
+    genMultijitteredSamples(unit_square_samples);
+    // Rectangle
+    
     if(sl->num_lights == MAX_LIGHTS){return;}    
     area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     area_light_ptr->intensity = 55.0f;
@@ -583,8 +644,8 @@ void initAreaLights(SceneLights* sl)
     vec3_copy(rect->mat->ce, area_light_ptr->color);
     rect->mat->ke = area_light_ptr->intensity;
     rect->mat->mat_type = EMISSIVE;
-    width = sqrt(vec3_dot(rect->width, rect->width));
-    height = sqrt(vec3_dot(rect->height, rect->height));
+    float width = sqrt(vec3_dot(rect->width, rect->width));
+    float height = sqrt(vec3_dot(rect->height, rect->height));
     area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
 
     area_light_ptr->pdf = 1.0f/(width * height);
@@ -642,7 +703,7 @@ void initEnvLight(SceneLights* sl)
     if(sl->num_lights == MAX_LIGHTS){return;}
     EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
     env_light->type = CONSTANT;
-    env_light->intensity = 1.0f;
+    env_light->intensity = 0.0f;
     vec3_copy(env_light->color, WHITE);
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
@@ -754,7 +815,7 @@ void initSceneLights(SceneLights* sl)
     (sl->num_lights)++;    
     */
 
-    //initAreaLights(sl);
+    initAreaLights(sl);
     initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);

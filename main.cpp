@@ -250,7 +250,8 @@ int main()
     film.frame_res_width = params.image_width;
     film.frame_res_height = params.image_height;
     film.num_pixels = num_pixels;
-    film.fov = 70.0f / 180.0f * PI; // TODO
+    //film.fov = 70.0f / 180.0f * PI; // TODO
+    film.fov = 40.0f / 180.0f * PI; // TODO
     Camera *camera = &(scene.camera);
     calcFilmDimension(&film, camera);
     moveSamples2D(&(film.samples), &unit_square_samples);

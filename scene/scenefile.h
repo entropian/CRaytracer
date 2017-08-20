@@ -53,6 +53,10 @@ bool getPresetColor(vec3 r, const char buffer[])
     {
         vec3_copy(r, GREY);
         return true;
+    }else if(strcmp(buffer, "MED_ORCHID") == 0)
+    {
+        vec3_copy(r, MED_ORCHID);
+        return true;
     }
     return false;
 }
