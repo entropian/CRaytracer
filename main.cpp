@@ -167,16 +167,6 @@ void* threadFunc(void* vargp)
 int saveImageState(float* color_buffer, int num_samples, int width, int height, const char* file_name)
 {
     FILE *fp;
-#ifdef _MSC_VER
-	fopen_s(&fp, file_name, "wb");
-#else
-    fp = fopen(file_name, "wb");
-#endif
-    if(!fp)
-    {
-        fprintf(stderr, "Failed to open file %s\n", file_name);
-        return 0;
-    }
     fprintf(fp, "%d\n", num_samples);
     fprintf(fp, "%d %d\n", width, height);
     int size = width * height * 3;
@@ -203,46 +193,13 @@ void ppmToImageState()
     }
     free(image);
     saveImageState(buffer, num_samples, width, height, "savestate.is");
-    /*
-    FILE *fp;
-    const char* file_name = "savestate.is";
-#ifdef _MSC_VER
-	fopen_s(&fp, file_name, "wb");
-#else
-    fp = fopen(file_name, "wb");
-#endif
-    if(!fp)
-    {
-        fprintf(stderr, "Failed to open file %s\n", file_name);
-        return;
-    }
-
-    fprintf(fp, "%d\n", num_samples);
-    fprintf(fp, "%d %d\n", width, height);
-    int result = fwrite(buffer, sizeof(float), size, fp);
-
-    if(result != size)
-    {
-        fprintf(stderr, "Write error.\n");
-    }
-    fclose(fp);
-    */
     free(buffer);
 }
 
 int readImageState(float** color_buffer, int* num_samples, int* size, int* width, int* height, const char* file_name)
 {
 	FILE *fp;
-#ifdef _MSC_VER
-	fopen_s(&fp, file_name, "r");
-#else
-    fp = fopen(file_name, "r");
-#endif
-    if(!fp)
-    {
-        fprintf(stderr, "Failed to open file %s\n", file_name);
-        return 0;
-    }
+    openFile(&fp, file_name, "r");
     int buffer_num_samples, buffer_size, buffer_width, buffer_height;
     fscanf(fp, "%d\n", &buffer_num_samples);
     fscanf(fp, "%d %d\n", &buffer_width, &buffer_height);

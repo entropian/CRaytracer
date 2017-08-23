@@ -325,15 +325,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
     }
     
     FILE* fp;
-#ifdef _MSC_VER
-    fopen_s(&fp, scenefile, "r");
-#else
-    fp = fopen(scenefile, "r");
-#endif
-    if(!fp)
-    {
-        return;
-    }
+    openFile(&fp, scenefile, "r");
     char buffer[128];
     // Setup camera
     initPinholeCameraDefault(&(scene->camera));

@@ -66,3 +66,18 @@ static void stringNCopy(char* dest, const int max_len, const char*src, const int
     strncpy(dest, src, len);
 #endif
 }
+
+static int openFile(FILE** fp, const char* file_name, const char* mode)
+{
+#ifdef _MSC_VER
+	fopen_s(fp, file_name, mode);
+#else
+    *fp = fopen(file_name, mode);
+#endif
+    if(!fp)
+    {
+        fprintf(stderr, "Failed to open file %s\n", file_name);
+        return 0;
+    }
+    return 1;
+}

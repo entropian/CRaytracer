@@ -1,5 +1,6 @@
 #pragma once
 #include <stdio.h>
+#include "util/util.h"
 
 int PPM_write(const char *file_name, const unsigned char *image, const int image_size, 
 			   const int width, const int height)
@@ -12,16 +13,7 @@ int PPM_write(const char *file_name, const unsigned char *image, const int image
 	}
 
 	FILE *fp;
-#ifdef _MSC_VER
-	fopen_s(&fp, file_name, "wb");
-#else
-    fp = fopen(file_name, "wb");
-#endif
-    if(!fp)
-    {
-        fprintf(stderr, "Failed to open file %s\n", file_name);
-        return 0;
-    }
+    openFile(&fp, file_name, "wb");
 
 	// Header
 	fprintf(fp, "P6\n");
@@ -36,16 +28,7 @@ int PPM_write(const char *file_name, const unsigned char *image, const int image
 int PPM_read(unsigned char** image, int* image_size, int* width, int* height, const char* file_name)
 {
 	FILE *fp;
-#ifdef _MSC_VER
-	fopen_s(&fp, file_name, "r");
-#else
-    fp = fopen(file_name, "r");
-#endif
-    if(!fp)
-    {
-        fprintf(stderr, "Failed to open file %s\n", file_name);
-        return 0;
-    }
+    openFile(&fp, file_name, "r");
 
     char buffer[16];
     int image_width, image_height, tmp;
