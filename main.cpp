@@ -94,6 +94,7 @@ int JobQueue_getJob(JobQueue* job_queue, int* start, int* end)
 typedef struct ThreadData_s
 {
     int p;
+    int prev_num_samples;
     unsigned char* set_buffer;
     Film* film;
     Camera* camera;
@@ -138,8 +139,8 @@ void* threadFunc(void* vargp)
                 if(thread_data->params->caustic_map)
                 {
                     trace_args.caustic_map = thread_data->caustic_map;
-                    vec3_assign(trace_args.caustic_rad,
-                                thread_data->caustic_buffer[i*3], thread_data->caustic_buffer[i*3+1], thread_data->caustic_buffer[i*3+2]);
+                    vec3_assign(trace_args.caustic_rad, thread_data->caustic_buffer[i*3],
+                                thread_data->caustic_buffer[i*3+1], thread_data->caustic_buffer[i*3+2]);
                 }
             }
 
@@ -150,8 +151,9 @@ void* threadFunc(void* vargp)
             thread_data->color_buffer[i*3] += color[0];
             thread_data->color_buffer[i*3 + 1] += color[1];
             thread_data->color_buffer[i*3 + 2] += color[2];
-            vec3_assign(color, thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 +1], thread_data->color_buffer[i*3 + 2]);
-            vec3_scale(color, color, 1/(float)(thread_data->p+1));
+            vec3_assign(color, thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 +1],
+                        thread_data->color_buffer[i*3 + 2]);
+            vec3_scale(color, color, 1/(float)(thread_data->p+1 + thread_data->prev_num_samples));
             maxToOne(color, color);
 
             thread_data->image[i*3] = (char)(color[0] * 255.0f);
@@ -161,8 +163,120 @@ void* threadFunc(void* vargp)
     }
 
 }
-int main()
+
+int saveImageState(float* color_buffer, int num_samples, int width, int height, const char* file_name)
 {
+    FILE *fp;
+#ifdef _MSC_VER
+	fopen_s(&fp, file_name, "wb");
+#else
+    fp = fopen(file_name, "wb");
+#endif
+    if(!fp)
+    {
+        fprintf(stderr, "Failed to open file %s\n", file_name);
+        return 0;
+    }
+    fprintf(fp, "%d\n", num_samples);
+    fprintf(fp, "%d %d\n", width, height);
+    int size = width * height * 3;
+    int result = fwrite(color_buffer, sizeof(float), size, fp);
+    if(result != size)
+    {
+        fprintf(stderr, "Write error.\n");
+    }
+    fclose(fp);
+    return 1;
+}
+
+void ppmToImageState()
+{
+    unsigned char* image;
+    int width, height, size;
+    PPM_read(&image, &size, &width, &height, "output.ppm");
+    float* buffer = (float*)malloc(size * sizeof(float));
+    int num_samples = 10000;
+    int i;
+    for(i = 0; i < size; i++)
+    {
+        buffer[i] = (float)(image[i]) / 255.0f * num_samples;
+    }
+    free(image);
+    saveImageState(buffer, num_samples, width, height, "savestate.is");
+    /*
+    FILE *fp;
+    const char* file_name = "savestate.is";
+#ifdef _MSC_VER
+	fopen_s(&fp, file_name, "wb");
+#else
+    fp = fopen(file_name, "wb");
+#endif
+    if(!fp)
+    {
+        fprintf(stderr, "Failed to open file %s\n", file_name);
+        return;
+    }
+
+    fprintf(fp, "%d\n", num_samples);
+    fprintf(fp, "%d %d\n", width, height);
+    int result = fwrite(buffer, sizeof(float), size, fp);
+
+    if(result != size)
+    {
+        fprintf(stderr, "Write error.\n");
+    }
+    fclose(fp);
+    */
+    free(buffer);
+}
+
+int readImageState(float** color_buffer, int* num_samples, int* size, int* width, int* height, const char* file_name)
+{
+	FILE *fp;
+#ifdef _MSC_VER
+	fopen_s(&fp, file_name, "r");
+#else
+    fp = fopen(file_name, "r");
+#endif
+    if(!fp)
+    {
+        fprintf(stderr, "Failed to open file %s\n", file_name);
+        return 0;
+    }
+    int buffer_num_samples, buffer_size, buffer_width, buffer_height;
+    fscanf(fp, "%d\n", &buffer_num_samples);
+    fscanf(fp, "%d %d\n", &buffer_width, &buffer_height);
+    buffer_size = buffer_width * buffer_height * 3;
+    float* buffer = (float*)malloc(buffer_size * sizeof(float));
+    int result = fread(buffer, sizeof(float), buffer_size, fp);
+    printf("result %d\n", result);
+    printf("buffer_size %d\n", buffer_size);
+    if(result != buffer_size)
+    {
+        fprintf(stderr, "Read error\n");
+    }
+    *color_buffer = buffer;
+    *num_samples = buffer_num_samples;
+    *size = result;
+    *width = buffer_width;
+    *height = buffer_height;
+    fclose(fp);
+}
+    
+int main(int argc, char** argv)
+{
+    bool using_image_state = false;
+    char image_state_file[256];
+    if(argc > 2)
+    {
+        printf("argv[1] %s\n", argv[1]);
+        if(strcmp(argv[1], "-s") == 0)
+        {
+            using_image_state = true;
+            stringCopy(image_state_file, 256, argv[2]);
+        }
+    }
+    
     ConfigParams params;
     parseConfigFile(&params);
     MAX_DEPTH = params.max_depth;
@@ -173,11 +287,47 @@ int main()
     GlViewport viewport;
     initViewport(&viewport);
 
+
     unsigned char *image;
     int num_pixels = params.image_width * params.image_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
-
-    float* color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+    /*
+    {
+        float* buffer;
+        int num_samples, width, height, size;
+        readImageState(&buffer, &num_samples, &size, &width, &height, "savestate.is");
+        if(size != num_pixels*3)
+        {
+            printf("wrong size\n");
+        }
+        for(int i = 0; i < size; i++)
+        {
+            image[i] = (unsigned char)(buffer[i] * 255.0f / num_samples);
+        }
+        while(1)
+        {
+            displayImage(window, viewport, image, width, height);
+        }
+    }
+    */
+    int prev_num_samples = 0;
+    float* color_buffer = NULL;
+    if(using_image_state)
+    {
+        printf("here\n");
+        int width, height, size;
+        readImageState(&color_buffer, &prev_num_samples, &size, &width, &height, image_state_file);
+        if(width != params.image_width || height != params.image_height)
+        {
+            fprintf(stderr, "Wrong dimensions on image state.\n");
+            free(color_buffer);
+            prev_num_samples = 0;
+            color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+        }
+    }else
+    {
+        color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+    }
     //LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
 
     // Samples
@@ -273,6 +423,7 @@ int main()
                           set_buffer, num_caustic_samples);
     }
     ThreadData thread_data;
+    thread_data.prev_num_samples = prev_num_samples;
     thread_data.set_buffer = set_buffer;
     thread_data.film = &film;
     thread_data.camera = camera;
@@ -388,7 +539,7 @@ int main()
             color_buffer[i*3 + 1] += color[1];
             color_buffer[i*3 + 2] += color[2];
             vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
-            vec3_scale(color, color, 1/(float)(p+1));
+            vec3_scale(color, color, 1/(float)(p+1 + prev_num_samples));
             maxToOne(color, color);
 
             image[i*3] = (char)(color[0] * 255.0f);

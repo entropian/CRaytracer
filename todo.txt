@@ -1,3 +1,5 @@
+refactor file opening
+refactor command line arguments
 dragon ugh
 glossy object edge don't look right. lack fresnel
 multithreading obj loading
