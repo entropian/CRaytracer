@@ -578,6 +578,10 @@ int main(int argc, char** argv)
         EXIT = true;
     }
 
+    // Save image state
+    saveImageState(color_buffer, params.num_samples + prev_num_samples, params.image_width,
+                   params.image_height, "savestate.is");
+
     // Clean up
     //freeSamples2D(&unit_square_samples);
     freeSamples2D(&disk_samples);
@@ -593,6 +597,7 @@ int main(int argc, char** argv)
         }
     }
     free(set_buffer);
+    free(color_buffer);
 
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;
