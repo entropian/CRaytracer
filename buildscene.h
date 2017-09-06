@@ -498,10 +498,10 @@ void loadSceneFile(Scene* scene, const char* scenefile)
     }
     DBuffer_destroy(&mat_tex_pairs);
 }
-
+#ifdef OLD
 void initAreaLights(SceneLights* sl)
 {
- if(sl->num_lights == MAX_LIGHTS){return;}
+    if(sl->num_lights == MAX_LIGHTS){return;}
     AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
     // Cornell rectangle light intensity
     area_light_ptr->intensity = 55.0f;
@@ -514,7 +514,7 @@ void initAreaLights(SceneLights* sl)
     // Rectangle
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
-    rect->shadow = false;
+    rect->shadow = true;
     vec3_assign(rect->point, 213.0f, 547.0f, -227.0f);
     vec3_assign(rect->width, 130.0f, 0.0f, 0.0f);
     vec3_assign(rect->height, 0.0f, 0.0f, -105.0f);    
@@ -539,7 +539,7 @@ void initAreaLights(SceneLights* sl)
     sl->shadow[sl->num_lights] = true;    
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
-(sl->num_lights)++;
+    (sl->num_lights)++;
     // Area light
     /*
     if(sl->num_lights == MAX_LIGHTS){return;}
@@ -674,6 +674,7 @@ void initAreaLights(SceneLights* sl)
     (sl->num_lights)++;
     */
 }
+#endif
 
 void initEnvLight(SceneLights* sl)
 {
@@ -793,10 +794,59 @@ void initSceneLights(SceneLights* sl)
     (sl->num_lights)++;    
     */
 
-    initAreaLights(sl);
+    //initAreaLights(sl);
     initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
+}
+
+int initAreaLights(Scene* scene)
+{
+    SceneObjects* so = &(scene->objects);
+    SceneLights* sl = &(scene->lights);
+    for(int i = 0; i < so->num_obj; i++)
+    {
+        Object_t obj = so->objects[i];
+        Material* mat = getObjectMatPtr(obj);
+        if((obj.type == RECTANGLE || obj.type == SPHERE) && mat->mat_type == EMISSIVE)
+        {
+            AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
+            area_light_ptr->intensity = mat->ke;
+            vec3_copy(area_light_ptr->color, mat->ce);
+            if(obj.type == RECTANGLE)
+            {
+                Rectangle* rect = (Rectangle*)(obj.ptr);
+                //rect->shadow = true;
+                float width = sqrt(vec3_dot(rect->width, rect->width));
+                float height = sqrt(vec3_dot(rect->height, rect->height));
+                area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
+                vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
+
+                Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
+                unit_square_samples->samples = NULL;
+                genMultijitteredSamples(unit_square_samples);
+
+                area_light_ptr->pdf = 1.0f/(width * height);
+                area_light_ptr->samples2D = unit_square_samples;
+                area_light_ptr->samples3D = NULL;
+                area_light_ptr->obj_ptr = rect;
+                area_light_ptr->obj_type = RECTANGLE;
+            }else if(obj.type == SPHERE)
+            {
+                Sphere* sphere = (Sphere*)(obj.ptr);
+                //sphere->shadow = true;
+
+                Samples3D* h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+
+                area_light_ptr->pdf = 1.0f / (4.0f * (float)PI * sphere->radius * sphere->radius);
+                area_light_ptr->samples2D = NULL;
+                area_light_ptr->samples3D = h_samples;
+                area_light_ptr->obj_ptr = sphere;
+                area_light_ptr->obj_type = SPHERE;                
+            }
+            SceneLights_addLight(area_light_ptr, AREALIGHT, sl);
+        }
+    }
 }
 
 int calcCausticObjectsAABB(AABB *aabb, const SceneObjects *so)
@@ -1029,6 +1079,7 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
     SceneObjects* so = &(scene->objects);
     so->accel = accel_type;
     mvNonGridObjToStart(so);
+    initAreaLights(scene);
     initMeshLights(scene);
     printf("num_obj %d\n", so->num_obj);
     printf("non bounded obj %d\n", so->num_non_grid_obj);

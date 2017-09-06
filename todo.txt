@@ -1,5 +1,6 @@
+area light castin shadow
 try not to keep pointers to elements in dynamic array when it's still growing
-add area light and env light into scene file
+add env light into scene file
 dragon ugh
 glossy object edge don't look right. lack fresnel
 multithreading obj loading

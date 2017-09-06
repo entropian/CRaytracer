@@ -336,12 +336,12 @@ void directIllumShadingRad(vec3 radiance, const float ndotwi, const vec3 light_d
 bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects* so,
                 const vec3 light_dir, const ShadeRec* sr)
 {
-    //if(sl->shadow[light_index] && sr->mat->shadow)
     if(sl->shadow[light_index])
     {
         Ray shadow_ray;
         vec3_copy(shadow_ray.origin, sr->hit_point);
         vec3_copy(shadow_ray.direction, light_dir);
+        
         float light_dist = calcLightDistance(sl->light_types[light_index],
                                     sl->light_ptrs[light_index], sr->hit_point);
         float min_t = shadowIntersectTest(so, shadow_ray, light_dist);             
