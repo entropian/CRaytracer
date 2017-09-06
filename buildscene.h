@@ -48,24 +48,9 @@ void calcTriangleNormals(Mesh* mesh)
                     mesh->positions[index+2]);
         vec3 face_normal;
         calcTriangleNormal(face_normal, v0, v1, v2);
-        /*
-        if(face_normal[0] == 0.0f && face_normal[1] == 0.0f && face_normal[2])
-        {
-            v0[0] += 2*K_EPSILON;
-            v1[1] += 2*K_EPSILON;
-            v2[2] += 2*K_EPSILON;
-            calcTriangleNormal(face_normal, v0, v1, v2);
-        }
-        */
         mesh->face_normals[num_face_normals++] = face_normal[0];
         mesh->face_normals[num_face_normals++] = face_normal[1];
         mesh->face_normals[num_face_normals++] = face_normal[2];
-        /*
-        if(face_normal[0] == 0.0f && face_normal[1] == 0.0f && face_normal[2])
-        {
-            printf("degenerate face normal\n");
-        }
-        */
     }
     mesh->num_face_normals = num_face_normals;
 
@@ -327,6 +312,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
     FILE* fp;
     openFile(&fp, scenefile, "r");
     char buffer[128];
+    
     // Setup camera
     initPinholeCameraDefault(&(scene->camera));
     vec3 cam_pos = {0.0f, 0.0f, 0.0f};
@@ -436,8 +422,8 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     // Load textures
                     if(obj_mat->diffuse_map[0] != '\0')
                     {
-                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->diffuse_map);
-                        if(tex_ptr)
+                        int status = parseTextureFileName(scene, obj_mat->diffuse_map);
+                        if(status)
                         {
                             MatTexNamePair pair;
                             pair.tex_type = DIFFUSE;
@@ -448,8 +434,8 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     }
                     if(obj_mat->normal_map[0] != '\0')
                     {
-                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->normal_map);
-                        if(tex_ptr)
+                        int status = parseTextureFileName(scene, obj_mat->normal_map);
+                        if(status)
                         {
                             MatTexNamePair pair;
                             pair.tex_type = NORMAL;
@@ -460,8 +446,8 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     }
                     if(obj_mat->specular_map[0] != '\0')
                     {
-                        Texture* tex_ptr = parseTextureFileName(scene, obj_mat->specular_map);
-                        if(tex_ptr)
+                        int status = parseTextureFileName(scene, obj_mat->specular_map);
+                        if(status)
                         {
                             MatTexNamePair pair;
                             pair.tex_type = SPECULAR;
@@ -695,7 +681,7 @@ void initEnvLight(SceneLights* sl)
     if(sl->num_lights == MAX_LIGHTS){return;}
     EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
     env_light->type = CONSTANT;
-    env_light->intensity = 0.0f;
+    env_light->intensity = 1.0f;
     vec3_copy(env_light->color, WHITE);
 
     Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);

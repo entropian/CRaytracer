@@ -89,7 +89,7 @@ bool parseColor(vec3 r, FILE* fp)
 }
 
 // Need to pass SceneTextures
-Texture* parseTexture(Scene* scene, FILE* fp, char *tex_file_name)
+int parseTexture(Scene* scene, FILE* fp, char *tex_file_name)
 {
     char buffer[128];
 
@@ -98,33 +98,35 @@ Texture* parseTexture(Scene* scene, FILE* fp, char *tex_file_name)
     tex_ptr = Scene_findTexture(scene, buffer);
     if(tex_ptr)
     {
-        return tex_ptr;
+        return 1;
     }
     Texture tex;
     if(!loadTexture(&tex, buffer))
     {
-        return NULL;
+        return 0;
     }
     stringCopy(tex_file_name, MAX_NAME_LENGTH, buffer);
-    return Scene_addTexture(scene, &tex, buffer);
+    Scene_addTexture(scene, &tex, buffer);
+    return 1;
 }
 
-Texture* parseTextureFileName(Scene* scene, const char *file_name)
+int parseTextureFileName(Scene* scene, const char *file_name)
 {
     Texture* tex_ptr;
     tex_ptr = Scene_findTexture(scene, file_name);
     if(tex_ptr)
     {
-        return tex_ptr;
+        return 1;
     }
     Texture tex;
     if(!loadTexture(&tex, file_name))
     {
-        return NULL;
+        return 0;
     }
     printf("Loaded %s\n", file_name);
     //stringCopy(tex.name, MAX_NAME_LENGTH, file_name);
-    return Scene_addTexture(scene, &tex, file_name);
+    Scene_addTexture(scene, &tex, file_name);
+    return 1;
 }
 
 typedef struct MatTexNamePair_s
@@ -154,8 +156,8 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, 
     if(strcmp(buffer, "DIFFUSE_MAP") == 0)
     {
         char tex_file_name[MAX_NAME_LENGTH];
-        tex_ptr = parseTexture(scene, fp, tex_file_name);
-        if(tex_ptr)
+        int status = parseTexture(scene, fp, tex_file_name);
+        if(status)
         {
             // Storing material name and texture name pair for binding later
             MatTexNamePair pair;
@@ -170,8 +172,8 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, 
     if(strcmp(buffer, "NORMAL_MAP") == 0)
     {
         char tex_file_name[MAX_NAME_LENGTH];
-        tex_ptr = parseTexture(scene, fp, tex_file_name);
-        if(tex_ptr)
+        int status = parseTexture(scene, fp, tex_file_name);
+        if(status)
         {
             // Storing material name and texture name pair for binding later
             MatTexNamePair pair;

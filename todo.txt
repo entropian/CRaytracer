@@ -1,13 +1,11 @@
-refactor file opening
-refactor command line arguments
+try not to keep pointers to elements in dynamic array when it's still growing
+add area light and env light into scene file
 dragon ugh
 glossy object edge don't look right. lack fresnel
 multithreading obj loading
 
 Use a pointer into mesh index array instead of using three ints for indices
 Irradiance caching
-SIMD ray triangle intersection for uniform grid
-Optimize mesh loading
 add normal type to torus
 set default background color in scene file
 Combine light pointer and light type into a struct?
