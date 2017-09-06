@@ -298,6 +298,7 @@ void procMatTexPairs(Scene *scene, const MatTexNamePair *pairs, const unsigned i
 
 void loadSceneFile(Scene* scene, const char* scenefile)
 {
+    /*
     SceneLights* sl = &(scene->lights);
     for(int i = 0; i < sl->num_lights; i++)
     {
@@ -308,7 +309,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
             Scene_addObject(scene, &obj);
         }
     }
-    
+    */
     FILE* fp;
     openFile(&fp, scenefile, "r");
     char buffer[128];
@@ -494,6 +495,33 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     Scene_addObject(scene, &obj);
                 }
             }
+        }else if(strcmp(buffer, "ENV_LIGHT") == 0)
+        {            
+            EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
+            Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+            env_light->samples3D = samples;            
+            getNextTokenInFile(buffer, fp); // Skip TYPE
+            getNextTokenInFile(buffer, fp);
+            if(strcmp(buffer, "CONSTANT") == 0)
+            {
+                env_light->type = CONSTANT;
+                getNextTokenInFile(buffer, fp); // Skip COLOR
+                parseColor(env_light->color, fp);
+                getNextTokenInFile(buffer, fp); // Skip INTENSITY
+                getNextTokenInFile(buffer, fp);
+                env_light->intensity = atof(buffer);
+
+                
+            }else if(strcmp(buffer, "CUBEMAP") == 0)
+            {
+                env_light->type = CUBEMAP;
+            }
+            if(scene->lights.env_light)
+            {
+                freeSamples3D(scene->lights.env_light->samples3D);                
+                free(scene->lights.env_light);
+            }
+            scene->lights.env_light = env_light;
         }
     }
     DBuffer_destroy(&mat_tex_pairs);
@@ -795,7 +823,7 @@ void initSceneLights(SceneLights* sl)
     */
 
     //initAreaLights(sl);
-    initEnvLight(sl);
+    //initEnvLight(sl);
     initAmbLight(sl);
     initBackgroundColor(sl);
 }
