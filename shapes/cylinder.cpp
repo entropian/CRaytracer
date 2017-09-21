@@ -1,10 +1,9 @@
 #include "cylinder.h"
 
 OpenCylinder* initOpenCylinder(const mat4 inv_transform, const float phi, Material* mat,
-                               const NormalType normal_type, const bool shadow)
+                               const NormalType normal_type)
 {
     GenericOpenCylinder* goc = (GenericOpenCylinder*)malloc(sizeof(GenericOpenCylinder));
-    goc->shadow = shadow;
     goc->radius = 1.0f;
     goc->half_height = 1.0f;
     goc->phi = phi;
@@ -33,12 +32,11 @@ void calcAABBSolidCylinder(AABB* aabb, const Disk* top, const Disk* bottom, cons
 }
 
 CompoundSolidCylinder* initCompoundSolidCylinder(const float radius, const float half_height, const float phi,
-                    Material* mat, const bool shadow)
+                    Material* mat)
 {
     int num_obj = 3;
     CompoundSolidCylinder* sc = (CompoundSolidCylinder*)malloc(sizeof(CompoundSolidCylinder));
     sc->objects = (Object_t*)malloc(sizeof(Object_t) * num_obj);
-    sc->shadow = shadow;
     Disk* top = (Disk*)malloc(sizeof(Disk));
     Disk* bottom = (Disk*)malloc(sizeof(Disk));
     GenericOpenCylinder* tube = (GenericOpenCylinder*)malloc(sizeof(GenericOpenCylinder));
@@ -64,9 +62,9 @@ CompoundSolidCylinder* initCompoundSolidCylinder(const float radius, const float
 }
 
 SolidCylinder* initSolidCylinder(const mat4 inv_transform, const float radius, const float half_height,
-                                 const float phi, Material* mat, const bool shadow)
+                                 const float phi, Material* mat)
 {
-    CompoundSolidCylinder* csc = initCompoundSolidCylinder(radius, half_height, phi, mat, shadow);
+    CompoundSolidCylinder* csc = initCompoundSolidCylinder(radius, half_height, phi, mat);
     SolidCylinder* sc = (SolidCylinder*)malloc(sizeof(SolidCylinder));
     sc->obj.ptr = csc;
     sc->obj.type = COMPOUND;

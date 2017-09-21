@@ -212,7 +212,6 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word INTENSITY
         if(!getNextTokenInFile(buffer, fp)){return false;}
         mat->ke = (float)atof(buffer);
-        mat->shadow = false;
         mat->h_samples = NULL;
     }else if(mat->mat_type == PARTICIPATING)
     {
@@ -225,16 +224,6 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *
         mat->scatter_coeff = (float)atof(buffer);
     }else
     {
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SHADOWED
-        if(!getNextTokenInFile(buffer, fp)){return false;}
-        if(strcmp(buffer, "yes") == 0)
-        {
-            mat->shadow = true;
-        }else
-        {
-            mat->shadow = false;
-        }
-
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word AMB_COLOR
         if(!parseColor(mat->ca, fp)){return false;}
 
@@ -329,16 +318,6 @@ bool parseSphereEntry(Object_t* obj, FILE* fp, Scene* scene)
 {
     char buffer[128];
     Sphere* sphere_ptr = (Sphere*)malloc(sizeof(Sphere));
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "yes") == 0)
-    {
-        sphere_ptr->shadow = true;
-    }else
-    {
-        sphere_ptr->shadow = false;
-    }
-    
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word RADIUS
     if(!getNextTokenInFile(buffer, fp)){return false;}
     sphere_ptr->radius = (float)atof(buffer);
@@ -371,16 +350,6 @@ bool parsePlaneEntry(Object_t* obj, FILE* fp, Scene* scene)
 {
     char buffer[128];
     Plane* plane_ptr = (Plane*)malloc(sizeof(Plane));
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "yes") == 0)
-    {
-        plane_ptr->shadow = true;
-    }else 
-    {
-        plane_ptr->shadow = false;
-    }
-
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word POINT
     if(!parseVec3(plane_ptr->point, fp)){return false;}
 
@@ -400,16 +369,6 @@ bool parseRectEntry(Object_t* obj, FILE* fp, Scene* scene)
 {
     char buffer[128];
     Rectangle* rect_ptr = (Rectangle*)malloc(sizeof(Rectangle));
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "yes") == 0)
-    {
-        rect_ptr->shadow = true;
-    }else
-    {
-        rect_ptr->shadow = false;
-    }
-
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word POINT
     if(!parseVec3(rect_ptr->point, fp)){return false;}
 
@@ -435,18 +394,6 @@ bool parseTriangleEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     Triangle* tri_ptr = (Triangle*)malloc(sizeof(Triangle));
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    /*
-    if(strcmp(buffer, "yes") == 0)
-    {
-        tri_ptr->shadow = true;
-    }else
-    {
-        tri_ptr->shadow = false;
-    }
-    */
-
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word V0
     if(!parseVec3(tri_ptr->v0, fp)){return false;}
 
@@ -470,17 +417,6 @@ bool parseTriangleEntry(Object_t* obj,  FILE* fp, Scene* scene)
 bool parseBoxEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    bool shadow;
-    if(strcmp(buffer, "yes") == 0)
-    {
-        shadow = true;
-    }else
-    {
-        shadow = false;
-    }
-
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LENGTH
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get x span
     float length = (float)atof(buffer);
@@ -515,7 +451,7 @@ bool parseBoxEntry(Object_t* obj,  FILE* fp, Scene* scene)
     mat4_mult(tmp, inv_scale, inv_rotation);
     mat4_mult(inv_transform, tmp, inv_translation);        
 
-    obj->ptr = initBox(inv_transform, length, height, width, mat, shadow);
+    obj->ptr = initBox(inv_transform, length, height, width, mat);
     obj->type = INSTANCED;
     return true;
 }
@@ -523,16 +459,6 @@ bool parseBoxEntry(Object_t* obj,  FILE* fp, Scene* scene)
 bool parseOpenCylEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
-    bool shadow;
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "yes") == 0)
-    {
-        shadow = true;
-    }else
-    {
-        shadow = false;
-    }
     float phi;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word PHI
     if(!getNextTokenInFile(buffer, fp)){return false;}
@@ -577,7 +503,7 @@ bool parseOpenCylEntry(Object_t* obj,  FILE* fp, Scene* scene)
     mat4_mult(tmp, inv_scale, inv_rotation);
     mat4_mult(inv_transform, tmp, inv_translation);
 
-    obj->ptr = initOpenCylinder(inv_transform, phi, mat, normal_type, shadow);
+    obj->ptr = initOpenCylinder(inv_transform, phi, mat, normal_type);
     obj->type = INSTANCED;
     return true;
 }
@@ -585,16 +511,6 @@ bool parseOpenCylEntry(Object_t* obj,  FILE* fp, Scene* scene)
 bool parseSolidCylEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
-    bool shadow;
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "yes") == 0)
-    {
-        shadow = true;
-    }else
-    {
-        shadow = false;
-    }
     vec3 location;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word LOCATION
     if(!parseVec3(location, fp)){return false;}    
@@ -635,7 +551,7 @@ bool parseSolidCylEntry(Object_t* obj,  FILE* fp, Scene* scene)
     mat4_mult(tmp, inv_scale, inv_rotation);
     mat4_mult(inv_transform, tmp, inv_translation);
 
-    obj->ptr = initSolidCylinder(inv_transform, 1.0f, 1.0f, (float)PI, mat, shadow);
+    obj->ptr = initSolidCylinder(inv_transform, 1.0f, 1.0f, (float)PI, mat);
     obj->type = INSTANCED;
     return true;
 }
@@ -644,16 +560,6 @@ bool parseDiskEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     Disk* disk_ptr = (Disk*)malloc(sizeof(Disk));
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "yes") == 0)
-    {
-        disk_ptr->shadow = true;
-    }else
-    {
-        disk_ptr->shadow = false;
-    }
-
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MIN
     if(!parseVec3(disk_ptr->center, fp)){return false;}
 
@@ -679,17 +585,6 @@ bool parseDiskEntry(Object_t* obj,  FILE* fp, Scene* scene)
 bool parseTorusEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
-    bool shadow = true;
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "yes") == 0)
-    {
-        shadow = true;
-    }else
-    {
-        shadow = false;
-    }
-
     float swept_radius;
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SWEPT_RADIUS
     if(!getNextTokenInFile(buffer, fp)){return false;}
@@ -727,7 +622,7 @@ bool parseTorusEntry(Object_t* obj,  FILE* fp, Scene* scene)
     mat4_mult(tmp, inv_scale, inv_rotation);
     mat4_mult(inv_transform, tmp, inv_translation);
 
-    obj->ptr = initTorus(inv_transform, swept_radius, tube_radius, phi, mat, shadow);
+    obj->ptr = initTorus(inv_transform, swept_radius, tube_radius, phi, mat);
     obj->type = INSTANCED;
     return true;
 }
@@ -736,7 +631,6 @@ bool parseTorusEntry(Object_t* obj,  FILE* fp, Scene* scene)
 
 typedef struct
 {
-    bool shadow;
     bool smooth;        
     vec3 scaling;
     vec3 location;
@@ -785,17 +679,6 @@ bool parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, OBJMaterial** materials
     {
         return false;
     }
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CAST_SHADOW
-    if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "yes") == 0)
-    {
-        mesh_entry->shadow = true;
-    }else
-    {
-        mesh_entry->shadow = false;
-    }
-
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word SMOOTH
     if(!getNextTokenInFile(buffer, fp)){return false;}
     if(strcmp(buffer, "yes") == 0)

@@ -14,4 +14,4 @@
 typedef InstancedShape Torus;
 
 Torus* initTorus(const mat4 inv_transform, const float swept_radius, const float tube_radius, const float phi, 
-                 Material* mat, const bool shadow);
+                 Material* mat);

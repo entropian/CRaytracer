@@ -13,10 +13,10 @@ typedef InstancedShape OpenCylinder;
 typedef CompoundObject CompoundSolidCylinder;
 typedef InstancedShape SolidCylinder;
 OpenCylinder* initOpenCylinder(const mat4 inv_transform, const float phi, Material* mat,
-                               const NormalType normal_type, const bool shadow);
+                               const NormalType normal_type);
 void calcAABBSolidCylinder(AABB* aabb, const Disk* top, const Disk* bottom, const GenericOpenCylinder* tube);
 CompoundSolidCylinder* initCompoundSolidCylinder(const float radius, const float half_height, const float phi,
-                                                 Material* mat, const bool shadow);
+                                                 Material* mat);
 SolidCylinder* initSolidCylinder(const mat4 inv_transform, const float radius, const float half_height,
-                                 const float phi, Material* mat, const bool shadow);
+                                 const float phi, Material* mat);
 

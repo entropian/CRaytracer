@@ -1,7 +1,7 @@
 #include "box.h"
 #include "generic.h"
 
-Box* initBox(const mat4 inv_transform, const float x_span, const float y_span, const float z_span, Material* mat, const bool shadow)
+Box* initBox(const mat4 inv_transform, const float x_span, const float y_span, const float z_span, Material* mat)
 {
     float half_x = x_span / 2.0f;
     float half_y = y_span / 2.0f;
