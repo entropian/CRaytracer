@@ -246,7 +246,7 @@ inline void vec4_copy(vec4 r, const vec4 a)
     r[3] = a[3];    
 }
 
-inline void vec3_assign(vec2 r, const float x, const float y)
+inline void vec2_assign(vec2 r, const float x, const float y)
 {
     r[0] = x;
     r[1] = y;

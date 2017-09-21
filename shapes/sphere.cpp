@@ -1,8 +1,18 @@
 #include "sphere.h"
 
-void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, const Ray ray, const float t)
+void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, const Ray ray, const float t,
+                        const float theta, const float phi)
 {
     sr->hit_status = true;
+    if(sphere->mat->tex_flags != NO_TEXTURE)
+    {
+        const float theta_max = PI;
+        const float theta_min = 0.0;
+        const float phi_max = 2.0 * PI;    
+        float u = phi / phi_max;
+        float v = (theta - theta_min) / (theta_max - theta_min);
+        vec2_assign(sr->uv, u, v);
+    }
     vec3_copy(sr->hit_point, hit_point);
     vec3 hit_point_to_center;
     vec3_sub(hit_point_to_center, sr->hit_point, sphere->center);
@@ -40,7 +50,7 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
             if(fabs(phi) <= sphere->phi && theta >= sphere->min_theta&&
                theta <= sphere->max_theta)
             {
-                fillShadeRecSphere(sr, sphere, hit_point, ray, t);
+                fillShadeRecSphere(sr, sphere, hit_point, ray, t, theta, phi);
                 return t;
             }
         }
@@ -55,7 +65,7 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
             if(fabs(phi) <= sphere->phi && theta >= sphere->min_theta&&
                theta <= sphere->max_theta)
             {
-                fillShadeRecSphere(sr, sphere, hit_point, ray, t);
+                fillShadeRecSphere(sr, sphere, hit_point, ray, t, theta, phi);
                 return t;
             }
         }
@@ -65,10 +75,6 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
 
 float shadowRayIntersectSphere(Sphere *sphere, const Ray ray)
 {
-    if(!sphere->shadow)
-    {
-        return TMAX;
-    }
     float a = vec3_dot(ray.direction, ray.direction);
     vec3 origin_to_center, tmp;
     vec3_sub(origin_to_center, ray.origin, sphere->center);
