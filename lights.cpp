@@ -402,9 +402,12 @@ void EnvLight_init_cubemap(EnvLight* env_light, char paths[][256])
 
 void EnvLight_destroy(EnvLight* env_light)
 {
-    for(int i = 0; i < 6; i++)
+    if(env_light->type == CUBEMAP)
     {
-        freeTexture(&(env_light->cubemap[i]));
+        for(int i = 0; i < 6; i++)
+        {
+            freeTexture(&(env_light->cubemap[i]));
+        }
     }
     env_light->intensity = 0.0f;
 }

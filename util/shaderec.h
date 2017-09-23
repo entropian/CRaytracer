@@ -9,6 +9,9 @@ typedef struct ShadeRec
     bool hit_status;
     vec3 hit_point;
     vec3 normal;
+    vec3 shading_normal;
+    vec3 dpdu;
+    vec3 dpdv;
     vec3 wo;
     vec2 uv;
     Material *mat;                // Points to the material member of an object    

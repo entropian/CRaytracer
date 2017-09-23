@@ -248,8 +248,8 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
 
             getMaterialNormalTexColor(tex_normal, tri->mat, sr->uv);
             orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);
-            vec3_normalize(normal, normal);
-            vec3_copy(sr->normal, normal);
+            vec3_normalize(sr->normal, normal);
+            //vec3_copy(sr->normal, normal);
         }
     }
 

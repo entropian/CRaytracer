@@ -365,15 +365,6 @@ void freeSceneLights(SceneLights* sl)
                     freeSamples3D(area_light_ptr->samples3D);
                     area_light_ptr->samples3D = NULL;
                 }
-            }else if(sl->light_types[i] == ENVLIGHT)
-            {
-                // TODO: should this be here?
-                EnvLight* env_light_ptr = (EnvLight*)(sl->light_ptrs[i]);
-                if(env_light_ptr->samples3D != NULL)
-                {
-                    freeSamples3D(env_light_ptr->samples3D);
-                    env_light_ptr->samples3D = NULL;
-                }
             }else if(sl->light_types[i] == POINTLIGHT)
             {
                 PointLight *point_light = (PointLight*)(sl->light_ptrs[i]);

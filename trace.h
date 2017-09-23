@@ -615,10 +615,10 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     vec3 inc_radiance;
                     float rand_float = (float)rand() / (float)RAND_MAX;
                     float cd_avg = (min_sr.mat->cd[0] + min_sr.mat->cd[1] + min_sr.mat->cd[2]) / 3.0f;
-                    if(rand_float <= cd_avg)
+                    //if(rand_float <= cd_avg)
                     {
                         pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
-                        assert(inc_radiance[0] >= 0.0f && inc_radiance[1] >= 0.0f && inc_radiance[2] >= 0.0f);
+                        //assert(inc_radiance[0] >= 0.0f && inc_radiance[1] >= 0.0f && inc_radiance[2] >= 0.0f);
                         vec3 brdf;
                         vec3_scale(brdf, min_sr.mat->cd, min_sr.mat->kd / (float)PI);
                         float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
@@ -627,7 +627,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                         vec3 tmp;
                         vec3_mult(tmp, inc_radiance, brdf);
                         vec3_scale(tmp, tmp, ndotwi / pdf);
-                        vec3_scale(tmp, tmp, 1.0 / cd_avg);
+                        //vec3_scale(tmp, tmp, 1.0 / cd_avg);
                         vec3_add(radiance, radiance, tmp);
                     }
                 }
@@ -748,12 +748,21 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                 //vec3_copy(radiance, sl->bg_color);
             }
         }
+        //vec3_assign(min_sr.mat->cd, min_sr.uv[0], min_sr.uv[0], min_sr.uv[0]);
+        //vec3_copy(radiance, min_sr.mat->cd);        
     }else
     {
         //vec3_copy(radiance, sl->bg_color);
         getEnvLightIncRadiance(radiance, ray.direction, sl->env_light);
     }
-    assert(radiance[0] >= 0.0f && radiance[1] >= 0.0f && radiance[2] >= 0.0f);
+    //assert(radiance[0] >= 0.0f && radiance[1] >= 0.0f && radiance[2] >= 0.0f);
+    //vec3_assign(radiance, min_sr.uv[0], min_sr.uv[1], 0.0f);
+    //vec3_assign(min_sr.mat->cd, min_sr.uv[0], min_sr.uv[0], min_sr.uv[0]);
+    //vec3_copy(radiance, min_sr.mat->cd);
+    //vec3_copy(radiance, min_sr.normal);
+    //float tmp = min_sr.uv[0];
+    //float tmp = min_sr.uv[1];
+    //vec3_assign(radiance, tmp, tmp, tmp);
     return min_t;
 }
 

@@ -48,8 +48,12 @@ AMB_COLOR GREY
 AMB_CONSTANT 1.0
 DIFF_COLOR GREY
 DIFF_CONSTANT 0.8
-DIFFUSE_MAP models/sponza/background.png
+
 END
+NORMAL_MAP models/sponza/spnza_bricks_a_ddn.png
+DIFFUSE_MAP models/sponza/spnza_bricks_a_diff.png
+
+
 
 MATERIAL MATTE
 NAME orchid
@@ -95,9 +99,10 @@ AMB_COLOR YELLOW
 AMB_CONSTANT 1.0
 DIFF_COLOR YELLOW
 DIFF_CONSTANT 0.8
+DIFFUSE_MAP models/sponza/spnza_bricks_a_diff.png
+NORMAL_MAP models/sponza/spnza_bricks_a_ddn.png
 END
-DIFFUSE_MAP textures/Ship2_diffuse.png
-NORMAL_MAP textures/sponza_arch_ddn.png
+
 
 END_MATERIALS
 
@@ -123,7 +128,7 @@ WIDTH 14.0 0.0 0.0
 HEIGHT 0.0 15.0 0.0
 MATERIAL white
 
-#OBJECT RECTANGLE
+OBJECT RECTANGLE
 POINT -7.0 -1.0 -7.0
 WIDTH 0.0 0.0 14.0
 HEIGHT 0.0 15.0 0.0
@@ -280,11 +285,11 @@ MATERIAL ref1
 
 OBJECT SPHERE
 RADIUS 1.0
-CENTER 1 0 0
+CENTER 0 0 8
 PHI 3.14159
 MIN_THETA 0
 MAX_THETA 3.14159
-MATERIAL matte1
+MATERIAL matte2
 
 #OBJECT SPHERE
 RADIUS 2

@@ -509,9 +509,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 parseColor(env_light->color, fp);
                 getNextTokenInFile(buffer, fp); // Skip INTENSITY
                 getNextTokenInFile(buffer, fp);
-                env_light->intensity = atof(buffer);
-
-                
+                env_light->intensity = atof(buffer);                
             }else if(strcmp(buffer, "CUBEMAP") == 0)
             {
                 env_light->type = CUBEMAP;

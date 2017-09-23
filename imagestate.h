@@ -5,6 +5,7 @@
 int saveImageState(float* color_buffer, int num_samples, int width, int height, const char* file_name)
 {
     FILE *fp;
+    openFile(&fp, file_name, "w");
     fprintf(fp, "%d\n", num_samples);
     fprintf(fp, "%d %d\n", width, height);
     int size = width * height * 3;
