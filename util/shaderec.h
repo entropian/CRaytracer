@@ -22,6 +22,18 @@ static void updateShadeRecWithTexInfo(ShadeRec *sr)
     if(sr->mat.tex_flags & DIFFUSE)
     {
         getMaterialDiffuseTexColor(sr->mat.cd, &(sr->mat), sr->uv);
+    }    
+    if(sr->mat.tex_flags & NORMAL)
+    {
+        vec3 tex_normal, normal, surface_normal;
+        vec3_copy(surface_normal, sr->normal);
+        getMaterialNormalTexColor(tex_normal, &(sr->mat), sr->uv);
+        orthoNormalTransform(normal, sr->dpdu, sr->dpdv, sr->normal, tex_normal);
+        vec3_normalize(sr->normal, normal);
+        if(vec3_equal(sr->normal, BLACK))
+        {
+            vec3_copy(sr->normal, surface_normal);
+        }
     }
     if(sr->mat.tex_flags & SPECULAR)
     {
