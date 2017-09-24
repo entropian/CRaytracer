@@ -23,7 +23,7 @@ static void updateShadeRecWithTexInfo(ShadeRec *sr)
     {
         getMaterialDiffuseTexColor(sr->mat.cd, &(sr->mat), sr->uv);
     }
-    /*
+
     if(sr->mat.tex_flags & NORMAL)
     {
         vec3 tex_normal, normal, surface_normal;
@@ -36,7 +36,7 @@ static void updateShadeRecWithTexInfo(ShadeRec *sr)
             vec3_copy(sr->normal, surface_normal);
         }
     }
-    */
+
     if(sr->mat.tex_flags & SPECULAR)
     {
         // TEMP:

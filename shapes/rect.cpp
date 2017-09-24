@@ -21,12 +21,19 @@ float rayIntersectRect(ShadeRec *sr, Rectangle *rect, const Ray ray)
         vec3 point;
         getPointOnRay(point, ray, t);
         vec3_sub(displacement, point, rect->point);
-        float dot_product = vec3_dot(displacement, rect->width);
-        if(dot_product >= 0 && dot_product <= vec3_dot(rect->width, rect->width))
+        //float dot_product = vec3_dot(displacement, rect->width);
+        float u = vec3_dot(displacement, rect->width) / vec3_dot(rect->width, rect->width);
+        //if(dot_product >= 0 && dot_product <= vec3_dot(rect->width, rect->width))
+        if(u >= 0.0f && u <= 1.0f)
         {
-            dot_product = vec3_dot(displacement, rect->height);
-            if(dot_product >= 0 && dot_product <= vec3_dot(rect->height, rect->height))
+            //dot_product = vec3_dot(displacement, rect->height);
+            float v = vec3_dot(displacement, rect->height) / vec3_dot(rect->height, rect->height);
+            //if(dot_product >= 0 && dot_product <= vec3_dot(rect->height, rect->height))
+            if(v >= 0.0f && v <= 1.0f)
             {
+                vec2_assign(sr->uv, u, v);
+                vec3_normalize(sr->dpdu, rect->width);
+                vec3_normalize(sr->dpdv, rect->height);
                 vec3_copy(sr->normal, normal);
                 vec3_scale(displacement, ray.direction, t);
                 vec3_copy(sr->hit_point, point);
@@ -34,6 +41,7 @@ float rayIntersectRect(ShadeRec *sr, Rectangle *rect, const Ray ray)
                 if(vec3_dot(sr->wo, sr->normal) < 0.0f)
                 {
                     vec3_negate(sr->normal, sr->normal);
+                    vec3_negate(sr->dpdu, sr->dpdu);
                 }
                 sr->mat = *(rect->mat);
                 return t;
