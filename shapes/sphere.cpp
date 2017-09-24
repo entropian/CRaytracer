@@ -10,8 +10,6 @@ void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, cons
     vec3_normalize(sr->normal, hit_point_to_center);
     vec3_negate(sr->wo, ray.direction);
     sr->mat = *(sphere->mat);
-    //vec3 surface_normal;
-    //vec3_copy(surface_normal, sr->normal);
     
     const double theta_max = PI;
     const double theta_min = 0.0;
@@ -29,20 +27,6 @@ void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, cons
     vec3_scale(sr->dpdv, tmp, theta_max * theta_max);
     vec3_normalize(sr->dpdu, sr->dpdu);
     vec3_normalize(sr->dpdv, sr->dpdv);
-    /*
-    if(sphere->mat->tex_flags & NORMAL) 
-    {
-        vec3 tex_normal, normal;
-        getMaterialNormalTexColor(tex_normal, sphere->mat, sr->uv);
-        orthoNormalTransform(normal, sr->dpdu, sr->dpdv, sr->normal, tex_normal);
-        vec3_normalize(sr->normal, normal);
-    }
-
-    if(vec3_equal(sr->normal, BLACK))
-    {
-        vec3_copy(sr->normal, surface_normal);
-    }
-    */
 }
 
 float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)

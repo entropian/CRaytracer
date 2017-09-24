@@ -5,6 +5,10 @@ void fillShadeRecGenericOpenCylinder(ShadeRec *sr, GenericOpenCylinder* oc, cons
     sr->hit_status = true;
     vec3_negate(sr->wo, ray.direction);
     vec3_copy(sr->hit_point, hit_point);
+    float phi = (float)atan2(hit_point[2], hit_point[0]);
+    float u = phi / oc->phi;
+    float v = (hit_point[1] + oc->half_height) / (2.0f * oc->half_height);
+    vec2_assign(sr->uv, u, v);
     switch(oc->normal_type)
     {
     case OPEN:

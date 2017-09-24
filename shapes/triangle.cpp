@@ -228,38 +228,18 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     interpTriangleVec3(tmp_normal, beta, gamma, n0, n1, n2);
     mat3_mult_vec3(sr->normal, *(tri->normal_mat), tmp_normal);
     vec3_normalize(sr->normal, sr->normal);
-    vec3 surface_normal;
-    vec3_copy(surface_normal, sr->normal);
-    assert(surface_normal[0] != 0.0f || surface_normal[1] != 0.0f || surface_normal[2] != 0.0f);
-    
-    //if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
-    {
-        interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
-        //if(tri->mat->tex_flags & NORMAL)
-        {
-            vec3 tangent, binormal, tex_normal, normal, tmp;
-            interpTriangleVec3(tmp, beta, gamma,
-                               mesh->tangents[tri->i0], mesh->tangents[tri->i1], mesh->tangents[tri->i2]);
-            mat3_mult_vec3(tangent, *(tri->normal_mat), tmp);
-            vec3_normalize(tangent, tangent);
 
-            vec3_cross(binormal, sr->normal, tangent);
-            vec3_normalize(binormal, binormal);
+    interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
+    vec3 tangent, binormal, tex_normal, normal, tmp;
+    interpTriangleVec3(tmp, beta, gamma,
+                       mesh->tangents[tri->i0], mesh->tangents[tri->i1], mesh->tangents[tri->i2]);
+    mat3_mult_vec3(tangent, *(tri->normal_mat), tmp);
+    vec3_normalize(sr->dpdu, tangent);
 
-            vec3_copy(sr->dpdu, tangent);
-            vec3_copy(sr->dpdv, binormal);
-            //getMaterialNormalTexColor(tex_normal, tri->mat, sr->uv);
-            //orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);
-            //vec3_normalize(sr->normal, normal);
-        }
-    }
-    /*
-    if(vec3_equal(sr->normal, BLACK))
-    {
-        vec3_copy(sr->normal, surface_normal);
-    }
+    vec3_cross(binormal, sr->normal, tangent);
+    vec3_normalize(sr->dpdv, binormal);
+
     assert(sr->normal[0] != 0.0f || sr->normal[1] != 0.0f || sr->normal[2] != 0.0f);
-    */
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);
     sr->mat = *(tri->mat);

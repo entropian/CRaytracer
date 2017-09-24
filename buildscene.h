@@ -475,7 +475,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     {
                         mat = Scene_findMaterial(scene, mesh_entry.mat_name);
                     }
-                    if(mat->tex_flags & NORMAL)
+                    //if(mat->tex_flags & NORMAL)
                     {
                         calcTangentVec(&mesh);
                     }
