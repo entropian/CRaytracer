@@ -39,7 +39,7 @@ Material* getMediumMatPtr(const vec3 start, const SceneObjects *so)
     int count = 0;
     while(t < TMAX)
     {
-        if(sr.mat->mat_type == PARTICIPATING)
+        if(sr.mat.mat_type == PARTICIPATING)
         {
             if(top == 9)
             {
@@ -48,17 +48,17 @@ Material* getMediumMatPtr(const vec3 start, const SceneObjects *so)
             }else if(top == -1)
             {
                 top++;
-                stack[top] = sr.mat;
+                stack[top] = &(sr.mat);
             }else
             {
-                if(stack[top] == sr.mat)
+                if(stack[top] == &(sr.mat))
                 {
                     stack[top] = NULL;
                     top--;
                 }else
                 {
                     top++;
-                    stack[top] = sr.mat;
+                    stack[top] = &(sr.mat);
                 }
             }
         }
@@ -124,7 +124,7 @@ void raymarch(vec3 radiance, const Ray ray, TraceArgs *trace_args)
     // 1. FInd exiting t value and location
     float t_exit = intersectTest(&in_sr, so, ray);
     if(t_exit == TMAX){return;}
-    if(in_sr.mat->mat_type == PARTICIPATING)
+    if(in_sr.mat.mat_type == PARTICIPATING)
     {
         // 2. Calculate initial radiance
         Ray exit_ray = ray;
@@ -148,9 +148,9 @@ void raymarch(vec3 radiance, const Ray ray, TraceArgs *trace_args)
     }else
     {
         vec3 init_rad = {0.0f, 0.0f, 0.0f};
-        if(in_sr.mat->mat_type == EMISSIVE)
+        if(in_sr.mat.mat_type == EMISSIVE)
         {
-            vec3_scale(init_rad, in_sr.mat->ce, in_sr.mat->ke/1.0f);
+            vec3_scale(init_rad, in_sr.mat.ce, in_sr.mat.ke/1.0f);
         }else
         {
             for(int i = 0; i < sl->num_lights; i++)
@@ -173,7 +173,7 @@ void raymarch(vec3 radiance, const Ray ray, TraceArgs *trace_args)
                 {
                     // Case where the light inside the medium or the light isn't physical
                     dist_in_medium = light_dist;
-                }else if(light_sr.mat->mat_type == PARTICIPATING)
+                }else if(light_sr.mat.mat_type == PARTICIPATING)
                 {
                     dist_in_medium = light_t;
                 }
@@ -286,9 +286,9 @@ void fogmarch(vec3 radiance, const Ray ray, TraceArgs *trace_args)
     if(min_t != TMAX)
     {
         vec3 init_rad = {0.0f, 0.0f, 0.0f};
-        if(min_sr.mat->mat_type == EMISSIVE)
+        if(min_sr.mat.mat_type == EMISSIVE)
         {
-            vec3_scale(init_rad, min_sr.mat->ce, min_sr.mat->ke/1.0f);
+            vec3_scale(init_rad, min_sr.mat.ce, min_sr.mat.ke/1.0f);
         }else
         {
             calcDirectIllumSurfaceInMedium(init_rad, &min_sr, extinct_coeff, scatter_coeff, trace_args);
@@ -321,7 +321,7 @@ float raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs *tr
     float t = intersectTest(&sr, so, ray);
     if(t == TMAX){return t;} // Shouldn't happen if the ray is inside a medium
     vec3 init_rad = {0.0f, 0.0f, 0.0f};
-    if(sr.mat->mat_type == PARTICIPATING) // Ray passes through the medium hitting nothing
+    if(sr.mat.mat_type == PARTICIPATING) // Ray passes through the medium hitting nothing
     {
         /*
         TraceArgs new_trace_args = trace_args;
@@ -331,9 +331,9 @@ float raycastMedium(vec3 radiance, const int depth, const Ray ray, TraceArgs *tr
         getPointOnRay(new_ray.origin, ray, t);
         raycast(init_rad, depth-1, new_ray, new_trace_args);
         */
-    }else if(sr.mat->mat_type == EMISSIVE)
+    }else if(sr.mat.mat_type == EMISSIVE)
     {
-        vec3_scale(init_rad, sr.mat->ce, sr.mat->ke/1.0f);
+        vec3_scale(init_rad, sr.mat.ce, sr.mat.ke/1.0f);
     }else
     {
         calcDirectIllumSurfaceInMedium(init_rad, &sr, extinct_coeff, scatter_coeff, trace_args);
@@ -359,22 +359,22 @@ float whittedTraceMedium(vec3 radiance, const int depth, const Ray ray, TraceArg
     float t = intersectTest(&sr, so, ray);
     if(t == TMAX){return t;} // Shouldn't happen if the ray is inside a medium
     vec3 init_rad = {0.0f, 0.0f, 0.0f};
-    if(sr.mat->mat_type == PARTICIPATING) // Ray passes through the medium hitting nothing
+    if(sr.mat.mat_type == PARTICIPATING) // Ray passes through the medium hitting nothing
     {
         Ray new_ray;
         vec3_copy(new_ray.direction, ray.direction);
         getPointOnRay(new_ray.origin, ray, t);
         whittedTrace(init_rad, depth-1, new_ray, trace_args);
-    }else if(sr.mat->mat_type == EMISSIVE)
+    }else if(sr.mat.mat_type == EMISSIVE)
     {
-        vec3_scale(init_rad, sr.mat->ce, sr.mat->ke/1.0f);
-    }else if(sr.mat->mat_type == REFLECTIVE)
+        vec3_scale(init_rad, sr.mat.ce, sr.mat.ke/1.0f);
+    }else if(sr.mat.mat_type == REFLECTIVE)
     {
         Ray new_ray;
         vec3_copy(new_ray.origin, sr.hit_point);
         calcReflectRayDir(new_ray.direction, sr.normal, ray.direction);
         whittedTraceMedium(init_rad, depth+1, new_ray, trace_args);
-    }else if(sr.mat->mat_type == TRANSPARENT)
+    }else if(sr.mat.mat_type == TRANSPARENT)
     {
         float transmit_t = TMAX;
         float reflect_t = TMAX;
@@ -409,12 +409,12 @@ float whittedTraceMedium(vec3 radiance, const int depth, const Ray ray, TraceArg
         vec3 color_filter_ref, color_filter_trans;
         if(ndotwo > 0.0f)
         {
-            vec3_pow(color_filter_ref, sr.mat->cf_out, reflect_t);
-            vec3_pow(color_filter_trans, sr.mat->cf_in, transmit_t);
+            vec3_pow(color_filter_ref, sr.mat.cf_out, reflect_t);
+            vec3_pow(color_filter_trans, sr.mat.cf_in, transmit_t);
         }else
         {
-            vec3_pow(color_filter_ref, sr.mat->cf_in, reflect_t);
-            vec3_pow(color_filter_trans, sr.mat->cf_out, transmit_t);
+            vec3_pow(color_filter_ref, sr.mat.cf_in, reflect_t);
+            vec3_pow(color_filter_trans, sr.mat.cf_out, transmit_t);
         }
         vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
         vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);

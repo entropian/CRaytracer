@@ -104,29 +104,29 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const float t, const 
 
     float rand_float = (float)rand() / (float)RAND_MAX;
     vec3 sample, ref_ray_dir;
-    switch(sr->mat->mat_type)
+    switch(sr->mat.mat_type)
     {
     case MATTE:
     {
-        float reflectance_avg = (sr->mat->cd[0] + sr->mat->cd[1] + sr->mat->cd[2]) / 3.0f;
+        float reflectance_avg = (sr->mat.cd[0] + sr->mat.cd[1] + sr->mat.cd[2]) / 3.0f;
         if(rand_float > reflectance_avg){return false;}
-        getSample3D(sample, sr->mat->h_samples, sample_index);
+        getSample3D(sample, sr->mat.h_samples, sample_index);
         getVec3InLocalBasis(ref_ray_dir, sample, sr->normal);
-        photon_power[0] *= sr->mat->cd[0] / reflectance_avg;
-        photon_power[1] *= sr->mat->cd[1] / reflectance_avg;
-        photon_power[2] *= sr->mat->cd[2] / reflectance_avg;
+        photon_power[0] *= sr->mat.cd[0] / reflectance_avg;
+        photon_power[1] *= sr->mat.cd[1] / reflectance_avg;
+        photon_power[2] *= sr->mat.cd[2] / reflectance_avg;
     } break;
     case REFLECTIVE:
     {
-        float reflectance_avg = (sr->mat->cs[0] + sr->mat->cs[1] + sr->mat->cs[2]) / 3.0f;
+        float reflectance_avg = (sr->mat.cs[0] + sr->mat.cs[1] + sr->mat.cs[2]) / 3.0f;
         if(rand_float > reflectance_avg){return false;}
-        getSample3D(sample, sr->mat->h_samples, sample_index);
+        getSample3D(sample, sr->mat.h_samples, sample_index);
         vec3 reflect_dir;
         calcReflectRayDir(reflect_dir, sr->normal, ray->direction);
         getVec3InLocalBasis(ref_ray_dir, sample, reflect_dir);
-        photon_power[0] *= sr->mat->cs[0] / reflectance_avg;
-        photon_power[1] *= sr->mat->cs[1] / reflectance_avg;
-        photon_power[2] *= sr->mat->cs[2] / reflectance_avg;
+        photon_power[0] *= sr->mat.cs[0] / reflectance_avg;
+        photon_power[1] *= sr->mat.cs[1] / reflectance_avg;
+        photon_power[2] *= sr->mat.cs[2] / reflectance_avg;
     } break;
     case TRANSPARENT:
     {
@@ -140,12 +140,12 @@ bool calcNewRayAndPhotonPower(Ray *ray, vec3 photon_power, const float t, const 
         // because the tracing direction is reversed.
         if(ndotwo > 0.0f)
         {
-            vec3_pow(color_filter_ref, sr->mat->cf_in, t);
-            vec3_pow(color_filter_trans, sr->mat->cf_out, t);
+            vec3_pow(color_filter_ref, sr->mat.cf_in, t);
+            vec3_pow(color_filter_trans, sr->mat.cf_out, t);
         }else
         {
-            vec3_pow(color_filter_ref, sr->mat->cf_out, t);
-            vec3_pow(color_filter_trans, sr->mat->cf_in, t);
+            vec3_pow(color_filter_ref, sr->mat.cf_out, t);
+            vec3_pow(color_filter_trans, sr->mat.cf_in, t);
         }
         if(rand_float <= kr)
         {
@@ -401,15 +401,15 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
             float t = intersectTest(&sr, so, ray);
             if(t < TMAX)
             {
-                if(sr.mat->tex_flags != NO_TEXTURE)
+                if(sr.mat.tex_flags != NO_TEXTURE)
                 {
                     updateShadeRecWithTexInfo(&sr);
                 }
                 /*
-                if(sr.mat->mat_type == MATTE
+                if(sr.mat.mat_type == MATTE
                    && bounce_count != 0) // Excluding first bounce so the photon map is only for indirection illum
                 */
-                if(sr.mat->mat_type == MATTE) // Using global photon map for final gather
+                if(sr.mat.mat_type == MATTE) // Using global photon map for final gather
                 {
                     // Store photon if surface is matte
                     stored_photons++;
@@ -529,12 +529,12 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
             float t = intersectTest(&sr, so, ray);
             if(t < TMAX)
             {
-                if(sr.mat->tex_flags != NO_TEXTURE)
+                if(sr.mat.tex_flags != NO_TEXTURE)
                 {
                     updateShadeRecWithTexInfo(&sr);
                 }
                 // Problem: the order is wrong for reflection and power adjustment
-                if(sr.mat->mat_type == MATTE && reflected)
+                if(sr.mat.mat_type == MATTE && reflected)
                 {
                     // Store photon if surface is diffuse
                     stored_photons++;
@@ -543,7 +543,7 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
                     reflected = false;
                 }
                 // Reflect photon
-                if((sr.mat->mat_type == REFLECTIVE || sr.mat->mat_type == TRANSPARENT) &&
+                if((sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT) &&
                    calcNewRayAndPhotonPower(&ray, photon_power, t, &sr, photon_map, sample_index))
                 {
                     reflected = true;
@@ -893,7 +893,7 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
                                  const SceneObjects *so, const ShadeRec *sr, const vec3 caustic_rad)
 {
     vec3 pm_color = {0.0f, 0.0f, 0.0f};
-    if(sr->mat->mat_type == DIFFUSE)
+    if(sr->mat.mat_type == DIFFUSE)
     {
         Ray new_ray;
         vec3_copy(new_ray.origin, sr->hit_point);
@@ -904,7 +904,7 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
 
         if(t < TMAX)
         {
-            if(new_sr.mat->tex_flags != NO_TEXTURE)
+            if(new_sr.mat.tex_flags != NO_TEXTURE)
             {
                 updateShadeRecWithTexInfo(&new_sr);
             }
@@ -912,14 +912,14 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
             irradEstimate(irrad, photon_map, new_sr.hit_point, new_sr.normal,
                           query_vars->photon_radius, query_vars->nphotons);
 
-            vec3_scale(f, new_sr.mat->cd, new_sr.mat->kd / (float)PI);
+            vec3_scale(f, new_sr.mat.cd, new_sr.mat.kd / (float)PI);
             vec3 inc_rad;
             vec3_mult(inc_rad, irrad, f);
 
             float ndotwi = vec3_dot(sr->normal, new_ray.direction);
             float pdf = ndotwi / (float)PI;
             // Incoming radiance from secondary point * cosine theta
-            vec3_scale(f, sr->mat->cd, sr->mat->kd / (float)PI * ndotwi / pdf);
+            vec3_scale(f, sr->mat.cd, sr->mat.kd / (float)PI * ndotwi / pdf);
             vec3_mult(pm_color, inc_rad, f);
         }
 
@@ -955,7 +955,7 @@ void calcCausticBuffer(float* caustic_buffer, Camera *camera, Film *film,
                 irradEstimate(caustic_irrad, caustic_map, sr.hit_point, sr.normal,
                               query_vars->caustic_radius, query_vars->nphotons);
                 vec3 f;
-                vec3_scale(f, sr.mat->cd, sr.mat->kd / PI);
+                vec3_scale(f, sr.mat.cd, sr.mat.kd / PI);
                 vec3_mult(caustic_rad, caustic_irrad, f);
                 vec3_add(pm_color, pm_color, caustic_rad);
             }

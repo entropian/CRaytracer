@@ -358,7 +358,7 @@ int main(int argc, char** argv)
     thread_data.trace = trace;
 
     int num_patches = 64;
-    int num_threads = 1;
+    int num_threads = 4;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[10];
     int patches[128];

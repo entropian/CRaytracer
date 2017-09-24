@@ -21,7 +21,7 @@ float rayIntersectDisk(ShadeRec* sr, Disk* disk, const Ray ray)
                 vec3_copy(sr->normal, disk->normal);
             }
             vec3_copy(sr->hit_point, hit_point);
-            sr->mat = disk->mat;
+            sr->mat = *(disk->mat);
             return t;
         }
     }

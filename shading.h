@@ -16,25 +16,25 @@ void diffuseBRDF(vec3 f, const ShadeRec* sr)
 {
     vec3 reflectance;
     /*
-    if(sr->mat->tex_flags & DIFFUSE)
+    if(sr->mat.tex_flags & DIFFUSE)
     {
         vec3 texel;
-        //getTexColor(texel, sr->mat->tex_array[DIFFUSE_MAP_INDEX], sr->uv);
+        //getTexColor(texel, sr->mat.tex_array[DIFFUSE_MAP_INDEX], sr->uv);
         getMaterialDiffuseTexColor(texel, sr->mat, sr->uv);
-        vec3_scale(reflectance, texel, sr->mat->kd);        
+        vec3_scale(reflectance, texel, sr->mat.kd);        
     }else
     {
-        vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
+        vec3_scale(reflectance, sr->mat.cd, sr->mat.kd);
     }
     */
-    if(sr->mat->tex_flags & NOISE)
+    if(sr->mat.tex_flags & NOISE)
     {
         //float noise_val = turbulenceNoise(sr->hit_point);
         float noise_val = fBm(sr->hit_point);
         vec3_scale(reflectance, reflectance, noise_val);
     }else
     {
-        vec3_scale(reflectance, sr->mat->cd, sr->mat->kd);
+        vec3_scale(reflectance, sr->mat.cd, sr->mat.kd);
     }
 
     vec3_scale(f, reflectance, 1.0f/(float)PI);
@@ -63,7 +63,7 @@ void specularShading(vec3 radiance, const vec3 light_dir,
     vec3_add(reflect_dir, wo_neg, tmp);    
     float rdotl = clamp(vec3_dot(reflect_dir, light_dir), 0.0f, 1.0f);
     // NOTE: using cd instead of cs
-    vec3_scale(tmp, sr->mat->cd, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+    vec3_scale(tmp, sr->mat.cd, sr->mat.ks * (float)pow(rdotl, sr->mat.exp));
     vec3_mult(tmp, inc_radiance_cos, tmp);
     vec3_add(radiance, radiance, tmp);
 }
@@ -81,13 +81,13 @@ float AOTest(const vec3 h_sample, const SceneObjects *so, const ShadeRec* sr)
 void ambientShading(vec3 radiance, const AmbientLight* amb_light, const vec3 sample,
                     const SceneObjects* so, const ShadeRec* sr)
 {
-    if(sr->mat->mat_type != TRANSPARENT)
+    if(sr->mat.mat_type != TRANSPARENT)
     {
         // ka*ca * amb_inc_radiance    
         vec3 amb_inc_radiance;
         vec3_scale(amb_inc_radiance, amb_light->color, amb_light->intensity);
         vec3 reflectance;
-        vec3_scale(reflectance, sr->mat->ca, sr->mat->ka);
+        vec3_scale(reflectance, sr->mat.ca, sr->mat.ka);
         if(amb_light->amb_occlusion && AOTest(sample, so, sr) < TMAX)
         {
             // Ambient Occlusion                        
@@ -140,7 +140,7 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
     vec3_add(radiance, radiance, tmp);
 
     // Specular component
-    MatType mat_type = sr->mat->mat_type;
+    MatType mat_type = sr->mat.mat_type;
     //if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
     if(mat_type == PHONG) // NOTE: figure this out
     {
@@ -151,8 +151,8 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
         vec3_add(reflect_dir, wo_neg, tmp);
         float rdotl = clamp(vec3_dot(reflect_dir, light_dir), 0.0f, 1.0f);
 
-        //vec3_scale(f, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
-        vec3_scale(f, sr->mat->cd, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        //vec3_scale(f, sr->mat.cs, sr->mat.ks * (float)pow(rdotl, sr->mat.exp));
+        vec3_scale(f, sr->mat.cd, sr->mat.ks * (float)pow(rdotl, sr->mat.exp));
         vec3_mult(tmp, f, inc_radiance);
         vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
         vec3_add(radiance, radiance, tmp);
@@ -196,7 +196,7 @@ void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir
     vec3_add(radiance, radiance, tmp);
 
     // Specular component
-    MatType mat_type = sr->mat->mat_type;
+    MatType mat_type = sr->mat.mat_type;
     //if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
     if(mat_type == PHONG) // NOTE: figure this out
     {
@@ -208,9 +208,9 @@ void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir
         float rdotl = vec3_dot(reflect_dir, light_dir);
         assert(rdotl <= 1.0f);
 
-        //vec3_scale(f, sr->mat->cs, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        //vec3_scale(f, sr->mat.cs, sr->mat.ks * (float)pow(rdotl, sr->mat.exp));
         // NOTE: Using cd instead of cs
-        vec3_scale(f, sr->mat->cd, sr->mat->ks * (float)pow(rdotl, sr->mat->exp));
+        vec3_scale(f, sr->mat.cd, sr->mat.ks * (float)pow(rdotl, sr->mat.exp));
         vec3_mult(tmp, f, inc_rad);
         vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
         vec3_add(radiance, radiance, tmp);
@@ -228,7 +228,7 @@ void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
     float pdf = ndotwi / (float)PI;
     vec3_scale(radiance, radiance, 1.0f/pdf);
 
-    MatType mat_type = sr->mat->mat_type;
+    MatType mat_type = sr->mat.mat_type;
     if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)        
     {
         vec3 spec_radiance = {0.0f, 0.0f, 0.0f};
@@ -248,7 +248,7 @@ void envLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir,
     float pdf = ndotwi / (float)PI;
     vec3_scale(radiance, radiance, 1.0f/pdf);
 
-    MatType mat_type = sr->mat->mat_type;
+    MatType mat_type = sr->mat.mat_type;
     if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
     {
         vec3 spec_radiance = {0.0f, 0.0f, 0.0f};
@@ -293,7 +293,7 @@ void directIllumShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
         vec3_scale(inc_radiance_cos, tmp, ndotwi);
         diffuseShading(radiance, inc_radiance_cos,  sr);
 
-        MatType mat_type = sr->mat->mat_type;
+        MatType mat_type = sr->mat.mat_type;
         if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
         {
             // Specular component
@@ -324,7 +324,7 @@ void directIllumShadingRad(vec3 radiance, const float ndotwi, const vec3 light_d
         vec3_scale(inc_radiance_cos, inc_rad, ndotwi);
         diffuseShading(radiance, inc_radiance_cos,  sr);
 
-        MatType mat_type = sr->mat->mat_type;
+        MatType mat_type = sr->mat.mat_type;
         if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
         {
             // Specular component

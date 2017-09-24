@@ -14,21 +14,21 @@ typedef struct ShadeRec
     vec3 dpdv;
     vec3 wo;
     vec2 uv;
-    Material *mat;                // Points to the material member of an object    
+    Material mat;
 } ShadeRec;
 
 static void updateShadeRecWithTexInfo(ShadeRec *sr)
 {
-    if(sr->mat->tex_flags & DIFFUSE)
+    if(sr->mat.tex_flags & DIFFUSE)
     {
-        getMaterialDiffuseTexColor(sr->mat->cd, sr->mat, sr->uv);
+        getMaterialDiffuseTexColor(sr->mat.cd, &(sr->mat), sr->uv);
     }
-    if(sr->mat->tex_flags & SPECULAR)
+    if(sr->mat.tex_flags & SPECULAR)
     {
         // TEMP:
         vec3 spec_color;
-        getMaterialSpecularTexColor(spec_color, sr->mat, sr->uv);
-        sr->mat->ks = spec_color[0];
-        sr->mat->kd = 1.0f - sr->mat->ks;
+        getMaterialSpecularTexColor(spec_color, &(sr->mat), sr->uv);
+        sr->mat.ks = spec_color[0];
+        sr->mat.kd = 1.0f - sr->mat.ks;
     }
 }

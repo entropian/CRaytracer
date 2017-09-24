@@ -24,7 +24,7 @@ void fillShadeRecGenericOpenCylinder(ShadeRec *sr, GenericOpenCylinder* oc, cons
         vec3_assign(sr->normal, (-hit_point[0])/oc->radius, 0.0f, (-hit_point[2])/oc->radius);
     } break;
     }
-    sr->mat = oc->mat;
+    sr->mat = *(oc->mat);
 }
 
 float rayIntersectGenericOpenCylinder(ShadeRec* sr, GenericOpenCylinder* oc, const Ray ray)
@@ -209,7 +209,7 @@ float rayIntersectGenericTorus(ShadeRec* sr, GenericTorus* torus, const Ray ray)
         {
             vec3_negate(sr->normal, sr->normal);
         }
-        sr->mat = torus->mat;
+        sr->mat = *(torus->mat);
         return (float)t;                                
     }
 
@@ -392,7 +392,7 @@ float rayIntersectAABox(ShadeRec* sr, AABox* aabox, const Ray ray)
             vec3_negate(sr->normal, sr->normal);
         }
         getPointOnRay(sr->hit_point, ray, t_min);
-        sr->mat = aabox->mat;
+        sr->mat = *(aabox->mat);
         sr->hit_status = true;
         vec3_negate(sr->wo, ray.direction);
     }

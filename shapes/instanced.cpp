@@ -98,7 +98,7 @@ float rayIntersectInstanced(ShadeRec* sr, InstancedShape* is, const Ray src_ray)
         mat4_mult_vec4(transformed_normal, normal_mat, normal);
         vec3FromVec4(sr->normal, transformed_normal);
         getPointOnRay(sr->hit_point, src_ray, t);
-        is->mat = sr->mat;
+        //is->mat = sr->mat;
     }
     return t;
 }

@@ -35,7 +35,7 @@ float rayIntersectRect(ShadeRec *sr, Rectangle *rect, const Ray ray)
                 {
                     vec3_negate(sr->normal, sr->normal);
                 }
-                sr->mat = rect->mat;                
+                sr->mat = *(rect->mat);
                 return t;
             }
         }

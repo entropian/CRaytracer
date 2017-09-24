@@ -9,7 +9,7 @@ void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, cons
     vec3_sub(hit_point_to_center, sr->hit_point, sphere->center);
     vec3_normalize(sr->normal, hit_point_to_center);
     vec3_negate(sr->wo, ray.direction);
-    sr->mat = sphere->mat;
+    sr->mat = *(sphere->mat);
     vec3 surface_normal;
     vec3_copy(surface_normal, sr->normal);
     //if(sphere->mat->tex_flags != NO_TEXTURE)
@@ -19,11 +19,7 @@ void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, cons
         const double phi_max = 2.0 * PI;    
         float u = phi / phi_max;
         float v = (theta - theta_min) / (theta_max - theta_min);
-        //float v = theta / theta_max;
-        //vec3_assign(sr->mat->cd, u, u, u);
-        //vec3_assign(sr->mat->cd, v, v, v);
         vec2_assign(sr->uv, u, v);
-        //vec3_assign(sr->mat->cd, sr->uv[0], sr->uv[0], sr->uv[0]);
 
         float y_radius = sqrt(hit_point[0] * hit_point[0] + hit_point[2] * hit_point[2]);
         float inv_y_radius = 1.0f / y_radius;

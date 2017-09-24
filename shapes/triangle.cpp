@@ -163,7 +163,7 @@ float rayIntersectTriangle(ShadeRec* sr, Triangle* tri, const Ray ray)
     {
         vec3_negate(sr->normal, sr->normal);
     }
-    sr->mat = tri->mat;
+    sr->mat = *(tri->mat);
     return t;
 }
 
@@ -194,7 +194,7 @@ float rayIntersectFlatTriangle(ShadeRec* sr, FlatTriangle* tri, const Ray ray)
     vec3_copy(sr->normal, tri->normal);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);    
-    sr->mat = tri->mat;
+    sr->mat = *(tri->mat);
     return t;
 }
 
@@ -260,7 +260,7 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     assert(sr->normal[0] != 0.0f || sr->normal[1] != 0.0f || sr->normal[2] != 0.0f);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);
-    sr->mat = tri->mat;
+    sr->mat = *(tri->mat);
     return t;
 }
 
@@ -316,7 +316,7 @@ float getSmoothTriangleShadeRec(ShadeRec* sr, SmoothTriangle* tri, const Ray ray
     assert(sr->normal[0] != 0.0f || sr->normal[1] != 0.0f || sr->normal[2] != 0.0f);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);
-    sr->mat = tri->mat;
+    sr->mat = *(tri->mat);
     return t;
 }
 
