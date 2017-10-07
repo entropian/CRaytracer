@@ -428,6 +428,7 @@ void cosWeightedHemisphereSample(vec3 sample, const float e)
 float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
                          const int depth, TraceArgs *trace_args)
 {
+    // sampeF
     const int sample_index = trace_args->sample_index;
     vec3 reflect_dir;
     calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
@@ -499,6 +500,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
     {
         if(min_sr.mat.tex_flags != NO_TEXTURE)
         {
+            // TODO move texture fetch into computeScatteringFunc
             updateShadeRecWithTexInfo(&min_sr);
         }
         if(min_sr.mat.mat_type == EMISSIVE)
@@ -549,19 +551,11 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                             vec3 sample, sample_normal;
                             vec3 hit_to_sample;
                             vec3 sample_to_hit;
-                            //do{
                             MeshLight_genSample(sample, sample_normal, mesh_light_ptr);
-                                // 2. check if hit surface faces sample point. if not go back to 1
-
-                            //vec3_sub(hit_to_sample, sample, min_sr.hit_point);
+                            // 2. check if hit surface faces sample point. if not go back to 1
                             vec3_sub(hit_to_sample, min_sr.hit_point, sample);
-                                // 3. check if sample surface faces hit point. if not go back to 1
-
+                            // 3. check if sample surface faces hit point. if not go back to 1
                             vec3_negate(sample_to_hit, hit_to_sample);
-                                /*
-                            }while(vec3_dot(sample_normal, hit_to_sample) <= 0.0f ||
-                                   vec3_dot(min_sr.normal, sample_to_hit) <= 0.0f);
-                                */
                             // 4. check if sample point is visible from hit point. if not, terminate
                             if(vec3_dot(sample_normal, hit_to_sample) > 0.0f &&
                                    vec3_dot(min_sr.normal, sample_to_hit) > 0.0f)
@@ -606,6 +600,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 #endif
                 if(min_sr.mat.mat_type == MATTE)
                 {
+                    // sampleF
                     vec3 new_sample;
                     getSample3D(new_sample, min_sr.mat.h_samples, sample_index + (MAX_DEPTH - depth));
                     Ray sample_ray;
@@ -618,7 +613,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     //if(rand_float <= cd_avg)
                     {
                         pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
-                        //assert(inc_radiance[0] >= 0.0f && inc_radiance[1] >= 0.0f && inc_radiance[2] >= 0.0f);
+                        // f
                         vec3 brdf;
                         vec3_scale(brdf, min_sr.mat.cd, min_sr.mat.kd / (float)PI);
                         float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
@@ -642,8 +637,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     vec3_scale(reflected_illum, reflected_illum, min_sr.mat.ks);
                     vec3_add(radiance, radiance, reflected_illum);
                 }
-
-                // TODO incorporate russian roulette
+                /*
                 if(min_sr.mat.mat_type == PHONG)
                 {
                     vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
@@ -685,6 +679,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                         vec3_add(radiance, radiance, reflected_illum);
                     }
                 }
+                */
 
                 if(min_sr.mat.mat_type == TRANSPARENT)
                 {

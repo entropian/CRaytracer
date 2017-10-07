@@ -222,13 +222,15 @@ void genMultijitteredSamples(Samples2D *samples)
     for(int p = 0; p < samples->num_sets; p++)
     {
         int row_offset = 0;
+        int rand_num = rand();
         for(int i = 0; i < samples->num_samples; i++)
         {
             if(i % samples_per_row == 0)
             {
                 row_offset = i + p * samples->num_samples;
             }
-            int target = rand() % samples_per_row + row_offset;
+            //int target = rand() % samples_per_row + row_offset;
+            int target = rand_num % samples_per_row + row_offset;
             float tmp = samples->samples[i + p * samples->num_samples][0];
             samples->samples[i + p * samples->num_samples][0] = samples->samples[target][0];
             samples->samples[target][0] = tmp;
@@ -236,10 +238,11 @@ void genMultijitteredSamples(Samples2D *samples)
     }
     for(int p = 0; p < samples->num_sets; p++)
     {
-
+        int rand_num = rand();
         for(int i = 0; i < samples->num_samples; i++)
         {
-            int target = rand() % samples_per_row * samples_per_row + (i % samples_per_row)
+            //int target = rand() % samples_per_row * samples_per_row + (i % samples_per_row)
+            int target = rand_num % samples_per_row * samples_per_row + (i % samples_per_row)
                 + p * samples->num_samples;
             float tmp = samples->samples[i + p * samples->num_samples][1];
             samples->samples[i + p * samples->num_samples][1] = samples->samples[target][1];

@@ -1,6 +1,6 @@
 area light castin shadow
+add uv coords and partial derivatives to the rest of the primitives
 try not to keep pointers to elements in dynamic array when it's still growing
-add env light into scene file
 dragon ugh
 glossy object edge don't look right. lack fresnel
 multithreading obj loading
@@ -10,7 +10,6 @@ Irradiance caching
 add normal type to torus
 set default background color in scene file
 Combine light pointer and light type into a struct?
-change some push function arguments to pointers?
 Change it so that the image plane isn't totally reliant on fov as input.
 the eventual image plane struct could have a samples pointer of its own.
 Update the clean up section.
