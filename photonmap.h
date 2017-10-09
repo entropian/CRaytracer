@@ -933,18 +933,24 @@ void calcPhotonmapComponent(vec3 color, const vec3 h_sample, const PhotonQueryVa
 
 void calcCausticBuffer(float* caustic_buffer, Camera *camera, Film *film, 
                        const Scene *scene, const Photonmap *caustic_map, const PhotonQueryVars *query_vars,
-                       const unsigned char *set_buffer, const int num_caustic_samples)
+                       const int num_caustic_samples)
 {
+    Sampler sampler;
+    Sampler_create(&sampler);
     for(int p = 0; p < num_caustic_samples; p++)
     {
+        sampler.cur_sample_index = p;
         for(int i = 0; i < film->num_pixels; i++)
         {
-            int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
+            Sampler_setPixel(&sampler, i);
             vec2 imageplane_coord;
-            calcImageCoord(imageplane_coord, film, sample_index, i);
+            vec2 sample;
+            Sampler_getSample(sample, &sampler);
+            calcImageCoord(imageplane_coord, film, sample, i);
 
             Ray ray;
-            calcCameraRay(&ray, imageplane_coord, camera, sample_index);
+            Sampler_getSample(sample, &sampler);
+            calcCameraRay(&ray, imageplane_coord, camera, sample);
 
             ShadeRec sr;
             float t = intersectTest(&sr, &(scene->objects), ray);

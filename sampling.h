@@ -60,7 +60,7 @@ int calcNextSampleIndex();
 int calcInterleavedSampleIndex(const int sample_index, const int set_index);
 void getSample2D(vec2 r, const Samples2D* samples, const int sample_index);
 void getSample3D(vec3 r, const Samples3D* samples, const int sample_index);
-void createGlobalSampleObject(const int num_samples, const int num_sets);
+void createGlobalSampleObject(const int num_samples, const int num_sets, const int num_pixels);
 void destroyGlobalSampleObject();
 
 
@@ -79,3 +79,5 @@ void Sampler_getSample(vec2 out, Sampler* sampler);
 void mapSampleToDisk(vec2 out, const vec2 in);
 void mapSampleToHemisphere(vec3 out, const vec2 in);
 void mapSampleWithCosPower(vec2 out, const vec2 in, const float exp);
+void Sampler_getHemisphereSample(vec3 out, Sampler* sampler);
+void Sampler_getCosPowerSample(vec3 out, Sampler* sampler, const float exp);

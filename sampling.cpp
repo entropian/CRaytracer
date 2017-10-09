@@ -451,8 +451,9 @@ void drawHemisphereSamples2D(unsigned char *image, Samples3D *samples,
 
 static Samples2D global_samples;
 static int** permutation_arrays = NULL;
-
-void createGlobalSampleObject(const int num_samples, const int num_sets)
+static int* random_sets = NULL;
+static int random_sets_size = 0;
+void createGlobalSampleObject(const int num_samples, const int num_sets, const int num_pixels)
 {
     setNumSamplesAndSets(num_samples, num_sets);
     genMultijitteredSamples(&global_samples);
@@ -472,6 +473,12 @@ void createGlobalSampleObject(const int num_samples, const int num_sets)
             permutation_arrays[i][random_index] = tmp;
         }
     }
+    random_sets = (int*)malloc(sizeof(int) * num_pixels);
+    random_sets_size = num_pixels;
+    for(int i = 0; i < num_pixels; i++)
+    {
+        random_sets[i] = rand() % num_sets;
+    }
 }
 
 void destroyGlobalSampleObject()
@@ -484,6 +491,10 @@ void destroyGlobalSampleObject()
             free(permutation_arrays[i]);
         }
         free(permutation_arrays);
+    }
+    if(random_sets)
+    {
+        free(random_sets);
     }
 }
 
@@ -505,8 +516,7 @@ void Sampler_delete(Sampler* sampler)
 
 void Sampler_calcSetSquence(Sampler* sampler, const int a)
 {
-    //int index = a % NUM_SAMPLE_SETS;
-    int index = rand() % NUM_SAMPLE_SETS;
+    int index = random_sets[a];
     for(int i = 0; i < NUM_SAMPLE_SETS; i++)
     {
         sampler->set_sequence[i] = permutation_arrays[i][index];
@@ -551,6 +561,13 @@ void mapSampleToHemisphere(vec3 out, const vec2 in)
     out[2] = sqrtf(max(0, 1.0f - out[0]*out[0] - out[1]*out[1]));
 }
 
+void Sampler_getHemisphereSample(vec3 out, Sampler* sampler)
+{
+    vec2 sample;
+    Sampler_getSample(sample, sampler);
+    mapSampleToHemisphere(out, sample);
+}
+
 void mapSampleWithCosPower(vec2 out, const vec2 in, const float exp)
 {
     float cos_phi = (float)cos(2.0f * (float)PI * in[0]);
@@ -562,4 +579,11 @@ void mapSampleWithCosPower(vec2 out, const vec2 in, const float exp)
     float pv = sin_theta * sin_phi;
     float pw = cos_theta;
     vec3_assign(out, pu, pv, pw);
+}
+
+void Sampler_getCosPowerSample(vec3 out, Sampler* sampler, const float exp)
+{
+    vec2 sample;
+    Sampler_getSample(sample, sampler);
+    mapSampleWithCosPower(out, sample, exp);
 }

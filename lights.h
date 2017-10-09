@@ -99,7 +99,6 @@ void assignDirLight(DirLight *dir_light, const float intensity, const vec3 color
 void assignPointLight(PointLight *point_light, const float intensity, const vec3 color, const vec3 point);
 
 // Calculate and store light direction vector in r
-void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, const ShadeRec* sr, const int);
 void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, const ShadeRec* sr, const vec2 sample);
 
 // Calculate and store incident radiance in r
