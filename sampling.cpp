@@ -117,11 +117,13 @@ void shuffleSamples(Samples2D* samples)
             vec2_copy(samples->samples[j + offset], samples->samples[random_index]);
             vec2_copy(samples->samples[random_index], tmp);
         }
-    }    
+    }
+    /*
     if(INTERLEAVED)
     {
         interleaveSampleSets2D(samples);
     }
+    */
 }
 
 // Used for rendering the entire image one sample at a time
@@ -445,4 +447,42 @@ void drawHemisphereSamples2D(unsigned char *image, Samples3D *samples,
         image[index*3 + 1] = 0;
         image[index*3 + 2] = 0;
     }    
+}
+
+static Samples2D global_samples;
+static int** permutation_arrays = NULL;
+
+void createGlobalSampleObject(const int num_samples, const int num_sets)
+{
+    setNumSamplesAndSets(num_samples, num_sets);
+    genMultijitteredSamples(&global_samples);
+    permutation_arrays = (int**)malloc(sizeof(int*) * num_sets);
+    for(int i = 0; i < num_sets; i++)
+    {
+        permutation_arrays[i] = (int*)malloc(sizeof(int) * num_sets);
+        for(int j = 0; j < num_sets; j++)
+        {
+            permutation_arrays[i][j] = j;
+        }
+        for(int j = 0; j < num_sets; j++)
+        {
+            int random_index = rand() % num_sets;
+            int tmp = permutation_arrays[i][j];
+            permutation_arrays[i][j] = permutation_arrays[i][random_index];
+            permutation_arrays[i][random_index] = tmp;
+        }
+    }
+}
+
+void destroyGlobalSampleObject()
+{
+    freeSamples2D(&global_samples);
+    if(permutation_arrays)
+    {
+        for(int i = 0; i < NUM_SAMPLE_SETS; i++)
+        {
+            free(permutation_arrays[i]);
+        }
+        free(permutation_arrays);
+    }
 }

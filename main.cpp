@@ -250,10 +250,16 @@ int main(int argc, char** argv)
     //LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
 
     // Samples
-    setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets
+    //setNumSamplesAndSets(params.num_samples, params.num_sample_sets);    // This sets the number of samples and sets
                                                                          // for every sample struct that follows
 
-    setInterleaved(true);
+    createGlobalSampleObject(params.num_samples, params.num_sample_sets);
+    
+    destroyGlobalSampleObject();
+
+    exit(0);
+
+    setInterleaved(false);
     unsigned char* set_buffer = (unsigned char*)malloc(sizeof(unsigned char) * num_pixels);
     for(unsigned int i = 0; i < num_pixels; i++)
     {
