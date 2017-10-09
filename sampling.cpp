@@ -486,3 +486,42 @@ void destroyGlobalSampleObject()
         free(permutation_arrays);
     }
 }
+
+
+void Sampler_create(Sampler* sampler)
+{
+    sampler->cur_sample_index = 0;
+    sampler->cur_dimension = 0;
+    sampler->set_sequence = (int*)malloc(sizeof(int) * NUM_SAMPLE_SETS);
+}
+
+void Sampler_delete(Sampler* sampler)
+{
+    sampler->cur_sample_index = 0;
+    sampler->cur_dimension = 0;
+    free(sampler->set_sequence);
+    sampler->set_sequence = NULL;
+}
+
+void Sampler_calcSetSquence(Sampler* sampler, const int a)
+{
+    int index = a % NUM_SAMPLE_SETS;
+    for(int i = 0; i < NUM_SAMPLE_SETS; i++)
+    {
+        sampler->set_sequence[i] = permutation_arrays[i][index];
+    }
+}
+
+void Sampler_setPixel(Sampler* sampler, const int x, const int y, const int x_res)
+{
+    sampler->cur_dimension = 0;
+    Sampler_calcSetSquence(sampler, y * x_res + x);
+}
+
+void Sampler_getSample(vec2 out, Sampler* sampler)
+{
+    int offset = sampler->set_sequence[(sampler->cur_dimension)++] * NUM_SAMPLES;
+    int sample_index = offset + sampler->cur_sample_index;
+    vec2_copy(out, global_samples.samples[sample_index]);
+}
+

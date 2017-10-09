@@ -62,3 +62,17 @@ void getSample2D(vec2 r, const Samples2D* samples, const int sample_index);
 void getSample3D(vec3 r, const Samples3D* samples, const int sample_index);
 void createGlobalSampleObject(const int num_samples, const int num_sets);
 void destroyGlobalSampleObject();
+
+
+typedef struct Sampler_s
+{
+    int cur_sample_index;
+    int cur_dimension;
+    int* set_sequence;    
+}Sampler;
+
+void Sampler_create(Sampler* sampler);
+void Sampler_delete(Sampler* sampler);
+void Sampler_calcSetSequence(Sampler* sampler, const int a);
+void Sampler_setPixel(Sampler* sampler, const int x, const int y, const int x_res);
+void Sampler_getsample(vec2 out, Sampler* sampler);
