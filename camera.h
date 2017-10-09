@@ -39,6 +39,7 @@ void calcRayPinhole(Ray *ray, const vec2 viewplane_coord, const Camera *camera);
 // Compute a ray for thin lens camera
 void calcRayThinLens(Ray *ray, const vec2 viewplane_coord, const Camera *camera, const int sample_index);
 void calcCameraRay(Ray* ray, const vec2 imageplane_coord, const Camera* camera, const int sample_index);
+void calcCameraRay(Ray* ray, const vec2 imageplane_coord, const Camera* camera, const vec2 sample);
 
 typedef struct Film_s
 {
@@ -52,4 +53,5 @@ typedef struct Film_s
 
 void calcFilmDimension(Film *film, const Camera *camera);
 void calcImageCoord(vec2 image_coord, Film *film, const int sample_index, const int pixel_index);
+void calcImageCoord(vec2 image_coord, Film *film, const vec2 sample, const int pixel_index);
 

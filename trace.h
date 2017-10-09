@@ -44,6 +44,8 @@ typedef struct TraceArgs_s
     PhotonQueryVars *query_vars;
     vec3 caustic_rad;
 
+    Sampler* sampler;
+
     // Currently not really used
     Material* medium_mat;
 }TraceArgs;
@@ -89,9 +91,13 @@ float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
-    const int sample_index = trace_args->sample_index;
+    //const int sample_index = trace_args->sample_index;
+    Sampler* sampler = trace_args->sampler;
+    vec2 sample;
+    Sampler_getSample(sample, sampler);
     vec3 h_sample;
-    vec3_copy(h_sample, trace_args->h_sample);
+    mapSampleToHemisphere(h_sample, sample);
+    //vec3_copy(h_sample, trace_args->h_sample);
 
     vec3_copy(radiance, BLACK);
     ShadeRec min_sr;
@@ -127,7 +133,10 @@ float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
             for(int i = 0; i < sl->num_lights; i++)
             {
                 vec3 light_dir;
-                getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
+                //getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index); sample change
+                vec2 sample;
+                Sampler_getSample(sample, sampler);
+                getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample); 
                 float ndotwi = vec3_dot(light_dir, min_sr.normal);
                 if(ndotwi > 0)
                 {
@@ -153,7 +162,8 @@ float calcSpecRefRadiance(vec3 spec_ref_radiance,
                           const int depth,  const Ray ray, const ShadeRec* sr,
                           TraceArgs *trace_args)
 {
-    const int sample_index = trace_args->sample_index;
+    //const int sample_index = trace_args->sample_index;
+    Sampler* sampler = trace_args->sampler;
     vec3 reflect_dir, normal;
     vec3_copy(normal, sr->normal);
     calcReflectRayDir(reflect_dir, normal, ray.direction);
@@ -161,8 +171,13 @@ float calcSpecRefRadiance(vec3 spec_ref_radiance,
     {
         vec3_negate(normal, normal);
     }
+    //vec3 new_sample;
+    //getSample3D(new_sample, sr->mat.h_samples, sample_index);
+    vec2 sample;
+    Sampler_getSample(sample, sampler);
     vec3 new_sample;
-    getSample3D(new_sample, sr->mat.h_samples, sample_index);
+    mapSampleWithCosPower(new_sample, sample, sr->mat.exp);
+    // TODO cosine power
     Ray sample_ray;
     vec3_copy(sample_ray.origin, sr->hit_point);
     getVec3InLocalBasis(sample_ray.direction, new_sample, reflect_dir);
@@ -245,6 +260,7 @@ void whittedShade(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
+    Sampler* sampler = trace_args->sampler;
     if(sr->mat.mat_type == EMISSIVE)
     {
         vec3_scale(radiance, sr->mat.ce, sr->mat.ke/1.0f);
@@ -254,7 +270,12 @@ void whittedShade(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args
         }
     }else
     {
-        ambientShading(radiance, sl->amb_light, trace_args->h_sample, so, sr);
+        vec2 sample;
+        Sampler_getSample(sample, sampler);
+        vec3 h_sample;
+        mapSampleToHemisphere(h_sample, sample);
+        //ambientShading(radiance, sl->amb_light, trace_args->h_sample, so, sr);
+        ambientShading(radiance, sl->amb_light, h_sample, so, sr);
         // Direct illumination
         // TODO: refactor
         if(sr->mat.mat_type == MATTE || sr->mat.mat_type == PHONG)
@@ -262,7 +283,10 @@ void whittedShade(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args
             for(int i = 0; i < sl->num_lights; i++)
             {
                 vec3 light_dir;
-                getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], sr, trace_args->sample_index);
+                //getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], sr, trace_args->sample_index);
+                vec2 sample;
+                Sampler_getSample(sample, sampler);
+                getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], sr, sample);
                 float ndotwi = vec3_dot(light_dir, sr->normal);
                 if(ndotwi > 0.0f)
                 {
@@ -380,6 +404,7 @@ float whittedPhotonTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *tra
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
+    Sampler* sampler = trace_args->sampler;
     vec3_copy(radiance, ORIGIN);
     float min_t = TMAX;
     ShadeRec min_sr;
@@ -393,7 +418,11 @@ float whittedPhotonTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *tra
         }
         whittedShade(radiance, depth, ray, trace_args, &min_sr);
         vec3 pm_comp;
-        calcPhotonmapComponent(pm_comp, trace_args->h_sample, trace_args->query_vars, trace_args->photon_map,
+        vec2 sample;
+        Sampler_getSample(sample, sampler);
+        vec3 h_sample;
+        mapSampleToHemisphere(h_sample, sample);
+        calcPhotonmapComponent(pm_comp, h_sample, trace_args->query_vars, trace_args->photon_map,
                                     trace_args->caustic_map, so, &min_sr, trace_args->caustic_rad);
         vec3_add(radiance, radiance, pm_comp);
     }else
@@ -429,11 +458,15 @@ float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
                          const int depth, TraceArgs *trace_args)
 {
     // sampeF
-    const int sample_index = trace_args->sample_index;
+    //const int sample_index = trace_args->sample_index;
+    Sampler* sampler = trace_args->sampler;
     vec3 reflect_dir;
-    calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
+    calcReflectRayDir(reflect_dir, sr->normal, ray.direction);    
     vec3 new_sample;
-    getSample3D(new_sample, sr->mat.h_samples, sample_index + (MAX_DEPTH - depth));
+    //getSample3D(new_sample, sr->mat.h_samples, sample_index + (MAX_DEPTH - depth));
+    vec2 sample;
+    Sampler_getSample(sample, sampler);
+    mapSampleWithCosPower(new_sample, sample, sr->mat.exp);
     Ray sample_ray;
     vec3_copy(sample_ray.origin, sr->hit_point);
     getVec3InLocalBasis(sample_ray.direction, new_sample, reflect_dir);
@@ -457,7 +490,8 @@ float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
 float calcSpecRadiancePTGenSample(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
                          const int depth, TraceArgs *trace_args)
 {
-    const int sample_index = trace_args->sample_index;
+    //const int sample_index = trace_args->sample_index;
+    //Sampler* sampler = trace_args->sampler;
     vec3 reflect_dir;
     calcReflectRayDir(reflect_dir, sr->normal, ray.direction);
     vec3 new_sample;
@@ -487,9 +521,10 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
-    const int sample_index = trace_args->sample_index;
-    vec3 h_sample;
-    vec3_copy(h_sample, trace_args->h_sample);
+    //const int sample_index = trace_args->sample_index;
+    Sampler* sampler = trace_args->sampler;
+    //vec3 h_sample;
+    //vec3_copy(h_sample, trace_args->h_sample);
 
     vec3_copy(radiance, ORIGIN);
     float min_t = TMAX;
@@ -532,7 +567,10 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                         if(sl->light_types[i] == AREALIGHT)
                         {
                             vec3 light_dir;
-                            getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
+                            vec2 sample;
+                            Sampler_getSample(sample, sampler);
+                            //getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
+                            getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample);
                             float ndotwi = vec3_dot(light_dir, min_sr.normal);
                             if(ndotwi > 0)
                             {
@@ -602,7 +640,10 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                 {
                     // sampleF
                     vec3 new_sample;
-                    getSample3D(new_sample, min_sr.mat.h_samples, sample_index + (MAX_DEPTH - depth));
+                    //getSample3D(new_sample, min_sr.mat.h_samples, sample_index + (MAX_DEPTH - depth));
+                    vec2 sample;
+                    Sampler_getSample(sample, sampler);
+                    mapSampleToHemisphere(new_sample, sample);
                     Ray sample_ray;
                     getVec3InLocalBasis(sample_ray.direction, new_sample, min_sr.normal);
                     vec3_copy(sample_ray.origin, min_sr.hit_point);

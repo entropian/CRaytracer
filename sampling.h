@@ -74,5 +74,8 @@ typedef struct Sampler_s
 void Sampler_create(Sampler* sampler);
 void Sampler_delete(Sampler* sampler);
 void Sampler_calcSetSequence(Sampler* sampler, const int a);
-void Sampler_setPixel(Sampler* sampler, const int x, const int y, const int x_res);
-void Sampler_getsample(vec2 out, Sampler* sampler);
+void Sampler_setPixel(Sampler* sampler, const int a);
+void Sampler_getSample(vec2 out, Sampler* sampler);
+void mapSampleToDisk(vec2 out, const vec2 in);
+void mapSampleToHemisphere(vec3 out, const vec2 in);
+void mapSampleWithCosPower(vec2 out, const vec2 in, const float exp);

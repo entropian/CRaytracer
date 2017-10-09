@@ -93,6 +93,67 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
     }
 }
 
+void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, const ShadeRec* sr, const vec2 sample)
+{
+    switch(light_type)
+    {
+    case DIRECTIONAL:
+    {
+        vec3_copy(r, ((DirLight*)light_ptr)->direction);
+    } break;
+    case POINTLIGHT:
+    {
+        vec3 displacement;
+        vec3_sub(displacement, ((PointLight*)light_ptr)->point, sr->hit_point);
+        vec3_normalize(r, displacement);
+    } break;
+    case AREALIGHT:
+    {
+        // Side effect: calculates and stores the surface sample point 
+        AreaLight* area_light_ptr = (AreaLight*)light_ptr;
+        switch(area_light_ptr->obj_type)
+        {
+        case RECTANGLE:
+        {
+            //vec2 sample;
+            //getSample2D(sample, area_light_ptr->samples2D, sample_index);
+            vec3 displacement;
+            Rectangle* rect = (Rectangle*)(area_light_ptr->obj_ptr);
+            vec3_scale(displacement, rect->width, sample[0]);
+            vec3_add(area_light_ptr->sample_point, rect->point, displacement);
+            vec3_scale(displacement, rect->height, sample[1]);
+            vec3_add(area_light_ptr->sample_point, area_light_ptr->sample_point, displacement);            
+            vec3_sub(displacement, area_light_ptr->sample_point, sr->hit_point);
+            vec3_normalize(r, displacement);
+        } break;
+        case SPHERE:
+        {
+            vec3 h_sample;
+            //getSample3D(h_sample, area_light_ptr->samples3D, sample_index);
+            mapSampleToHemisphere(h_sample, sample);
+            getVec3InLocalBasis(area_light_ptr->sample_point, h_sample, sr->normal);
+            vec3_add(area_light_ptr->sample_point, area_light_ptr->sample_point,
+                     ((Sphere*)(area_light_ptr->obj_ptr))->center);
+            vec3 displacement;
+            vec3_sub(displacement, area_light_ptr->sample_point, sr->hit_point);
+            vec3_normalize(r, displacement);
+        } break;
+        }
+    }  break;
+    case ENVLIGHT:
+    {
+        // get sample
+        // calculate orthonormal basis based on the hit point and hit normal
+        // transform sample by orthonormal basis
+        EnvLight* env_light_ptr = (EnvLight*)light_ptr;
+        vec3 h_sample;
+        //getSample3D(h_sample, env_light_ptr->samples3D, sample_index);
+        mapSampleToHemisphere(h_sample, sample);
+        getVec3InLocalBasis(r, h_sample, sr->normal);        
+    } break;
+    }
+}
+
 void getIncRadiance(vec3 r, const LightType light_type, const void* light_ptr, const vec3 hit_point)
 {
     switch(light_type)

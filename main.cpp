@@ -132,7 +132,7 @@ void* threadFunc(void* vargp)
             trace_args.objects = &(thread_data->scene->objects);
             trace_args.lights = &(thread_data->scene->lights);
             trace_args.sample_index = sample_index;
-            getSample3D(trace_args.h_sample, thread_data->h_samples, sample_index);
+            //getSample3D(trace_args.h_sample, thread_data->h_samples, sample_index);
             if(thread_data->params->trace_type == PHOTONMAP)
             {
                 trace_args.photon_map = thread_data->photon_map;
@@ -255,10 +255,7 @@ int main(int argc, char** argv)
 
     createGlobalSampleObject(params.num_samples, params.num_sample_sets);
     
-    destroyGlobalSampleObject();
-
-    exit(0);
-
+    /*
     setInterleaved(false);
     unsigned char* set_buffer = (unsigned char*)malloc(sizeof(unsigned char) * num_pixels);
     for(unsigned int i = 0; i < num_pixels; i++)
@@ -273,6 +270,7 @@ int main(int argc, char** argv)
     genMultijitteredSamples(&unit_square_samples);
     mapSamplesToDisk(&disk_samples, &unit_square_samples);
     mapSamplesToHemisphere(&h_samples, &disk_samples, 1);
+    */
 
     // Scene data structures
     Scene scene = Scene_create();
@@ -329,7 +327,7 @@ int main(int argc, char** argv)
     film.fov = 40.0f / 180.0f * PI; // TODO
     Camera *camera = &(scene.camera);
     calcFilmDimension(&film, camera);
-    moveSamples2D(&(film.samples), &unit_square_samples);
+    //moveSamples2D(&(film.samples), &unit_square_samples);
 
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs*);
@@ -341,19 +339,21 @@ int main(int argc, char** argv)
     {
         trace = getTraceFunc(params.trace_type);
     }
+    /*
     if(params.trace_type == PHOTONMAP && params.caustic_map)
     {
         const int num_caustic_samples = 4;
         calcCausticBuffer(caustic_buffer, camera, &film, &scene, &caustic_map, &query_vars,
                           set_buffer, num_caustic_samples);
     }
+    */
     ThreadData thread_data;
     thread_data.prev_num_samples = prev_num_samples;
-    thread_data.set_buffer = set_buffer;
+    //thread_data.set_buffer = set_buffer;
     thread_data.film = &film;
     thread_data.camera = camera;
     thread_data.scene = &scene;
-    thread_data.h_samples = &h_samples;
+    //thread_data.h_samples = &h_samples;
     thread_data.photon_map = &photon_map;
     thread_data.caustic_map = &caustic_map;
     thread_data.query_vars = &query_vars;
@@ -378,7 +378,7 @@ int main(int argc, char** argv)
     end_time = start_time;
     int prev_percent = 0;
 
-#define MULTITHREAD
+//#define MULTITHREAD
 #ifdef MULTITHREAD
     JobQueue job_queue;
     JobQueue_init(&job_queue);
@@ -420,24 +420,35 @@ int main(int argc, char** argv)
         }
     }
 #else
+    Sampler sampler;
+    Sampler_create(&sampler);
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
+        sampler.cur_sample_index = p;
         for(int i = 0; i < num_pixels; i++)
         {
-            int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
+            Sampler_setPixel(&sampler, i);
+            //int sample_index = calcInterleavedSampleIndex(p, set_buffer[i]);
             vec3 color = {0.0f, 0.0f, 0.0f};
+            vec2 sample;
+            Sampler_getSample(sample, &sampler);
             vec2 imageplane_coord;
-            calcImageCoord(imageplane_coord, &film, sample_index, i);
+            // LATEST
+            //calcImageCoord(imageplane_coord, &film, sample_index, i);
+            calcImageCoord(imageplane_coord, &film, sample, i);
 
             Ray ray;
-            calcCameraRay(&ray, imageplane_coord, camera, sample_index);
+            //calcCameraRay(&ray, imageplane_coord, camera, sample_index);
+            Sampler_getSample(sample, &sampler);
+            calcCameraRay(&ray, imageplane_coord, camera, sample);
 
             TraceArgs trace_args;
             //trace_args.medium_mat = medium_mat;
             trace_args.objects = &(scene.objects);
             trace_args.lights = &(scene.lights);
-            trace_args.sample_index = sample_index;
-            getSample3D(trace_args.h_sample, &h_samples, sample_index);
+            //trace_args.sample_index = sample_index;
+            //getSample3D(trace_args.h_sample, &h_samples, sample_index);
+            trace_args.sampler = &sampler;
             if(params.trace_type == PHOTONMAP)
             {
                 trace_args.photon_map = &photon_map;
@@ -507,8 +518,8 @@ int main(int argc, char** argv)
 
     // Clean up
     //freeSamples2D(&unit_square_samples);
-    freeSamples2D(&disk_samples);
-    freeSamples3D(&h_samples);
+    //freeSamples2D(&disk_samples);
+    //freeSamples3D(&h_samples);
     Scene_destroy(&scene);
     if(params.trace_type == PHOTONMAP)
     {
@@ -519,7 +530,7 @@ int main(int argc, char** argv)
             free(caustic_buffer);
         }
     }
-    free(set_buffer);
+    //free(set_buffer);
     free(color_buffer);
 
     double frames_per_sec = 10.0;
