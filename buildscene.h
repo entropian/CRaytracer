@@ -371,7 +371,6 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     const OBJMaterial *obj_mat = &(materials[i]);
                     Material material;
                     initMaterial(&material);
-                    material.shadow = true;
                     vec3_assign(material.ca, obj_mat->ambient[0], obj_mat->ambient[1], obj_mat->ambient[2]);
                     vec3_assign(material.cd, obj_mat->diffuse[0], obj_mat->diffuse[1], obj_mat->diffuse[2]);
                     vec3_assign(material.cs, obj_mat->specular[0], obj_mat->specular[1], obj_mat->specular[2]);
@@ -385,8 +384,6 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     material.ior_out = 1.0f;
                     material.tex_flags = NO_TEXTURE;
                     // TODO: fix exponent
-                    //material.h_samples = genHemisphereSamples(MULTIJITTERED, material.exp);
-                    //material.h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
                     stringCopy(material.name, MAX_NAME_LENGTH, obj_mat->name);
 
                     if(obj_mat->illum == 2)
@@ -413,13 +410,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                         //material.mat_type = INVALID_MAT_TYPE;
                         material.mat_type = MATTE;
                     }
-                    if(material.mat_type == MATTE)
-                    {
-                        material.h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-                    }else
-                    {
-                        material.h_samples = genHemisphereSamples(MULTIJITTERED, material.exp);
-                    }
+
                     // Load textures
                     if(obj_mat->diffuse_map[0] != '\0')
                     {

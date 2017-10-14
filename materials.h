@@ -26,17 +26,16 @@ enum TextureType
 
 typedef struct Material_s
 {
-    bool shadow;
     MatType mat_type;
     unsigned int tex_flags;
     float ka, kd, ks, ke, kr, exp;
     float ior_in, ior_out;
     vec3 ca, cd, cs, ce, cr;
     vec3 cf_in, cf_out;
-    Samples3D* h_samples;
     float extinct_coeff, scatter_coeff;
     Texture* tex_array[4];
     char name[MAX_NAME_LENGTH];
+    Samples3D* h_samples;
 }Material;
 
 const unsigned int DIFFUSE_MAP_INDEX = 0;

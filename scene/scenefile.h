@@ -212,7 +212,6 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word INTENSITY
         if(!getNextTokenInFile(buffer, fp)){return false;}
         mat->ke = (float)atof(buffer);
-        mat->h_samples = NULL;
     }else if(mat->mat_type == PARTICIPATING)
     {
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word EXTINCT_COEFF
@@ -240,7 +239,6 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *
 
         if(mat->mat_type == MATTE)
         {
-            mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
             goto Texture;
         }
 
@@ -257,14 +255,12 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *
 
         if(mat->mat_type == PHONG)
         {
-            mat->h_samples = NULL;
             goto Texture;
         }
 
         if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word REF_CONSTANT
         if(!getNextTokenInFile(buffer, fp)){return false;}
         mat->kr = (float)atof(buffer);
-        mat->h_samples = genHemisphereSamples(MULTIJITTERED, mat->exp);
 
         // TODO: Participating media should be its own category
         if(mat->mat_type == REFLECTIVE || mat->mat_type == PARTICIPATING)

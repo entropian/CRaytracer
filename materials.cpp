@@ -31,7 +31,6 @@ MatType getMatTypeFromString(const char* str)
 void printMaterial(const Material* mat)
 {
     printf("%s\n", mat->name);
-    printf("shadow %s\n", mat->shadow ? "true" : "false");
     printf("ka %f, kd %f\n", mat->ka, mat->kd);
     printf("ks %f, ke %f\n", mat->ks, mat->ke);
     printf("exp %f\n", mat->exp);
@@ -46,7 +45,6 @@ void printMaterial(const Material* mat)
 
 void initMaterial(Material *mat)
 {
-    mat->shadow = false;
     mat->mat_type = INVALID_MAT_TYPE;
     mat->tex_flags = 0;
     mat->ka = mat->kd = mat->ks = mat->ke = mat->kr = mat->exp = 0.0f;
@@ -72,7 +70,6 @@ void initDefaultMatteMat(Material* mat, const vec3 color)
     mat->kd = 0.6f;
     mat->ka = 1.0f;
     mat->mat_type  = MATTE;
-    mat->shadow = true;
     mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
     mat->tex_flags = NO_TEXTURE;
 }
@@ -87,7 +84,6 @@ void initDefaultPhongMat(Material* mat, const vec3 color)
     mat->ks = 0.4f;
     mat->exp = 10.0f;            
     mat->mat_type = PHONG;
-    mat->shadow = true;
     mat->h_samples = genHemisphereSamples(MULTIJITTERED, DEFAULT_GLOSSINESS);
     mat->tex_flags = NO_TEXTURE;    
 }

@@ -380,7 +380,6 @@ void emitPhotons(Photonmap* photon_map, const SceneObjects *so, const SceneLight
         Ray ray;
         vec3 photon_power = {0.0f, 0.0f, 0.0f};
         int last_stored = stored_photons + 1;
-        int h_sample_index = 0;
         while(stored_photons - last_stored < photons_per_light)
         {
             if(!reflected || bounce_count == max_bounce)
@@ -477,7 +476,6 @@ void emitCaustics(Photonmap* photon_map, const SceneObjects *so, const SceneLigh
         Ray ray;
         vec3 photon_power = {0.0f, 0.0f, 0.0f};
         int last_stored = stored_photons + 1;
-        int h_sample_index = 0;
         while(stored_photons - last_stored < photons_per_light)
         {
             if(!reflected || bounce_count == max_bounce)

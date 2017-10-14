@@ -547,16 +547,6 @@ void mapSampleToDisk(vec2 out, const vec2 in)
 
 void mapSampleToHemisphere(vec3 out, const vec2 in)
 {
-    /*
-    float phi = 2.0f * M_PI * in[0];
-    float radius = sqrtf(in[1]);
-    // radius = sin(theta)
-    // z = cos(theta)
-    // z = sqrt(1 - sin(theta) * sin(theta));
-    out[0] = cosf(phi) * radius;
-    out[1] = sinf(phi) * radius;
-    out[2] = sqrtf(1.0f - radius*radius);
-    */
     mapSampleToDisk(out, in);
     out[2] = sqrtf(max(0, 1.0f - out[0]*out[0] - out[1]*out[1]));
 }
@@ -573,7 +563,6 @@ void mapSampleWithCosPower(vec2 out, const vec2 in, const float exp)
     float cos_phi = (float)cos(2.0f * (float)PI * in[0]);
     float sin_phi = (float)sin(2.0f * (float)PI * in[0]);
     float cos_theta = powf((1.0f - fabs(in[1])), 1.0f / (exp + 1.0f));
-    //float cos_theta = pow((1.0f - (src_samples->samples[i][1])), 1.0f / (e + 1.0f));
     float sin_theta = (float)sqrt(1.0f - cos_theta * cos_theta);
     float pu = sin_theta * cos_phi;
     float pv = sin_theta * sin_phi;
