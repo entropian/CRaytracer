@@ -10,6 +10,13 @@ void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, cons
     vec3_add(r, r, w_comp);    
 }
 
+void transposeTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
+{
+    r[0] = u[0]*a[0] + v[0]*a[1] + w[0]*a[2];
+    r[1] = u[1]*a[0] + v[1]*a[1] + w[1]*a[2];
+    r[2] = u[2]*a[0] + v[2]*a[1] + w[2]*a[2];
+}
+
 void getVec3InLocalBasis(vec3 r, const vec3 a, const vec3 normal)
 {
     vec3 u, v, w;

@@ -3,6 +3,7 @@
 #include "util/vec.h"
 #include "sampling.h"
 #include "texture.h"
+#include "reflection.h"
 
 enum MatType
 {
@@ -53,3 +54,4 @@ void getMaterialSpecularTexColor(vec3 texel, const Material *mat, const vec2 uv)
 void setMaterialDiffuseTexPtr(Material *mat, Texture *tex);
 void setMaterialNormalTexPtr(Material *mat, Texture *tex);
 void setMaterialSpecularTexPtr(Material *mat, Texture *tex);
+void computeScatteringFunc(BSDF* bsdf, const Material* mat);

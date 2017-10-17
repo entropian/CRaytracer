@@ -11,6 +11,7 @@
 
 
 void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a);
+void transposeTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a);
 
 void getVec3InLocalBasis(vec3 r, const vec3 a, const vec3 normal);
 

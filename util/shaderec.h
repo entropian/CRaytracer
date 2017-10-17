@@ -3,7 +3,6 @@
 #include "vec.h"
 #include "../materials.h"
 #include "math.h"
-#include "../bxdf.h"
 
 typedef struct ShadeRec
 {

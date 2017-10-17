@@ -7,6 +7,7 @@ static const double PI = 3.14159265358979323846264338327950288;
 static const double EPS = 1e-8;
 static const double EPS2 = EPS*EPS;
 static const double EPS3 = EPS*EPS*EPS;
+static const double INV_PI = 1.0 / PI;
 
 typedef float vec2[2];
 typedef float vec3[3];
