@@ -1,4 +1,5 @@
 #include "util/vec.h"
+#include "mempool.h"
 enum BxDFType
 {
     LAMBERTIAN,
@@ -50,7 +51,22 @@ typedef struct BSDF_s
     vec3 binormal;
 }BSDF;
 
+static MemPool bsdf_mem_pool;
+
+static bool allocateBSDFMem(const int num_threads, const int num_depth)
+{
+    MemPool_init(&bsdf_mem_pool, sizeof(SpecularTransmission), num_threads * num_depth);    
+}
+
+static void freeBSDFMem()
+{
+    MemPool_destroy(&bsdf_mem_pool);
+}
+
+
 void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf);
 float BSDF_sample_f(vec3 f, vec3 wi,
                     const vec3 wo, const vec2 sample, const BSDF* bsdf);
 void BSDF_addBxDF(BSDF* bsdf, void* bxdf, BxDFType type);
+
+
