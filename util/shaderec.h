@@ -15,8 +15,7 @@ typedef struct ShadeRec
     vec3 wo;
     vec2 uv;
     Material mat;
-    void* bxdf;
-    BxDFType bxdf_type;
+    BSDF bsdf;
 } ShadeRec;
 
 

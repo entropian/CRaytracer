@@ -121,42 +121,37 @@ void setMaterialSpecularTexPtr(Material *mat, Texture *tex)
     mat->tex_flags |= SPECULAR;
 }
 
-void computeScatteringFunc(BSDF* bsdf, const vec3 uv, const Material* mat)
+void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
 {
     switch(mat->mat_type)
     {
     case MATTE:
     {
-        Lambertian l;
+        vec3 cd;
         if(mat->tex_flags & DIFFUSE)
         {
-            getMaterialDiffuseTexColor(l.cd, mat, uv);
+            getMaterialDiffuseTexColor(cd, mat, uv);
         }else
         {
-            vec3_copy(l.cd, mat->cd);
+            vec3_copy(cd, mat->cd);
         }
-        BSDF_addBxDF(bsdf, &l, LAMBERTIAN);
+        BSDF_addLambertian(bsdf, cd);
     } break;
     case REFLECTIVE:
     {
-        SpecularReflection spec_ref;
+        vec3 cr;
         if(mat->tex_flags & SPECULAR)
         {
-            getMaterialSpecularTexColor(spec_ref.cr, mat, uv);            
+            getMaterialSpecularTexColor(cr, mat, uv);            
         }else
         {
-            vec3_copy(spec_ref.cr, mat->cr);
+            vec3_copy(cr, mat->cr);
         }
-        BSDF_addBxDF(bsdf, &spec_ref, SPECULAR_REFLECTION);
+        BSDF_addSpecularReflection(bsdf, cr);
     } break;
     case TRANSPARENT:
     {
-        SpecularTransmission spec_trans;
-        spec_trans.ior_in = mat->ior_in;
-        spec_trans.ior_out = mat->ior_out;
-        vec3_copy(spec_trans.cf_in, mat->cf_in);
-        vec3_copy(spec_trans.cf_out, mat->cf_out);
-        BSDF_addBxDF(bsdf, &spec_trans, SPECULAR_TRANSMISSION);
+        BSDF_addSpecularTransmission(bsdf, mat->ior_in, mat->ior_out, mat->cf_in, mat->cf_out);
     } break;
     }
 }

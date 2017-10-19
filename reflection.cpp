@@ -193,7 +193,7 @@ float BSDF_sample_f(vec3 f, vec3 wi,
     }
     return pdf;
 }
-
+/*
 void BSDF_addBxDF(BSDF* bsdf, void* bxdf, BxDFType type)
 {
     switch(type)
@@ -201,6 +201,7 @@ void BSDF_addBxDF(BSDF* bsdf, void* bxdf, BxDFType type)
     case LAMBERTIAN:
     case SPECULAR_REFLECTION:
     case SPECULAR_TRANSMISSION:
+        bsdf->bxdfs[bsdf->num_bxdf] = allocateBxDF();
         bsdf->bxdfs[bsdf->num_bxdf] = bxdf;
         bsdf->types[bsdf->num_bxdf] = type;
         bsdf->num_bxdf++;
@@ -210,4 +211,34 @@ void BSDF_addBxDF(BSDF* bsdf, void* bxdf, BxDFType type)
         break;
     }
 }
+*/
+void BSDF_addLambertian(BSDF* bsdf, const vec3 cd)
+{
+    Lambertian* l = (Lambertian*)allocateBxDF();
+    vec3_copy(l->cd, cd);
+    bsdf->bxdfs[bsdf->num_bxdf] = l;
+    bsdf->types[bsdf->num_bxdf] = LAMBERTIAN;
+    bsdf->num_bxdf++;
+}
 
+void BSDF_addSpecularReflection(BSDF* bsdf, const vec3 cr)
+{
+    SpecularReflection* spec_ref = (SpecularReflection*)allocateBxDF();
+    vec3_copy(spec_ref->cr, cr);
+    bsdf->bxdfs[bsdf->num_bxdf] = spec_ref;
+    bsdf->types[bsdf->num_bxdf] = SPECULAR_REFLECTION;
+    bsdf->num_bxdf++;
+}
+
+void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float ior_out, const vec3 cf_in,
+                                  const vec3 cf_out)
+{
+    SpecularTransmission* spec_trans = (SpecularTransmission*)allocateBxDF();
+    spec_trans->ior_in = ior_in;
+    spec_trans->ior_out = ior_out;
+    vec3_copy(spec_trans->cf_in, cf_in);
+    vec3_copy(spec_trans->cf_out, cf_out);
+    bsdf->bxdfs[bsdf->num_bxdf] = spec_trans;
+    bsdf->types[bsdf->num_bxdf] = SPECULAR_TRANSMISSION;
+    bsdf->num_bxdf++;
+}
