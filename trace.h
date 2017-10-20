@@ -493,7 +493,7 @@ float calcSpecRadiancePTGenSample(vec4 ref_radiance, const Ray ray, const ShadeR
     return t;
 }
 
-float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
+float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
@@ -772,7 +772,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
     return min_t;
 }
 
-float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
+float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
@@ -785,14 +785,14 @@ float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
     // Shading
     if(min_t < TMAX)
     {
-        /*
+        computeScatteringFunc(&(min_sr.bsdf), min_sr.uv, &(min_sr.mat));
         if(min_sr.mat.tex_flags != NO_TEXTURE)
         {
             // TODO move texture fetch into computeScatteringFunc
             updateShadeRecWithTexInfo(&min_sr);
         }
-        */
-        computeScatteringFunc(&(min_sr.bsdf), min_sr.uv, &(min_sr.mat));
+
+
         if(min_sr.mat.mat_type == EMISSIVE)
         {
             //TODO this
@@ -832,7 +832,7 @@ float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                                 bool in_shadow = shadowTest(i, sl, so, light_dir, &min_sr);
                                 if(!in_shadow)
                                 {
-                                    directIllumShading(radiance, ndotwi, light_dir, sl->light_ptrs[i],
+                                    directIllumShadingNew(radiance, ndotwi, light_dir, sl->light_ptrs[i],
                                                        sl->light_types[i], &min_sr);
                                 }
                             }
@@ -864,7 +864,7 @@ float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                                     if(t + K_EPSILON >= light_dist)
                                     {
                                         vec3 f;
-                                        diffuseBRDF(f, &min_sr);
+                                        BSDF_f(f, ray.direction, min_sr.wo, &(min_sr.bsdf));
                                         // Incident radiance
                                         vec3 inc_radiance = {0.0f, 0.0f, 0.0f};
                                         vec3_scale(inc_radiance, mesh_light_ptr->color, mesh_light_ptr->intensity);
@@ -989,6 +989,8 @@ float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                 //vec3_copy(radiance, sl->bg_color);
             }
         }
+        // Release BSDF memory
+        BSDF_freeBxDFs(&(min_sr.bsdf));
     }else
     {
         //vec3_copy(radiance, sl->bg_color);

@@ -30,6 +30,7 @@
 #include "photonmap.h"
 #include "projmap.h"
 #include "imagestate.h"
+#include "reflection.h"
 
 #define SHOW_PROGRESS 1
 
@@ -344,7 +345,7 @@ int main(int argc, char** argv)
     thread_data.trace = trace;
 
     int num_patches = 64;
-    int num_threads = 4;
+    int num_threads = 1;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[10];
     int patches[128];
@@ -352,6 +353,8 @@ int main(int argc, char** argv)
     {
         patches[i] = i * num_pixels_per_patch;
     }
+
+    initBSDFMem(num_threads, params.max_depth+1);
 
     double start_time, end_time;
     start_time = glfwGetTime();
@@ -490,6 +493,7 @@ int main(int argc, char** argv)
                    params.image_height, "savestate.is");
 
     // Clean up
+    freeBSDFMem();
     Scene_destroy(&scene);
     if(params.trace_type == PHOTONMAP)
     {

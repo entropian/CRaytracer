@@ -159,6 +159,45 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
     }
 }
 
+void areaLightShadingNew(vec3 radiance, const float ndotwi, const vec3 light_dir,
+                      const AreaLight* area_light_ptr, const ShadeRec* sr)
+{
+    const BSDF* bsdf = &(sr->bsdf);
+    vec3 f;
+    BSDF_f(f, light_dir, sr->wo, bsdf);
+
+    // Incident radiance
+    vec3 inc_radiance = {0.0f, 0.0f, 0.0f}, neg_wi, displacement, light_normal;
+    vec3_sub(displacement, sr->hit_point, area_light_ptr->sample_point);
+    vec3_negate(neg_wi, light_dir);
+    getAreaLightNormal(light_normal, area_light_ptr, sr->hit_point);
+    // TODO: Fix this
+    /*
+    if(vec3_dot(neg_wi, light_normal) > 0.0f)
+    {
+
+    }else
+    {
+        return;
+    }
+    */
+    if(vec3_dot(neg_wi, light_normal) < 0.0f)
+    {
+        vec3_negate(light_normal, light_normal);
+    }
+    getIncRadiance(inc_radiance, AREALIGHT, area_light_ptr, sr->hit_point);    
+
+    // Geometry term
+    float geo_term = vec3_dot(light_normal, neg_wi) * ndotwi /
+        vec3_dot(displacement, displacement);
+
+    // f * L * G / PDF
+    vec3 tmp;
+    vec3_mult(tmp, f, inc_radiance);
+    vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
+    vec3_add(radiance, radiance, tmp);
+}
+
 void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir, const AreaLight* area_light_ptr,
                          const vec3 inc_rad, const ShadeRec* sr)
 {
@@ -238,6 +277,21 @@ void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
     }
 }
 
+void envLightShadingNew(vec3 radiance, const float ndotwi, const vec3 light_dir,
+                     const EnvLight* env_light_ptr, const ShadeRec* sr)
+{
+    vec3 f, inc_radiance_cos, tmp;
+    //diffuseBRDF(f, sr);
+    const BSDF* bsdf = &(sr->bsdf);
+    BSDF_f(f, light_dir, sr->wo, bsdf);
+    
+    getIncRadiance(tmp, ENVLIGHT, env_light_ptr, sr->hit_point);
+    vec3_scale(inc_radiance_cos, tmp, ndotwi);
+    diffuseShading(radiance, inc_radiance_cos, sr);
+    float pdf = ndotwi / (float)PI;
+    vec3_scale(radiance, radiance, 1.0f/pdf);
+}
+
 void envLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir, const EnvLight* env_light_ptr,
                      const vec3 inc_rad, const ShadeRec* sr)
 {
@@ -299,6 +353,43 @@ void directIllumShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
             // Specular component
             specularShading(radiance, light_dir, inc_radiance_cos, sr);
         }
+    }
+}
+
+void directIllumShadingNew(vec3 radiance, const float ndotwi, const vec3 light_dir, const void* light_ptr,
+                  const LightType light_type, const ShadeRec* sr)
+{
+    switch(light_type)
+    {
+    case AREALIGHT:
+    {
+        AreaLight* area_light_ptr = (AreaLight*)light_ptr;
+        areaLightShadingNew(radiance, ndotwi, light_dir, area_light_ptr, sr);
+    } break;
+    case ENVLIGHT:
+    {
+        EnvLight* env_light_ptr = (EnvLight*)light_ptr;
+        envLightShadingNew(radiance, ndotwi, light_dir, env_light_ptr, sr);
+    } break;
+    default:
+        // Diffuse component
+        // kd*cd/PI * inc_radiance_cos
+        vec3 inc_radiance_cos, tmp;
+        getIncRadiance(tmp, light_type, light_ptr, sr->hit_point);
+        vec3_scale(inc_radiance_cos, tmp, ndotwi);
+        vec3 f;
+        const BSDF* bsdf = &(sr->bsdf);
+        BSDF_f(f, light_dir, sr->wo, bsdf);
+        //diffuseShading(radiance, inc_radiance_cos,  sr);
+        vec3_mult(radiance, inc_radiance_cos, f);
+        /*
+        MatType mat_type = sr->mat.mat_type;
+        if(mat_type == PHONG || mat_type == REFLECTIVE || mat_type == TRANSPARENT)
+        {
+            // Specular component
+            specularShading(radiance, light_dir, inc_radiance_cos, sr);
+        }
+        */
     }
 }
 

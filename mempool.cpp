@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 int MemPool_init(MemPool* mem_pool, int element_size, int num_elements)
-{
+{    
     int block_size = element_size * num_elements;
     mem_pool->block = (unsigned char*)malloc(block_size);
     if(!mem_pool->block)
@@ -70,5 +70,9 @@ void MemPool_releaseElement_f(MemPool* mem_pool, unsigned char** element)
     *address_ptr = NULL;
     mem_pool->tail = *element;
     *element = NULL;
+    if(!mem_pool->head)
+    {
+        mem_pool->head = mem_pool->tail;
+    }
 }
 

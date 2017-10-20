@@ -123,6 +123,7 @@ void setMaterialSpecularTexPtr(Material *mat, Texture *tex)
 
 void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
 {
+    bsdf->num_bxdf = 0;
     switch(mat->mat_type)
     {
     case MATTE:

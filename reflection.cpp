@@ -193,25 +193,7 @@ float BSDF_sample_f(vec3 f, vec3 wi,
     }
     return pdf;
 }
-/*
-void BSDF_addBxDF(BSDF* bsdf, void* bxdf, BxDFType type)
-{
-    switch(type)
-    {
-    case LAMBERTIAN:
-    case SPECULAR_REFLECTION:
-    case SPECULAR_TRANSMISSION:
-        bsdf->bxdfs[bsdf->num_bxdf] = allocateBxDF();
-        bsdf->bxdfs[bsdf->num_bxdf] = bxdf;
-        bsdf->types[bsdf->num_bxdf] = type;
-        bsdf->num_bxdf++;
-        break;
-    default:
-        fprintf(stderr, "Invalid BxDF type\n");
-        break;
-    }
-}
-*/
+
 void BSDF_addLambertian(BSDF* bsdf, const vec3 cd)
 {
     Lambertian* l = (Lambertian*)allocateBxDF();
@@ -241,4 +223,35 @@ void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float io
     bsdf->bxdfs[bsdf->num_bxdf] = spec_trans;
     bsdf->types[bsdf->num_bxdf] = SPECULAR_TRANSMISSION;
     bsdf->num_bxdf++;
+}
+
+void BSDF_freeBxDFs(BSDF* bsdf)
+{
+    for(int i = 0; i < bsdf->num_bxdf; i++)
+    {
+        freeBxDF(&(bsdf->bxdfs[i]));
+        bsdf->num_bxdf = 0;
+    }
+}
+
+static MemPool bsdf_mem_pool;
+
+bool initBSDFMem(const int num_threads, const int num_depth)
+{
+    MemPool_init(&bsdf_mem_pool, sizeof(SpecularTransmission), num_threads * num_depth * MAX_BXDF);    
+}
+
+void freeBSDFMem()
+{
+    MemPool_destroy(&bsdf_mem_pool);
+}
+
+void* allocateBxDF()
+{
+    return MemPool_requestElement(&bsdf_mem_pool);
+}
+
+void freeBxDF(void** bxdf)
+{
+    MemPool_releaseElement(&bsdf_mem_pool, bxdf);
 }
