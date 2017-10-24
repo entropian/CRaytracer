@@ -22,7 +22,8 @@ void fillShadeRecSphere(ShadeRec *sr, Sphere *sphere, const vec3 hit_point, cons
     float inv_y_radius = 1.0f / y_radius;
     float cos_phi = hit_point[0] * inv_y_radius;
     float sin_phi = hit_point[2] * inv_y_radius;
-    vec3_assign(sr->dpdu, -phi_max * hit_point[2], 0.0f, phi_max * hit_point[0]);
+    vec3_assign(sr->dpdu, -phi_max * (hit_point[2] - sphere->center[2]), 0.0f,
+                phi_max * (hit_point[0] - sphere->center[0]));
     vec3 tmp = {hit_point[1] * cos_phi, -sphere->radius * sinf(theta), hit_point[1] * sin_phi};
     vec3_scale(sr->dpdv, tmp, theta_max * theta_max);
     vec3_normalize(sr->dpdu, sr->dpdu);
@@ -55,6 +56,7 @@ float rayIntersectSphere(ShadeRec *sr, Sphere *sphere, const Ray ray)
             getPointOnRay(hit_point, ray, t);                        
             //float phi = (float)atan2(hit_point[0] - sphere->center[0], hit_point[2] - sphere->center[2]);
             float phi = (float)atan2(hit_point[2] - sphere->center[2], hit_point[0] - sphere->center[0]);
+            if(phi < 0.0f) phi += 2.0f * PI;
             float theta = (float)acos(((hit_point[1] - sphere->center[1]) / sphere->radius));
             if(fabs(phi) <= sphere->phi && theta >= sphere->min_theta&&
                theta <= sphere->max_theta)
