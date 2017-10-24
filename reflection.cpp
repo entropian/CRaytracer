@@ -41,16 +41,34 @@ void Lambertian_f(vec3 f, const vec3 wi, const vec3 wo, const Lambertian* l)
 
 float Lambertian_pdf(const vec3 wi, const vec3 wo)
 {
-    return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, wo)) * INV_PI: 0.0f;
+    vec3 normal = {0.0f, 0.0f, 1.0f};
+    //return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, wo)) * INV_PI: 0.0f;
+    if(!sameHemisphere(wi, wo))
+    {
+        printf("not same hemisphere\n");
+    }
+    float dot_product = fabs(vec3_dot(wi, normal)) * INV_PI;
+    if(dot_product == 0.0f)
+    {
+        printf("dot product 0\n");
+    }
+    
+    return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, normal)) * INV_PI: 0.0f;
 }
 
 float Lambertian_sample_f(vec3 f, vec3 wi,
                          const vec3 wo, const vec2 sample, const Lambertian* l)
 {
+    vec3 tmp_wo;
+    vec3_copy(tmp_wo, wo);
+    if(tmp_wo[2] < 0.0f)
+    {
+        tmp_wo[2] *= -1.0f;
+    }
     vec3_copy(f, l->cd);
     vec3_scale(f, f, INV_PI);
     mapSampleToHemisphere(wi, sample);
-    return Lambertian_pdf(wi, wo);
+    return Lambertian_pdf(wi, tmp_wo);
 }
 
 float SpecularReflection_sample_f(vec3 f, vec3 wi,
@@ -148,6 +166,7 @@ float BSDF_sample_f(vec3 f, vec3 wi,
     if(bsdf->num_bxdf == 0)
     {
         vec3_copy(f, BLACK);
+        printf("0 bxdf\n");
         return 0.0f;
     }
     // Choose BxDF
@@ -156,9 +175,12 @@ float BSDF_sample_f(vec3 f, vec3 wi,
 
     // Transform wo to tangent space
     vec3 wi_local, wo_local;
-    orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
+    //orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
+    //orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
+    transposeTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
     if(wo_local[2] == 0.0f)
     {
+        printf("wo parallel\n");
         return 0.0f;
     }
     // Sample BxDF
@@ -168,9 +190,11 @@ float BSDF_sample_f(vec3 f, vec3 wi,
     if(pdf == 0.0f)
     {
         vec3_copy(f, BLACK);
+        //printf("pdf 0\n");
         return pdf;
     }
-    transposeTransform(wi, bsdf->tangent, bsdf->binormal, bsdf->normal, wi_local);
+    //transposeTransform(wi, bsdf->tangent, bsdf->binormal, bsdf->normal, wi_local);
+    orthoNormalTransform(wi, bsdf->tangent, bsdf->binormal, bsdf->normal, wi_local);
 
     // Add pdfs from other BxDFs
     for(int i = 0; i < bsdf->num_bxdf; i++)
