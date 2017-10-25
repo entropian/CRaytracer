@@ -1,7 +1,9 @@
 #include "mempool.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
+static pthread_mutex_t mtx;
 int MemPool_init(MemPool* mem_pool, int element_size, int num_elements)
 {    
     int block_size = element_size * num_elements;
@@ -46,22 +48,27 @@ void MemPool_destroy(MemPool* mem_pool)
 
 unsigned char* MemPool_requestElement(MemPool* mem_pool)
 {
+    pthread_mutex_lock(&mtx);
     unsigned char* r = mem_pool->head;
     if(!r)
     {
         fprintf(stderr, "MemPool out of memory.\n");
+        pthread_mutex_unlock(&mtx);
         return NULL;
     }
     unsigned char** address_ptr = (unsigned char**)(mem_pool->head);
     mem_pool->head = *address_ptr;
+    pthread_mutex_unlock(&mtx);
     return r;
 }
 
 void MemPool_releaseElement_f(MemPool* mem_pool, unsigned char** element)
 {
+    pthread_mutex_lock(&mtx);
     if(*element < mem_pool->block || *element > mem_pool->block + mem_pool->block_size)
     {
         fprintf(stderr, "Invalid element pointer\n.");
+        pthread_mutex_unlock(&mtx);
         return;
     }
     unsigned char** address_ptr = (unsigned char**)(mem_pool->tail);
@@ -74,5 +81,6 @@ void MemPool_releaseElement_f(MemPool* mem_pool, unsigned char** element)
     {
         mem_pool->head = mem_pool->tail;
     }
+    pthread_mutex_unlock(&mtx);
 }
 

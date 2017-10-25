@@ -509,7 +509,7 @@ void computeLocalBasis(ShadeRec* sr)
     vec3_normalize(sr->bsdf.binormal, sr->bsdf.binormal);
 }
 
-bool checkOrthoNormal(const vec3 u, const vec3 v, const vec3 w)
+bool isOrthoNormal(const vec3 u, const vec3 v, const vec3 w)
 {
     if(vec3_length(u) - 1.0f > K_EPSILON) return false;
     if(vec3_length(v) - 1.0f > K_EPSILON) return false;
@@ -520,7 +520,7 @@ bool checkOrthoNormal(const vec3 u, const vec3 v, const vec3 w)
     return true;
 }
 
-float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
+float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
@@ -638,37 +638,39 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                 {
                     // sampleF
                     Ray sample_ray;
-                    /*
+
                     vec3 new_sample;
                     Sampler_getHemisphereSample(new_sample, sampler);
                     BSDF* bsdf = &(min_sr.bsdf);
                     orthoNormalTransform(sample_ray.direction, bsdf->tangent, bsdf->binormal, bsdf->normal,
                                        new_sample);
                     vec3_normalize(sample_ray.direction, sample_ray.direction);
-                    */
-                    vec3_copy(sample_ray.origin, min_sr.hit_point);
 
+                    vec3_copy(sample_ray.origin, min_sr.hit_point);
+                    /*
                     vec2 sample;
                     Sampler_getSample(sample, sampler);
                     vec3 f;
                     float pdf = BSDF_sample_f(f, sample_ray.direction, min_sr.wo, sample, &(min_sr.bsdf));
+                    */
+                    //float rand_float = (float)rand() / (float)RAND_MAX;
+                    //float cd_avg = (min_sr.mat.cd[0] + min_sr.mat.cd[1] + min_sr.mat.cd[2]) / 3.0f;
 
-                    vec3 inc_radiance;
-                    float rand_float = (float)rand() / (float)RAND_MAX;
-                    float cd_avg = (min_sr.mat.cd[0] + min_sr.mat.cd[1] + min_sr.mat.cd[2]) / 3.0f;
-
-                    if(pdf > 0.0f)
+                    //if(pdf > 0.0f)
                     {
+                        vec3 inc_radiance;
                         pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
                         // f
                         vec3 brdf;
                         vec3_scale(brdf, min_sr.mat.cd, min_sr.mat.kd / (float)PI);
                         float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
-                        float new_pdf = ndotwi / (float)PI;
+                        float pdf = ndotwi / (float)PI;
+                        /*
                         if(new_pdf - pdf > K_EPSILON)
                         {
                             BSDF_sample_f(f, sample_ray.direction, min_sr.wo, sample, &(min_sr.bsdf));
                         }
+                        */
 
                         vec3 tmp;
                         vec3_mult(tmp, inc_radiance, brdf);
@@ -690,6 +692,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     vec3_scale(reflected_illum, reflected_illum, min_sr.mat.ks);
                     vec3_add(radiance, radiance, reflected_illum);
                 }
+
                 /*
                 if(min_sr.mat.mat_type == PHONG)
                 {
@@ -791,6 +794,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     vec3_add(radiance, radiance, transmitted_illum);
                     vec3_add(radiance, radiance, reflected_illum);
                 }
+
             }else
             {
                 //vec3_copy(radiance, sl->bg_color);
@@ -816,7 +820,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 }
 
 
-float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
+float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
@@ -869,7 +873,6 @@ float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                             vec3 light_dir;
                             vec2 sample;
                             Sampler_getSample(sample, sampler);
-                            //getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
                             getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample);
                             float ndotwi = vec3_dot(light_dir, min_sr.normal);
                             if(ndotwi > 0)
@@ -883,7 +886,6 @@ float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                             }
                         }else if(sl->light_types[i] == MESHLIGHT)
                         {
-                            //printf("here\n");
                             MeshLight* mesh_light_ptr = (MeshLight*)(sl->light_ptrs[i]);                            
                             // 1. Generate sample
                             vec3 sample, sample_normal;
@@ -936,14 +938,24 @@ float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                     }
                 }
 #endif
+                //if(min_sr.mat.mat_type == MATTE || min_sr.mat.mat_type == REFLECTIVE)
                 if(min_sr.mat.mat_type == MATTE)
                 {
+                    if(min_sr.mat.mat_type == REFLECTIVE)
+                    {
+                        printf("reflective\n");
+                    }
                     // sampleF
                     vec3 f;
                     vec3 wi;
                     vec2 sample;
                     Sampler_getSample(sample, sampler);
                     float pdf = BSDF_sample_f(f, wi, min_sr.wo, sample, &(min_sr.bsdf));
+                    BSDF* bsdf = &(min_sr.bsdf);
+                    if(!isOrthoNormal(bsdf->tangent, bsdf->binormal, bsdf->normal))
+                    {
+                        printf("not orthonormal\n");
+                    }
                     if(pdf > 0.0f)
                     {
 

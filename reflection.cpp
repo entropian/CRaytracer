@@ -197,6 +197,9 @@ float BSDF_sample_f(vec3 f, vec3 wi,
     orthoNormalTransform(wi, bsdf->tangent, bsdf->binormal, bsdf->normal, wi_local);
 
     // Add pdfs from other BxDFs
+    if(bsdf->types[bxdf_index] == SPECULAR_REFLECTION ||
+       bsdf->types[bxdf_index] == SPECULAR_TRANSMISSION)
+        return pdf;
     for(int i = 0; i < bsdf->num_bxdf; i++)
     {
         if(i != bxdf_index)
