@@ -497,7 +497,14 @@ void computeLocalBasis(ShadeRec* sr)
 {
     vec3_copy(sr->bsdf.normal, sr->normal);
     vec3_copy(sr->bsdf.tangent, sr->dpdu);
-    //vec3_cross(sr->bsdf.binormal, sr->bsdf.tangent, sr->bsdf.normal);
+    float dot_product = vec3_dot(sr->bsdf.normal, sr->bsdf.tangent);
+    if(dot_product != 0.0f)
+    {
+        vec3 adjustment;
+        vec3_scale(adjustment, sr->bsdf.normal, dot_product);
+        vec3_sub(sr->bsdf.tangent, sr->bsdf.tangent, adjustment);
+        vec3_normalize(sr->bsdf.tangent, sr->bsdf.tangent);
+    }
     vec3_cross(sr->bsdf.binormal, sr->bsdf.normal, sr->bsdf.tangent);
     vec3_normalize(sr->bsdf.binormal, sr->bsdf.binormal);
 }
@@ -526,12 +533,13 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
     // Shading
     if(min_t < TMAX)
     {
-        computeLocalBasis(&(min_sr));
         if(min_sr.mat.tex_flags != NO_TEXTURE)
         {
             // TODO move texture fetch into computeScatteringFunc
             updateShadeRecWithTexInfo(&min_sr);
         }
+        computeLocalBasis(&(min_sr));
+        computeScatteringFunc(&(min_sr.bsdf), min_sr.uv, &(min_sr.mat));        
         if(min_sr.mat.mat_type == EMISSIVE)
         {
             //TODO this
@@ -629,30 +637,38 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                 if(min_sr.mat.mat_type == MATTE)
                 {
                     // sampleF
+                    Ray sample_ray;
+                    /*
                     vec3 new_sample;
                     Sampler_getHemisphereSample(new_sample, sampler);
-                    Ray sample_ray;
-                    //getVec3InLocalBasis(sample_ray.direction, new_sample, min_sr.normal);
-
                     BSDF* bsdf = &(min_sr.bsdf);
                     orthoNormalTransform(sample_ray.direction, bsdf->tangent, bsdf->binormal, bsdf->normal,
                                        new_sample);
-                    bool isOrthoNormal = checkOrthoNormal(bsdf->tangent, bsdf->binormal, bsdf->normal);
-
                     vec3_normalize(sample_ray.direction, sample_ray.direction);
+                    */
                     vec3_copy(sample_ray.origin, min_sr.hit_point);
+
+                    vec2 sample;
+                    Sampler_getSample(sample, sampler);
+                    vec3 f;
+                    float pdf = BSDF_sample_f(f, sample_ray.direction, min_sr.wo, sample, &(min_sr.bsdf));
 
                     vec3 inc_radiance;
                     float rand_float = (float)rand() / (float)RAND_MAX;
                     float cd_avg = (min_sr.mat.cd[0] + min_sr.mat.cd[1] + min_sr.mat.cd[2]) / 3.0f;
-                    //if(rand_float <= cd_avg)
+
+                    if(pdf > 0.0f)
                     {
                         pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
                         // f
                         vec3 brdf;
                         vec3_scale(brdf, min_sr.mat.cd, min_sr.mat.kd / (float)PI);
                         float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
-                        float pdf = ndotwi / (float)PI;
+                        float new_pdf = ndotwi / (float)PI;
+                        if(new_pdf - pdf > K_EPSILON)
+                        {
+                            BSDF_sample_f(f, sample_ray.direction, min_sr.wo, sample, &(min_sr.bsdf));
+                        }
 
                         vec3 tmp;
                         vec3_mult(tmp, inc_radiance, brdf);
@@ -787,6 +803,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
         //vec3_copy(radiance, sl->bg_color);
         getEnvLightIncRadiance(radiance, ray.direction, sl->env_light);
     }
+    BSDF_freeBxDFs(&(min_sr.bsdf));
     //assert(radiance[0] >= 0.0f && radiance[1] >= 0.0f && radiance[2] >= 0.0f);
     //vec3_assign(radiance, min_sr.uv[0], min_sr.uv[1], 0.0f);
     //vec3_assign(min_sr.mat.cd, min_sr.uv[0], min_sr.uv[0], min_sr.uv[0]);
@@ -927,32 +944,22 @@ float pathTraceNew(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                     vec2 sample;
                     Sampler_getSample(sample, sampler);
                     float pdf = BSDF_sample_f(f, wi, min_sr.wo, sample, &(min_sr.bsdf));
-                    Ray sample_ray;
-                    //getVec3InLocalBasis(sample_ray.direction, wi, min_sr.normal);
-                    vec3_copy(sample_ray.direction, wi);
-                    vec3_copy(sample_ray.origin, min_sr.hit_point);
+                    if(pdf > 0.0f)
+                    {
 
+                        Ray sample_ray;
+                        vec3_copy(sample_ray.direction, wi);
+                        vec3_copy(sample_ray.origin, min_sr.hit_point);
+                        
+                        vec3 inc_radiance;
+                        pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
+                        float ndotwi = vec3_dot(min_sr.normal, wi);
 
-                    vec3 inc_radiance;
-                    //float rand_float = (float)rand() / (float)RAND_MAX;
-                    // NOTE: ??
-                    //float cd_avg = (min_sr.mat.cd[0] + min_sr.mat.cd[1] + min_sr.mat.cd[2]) / 3.0f;
-                    //if(rand_float <= cd_avg)
-                    //{
-                    pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
-                    // f
-                    //vec3 brdf;
-                    //vec3_scale(brdf, min_sr.mat.cd, min_sr.mat.kd / (float)PI);
-                    float ndotwi = vec3_dot(min_sr.normal, wi);
-                    //float pdf = ndotwi / (float)PI;
-
-                    vec3 tmp;
-                    vec3_mult(tmp, inc_radiance, f);
-                    vec3_scale(tmp, tmp, ndotwi / pdf);
-                    //vec3_scale(tmp, tmp, 1.0 / cd_avg);
-                    vec3_add(radiance, radiance, tmp);
-                        //}
-
+                        vec3 tmp;
+                        vec3_mult(tmp, inc_radiance, f);
+                        vec3_scale(tmp, tmp, ndotwi / pdf);
+                        vec3_add(radiance, radiance, tmp);
+                    }
                 }
 
                 if(min_sr.mat.mat_type == REFLECTIVE)
