@@ -88,10 +88,23 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
                                     const vec3 wo, const vec2 sample, const SpecularTransmission* spec_trans)
 {
     vec3 normal = {0.0f, 0.0f, 1.0f};
-    float eta = calcTransmitDir(wi, normal, wo, spec_trans->ior_in, spec_trans->ior_out);
-    float kt = 1.0f - calcFresnelReflectance(normal, wo, spec_trans->ior_in, spec_trans->ior_out);
-    float ndotwi = fabs(vec3_dot(normal, wi));
-    vec3_scale(f, WHITE, kt / (eta*eta) / ndotwi);
+    float kr = calcFresnelReflectance(normal, wo, spec_trans->ior_in, spec_trans->ior_out);
+    float rand_float = (float)rand() / (float)RAND_MAX;
+    if(rand_float <= kr)
+    {
+        vec3 ray_dir;
+        vec3_negate(ray_dir, wo);
+        calcReflectRayDir(wi, normal, ray_dir);
+        vec3_copy(f, WHITE);
+    }else
+    {
+        float eta = calcTransmitDir(wi, normal, wo, spec_trans->ior_in, spec_trans->ior_out);
+        float ndotwi = fabs(vec3_dot(normal, wi));
+        //float kt = 1.0f - kr;
+        //vec3_scale(f, WHITE, kt / (eta*eta) / ndotwi);
+        //vec3_scale(f, WHITE, kt / (eta*eta));
+        vec3_scale(f, WHITE, (eta*eta));
+    }
     return 1.0f;
 }
 

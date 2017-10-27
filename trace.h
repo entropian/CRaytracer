@@ -524,314 +524,6 @@ bool isOrthoNormal(const vec3 u, const vec3 v, const vec3 w)
     return true;
 }
 
-void normalize_vector(vec3 out, vec3 in)
-{
-    vec3 tmp0;
-    vec3 tmp1 = {1.0f, 1.0f, 1.0f};
-    vec3_add(tmp0, in, tmp1);
-    vec3_scale(out, tmp0, 0.5f);
-}
-//#define OLD
-#ifdef OLD
-float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
-{
-    const SceneObjects *so = trace_args->objects;
-    const SceneLights *sl = trace_args->lights;
-    Sampler* sampler = trace_args->sampler;
-
-    vec3_copy(radiance, ORIGIN);
-    float min_t = TMAX;
-    ShadeRec min_sr;
-    min_t = intersectTest(&min_sr, so, ray);
-    // Shading
-    if(min_t < TMAX)
-    {
-        if(min_sr.mat.tex_flags != NO_TEXTURE)
-        {
-            // TODO move texture fetch into computeScatteringFunc
-            updateShadeRecWithTexInfo(&min_sr);
-        }
-        computeLocalBasis(&(min_sr));
-        computeScatteringFunc(&(min_sr.bsdf), min_sr.uv, &(min_sr.mat));        
-        if(min_sr.mat.mat_type == EMISSIVE)
-        {
-            //TODO this
-#ifdef SEPARATE_DIRECT_INDIRECT
-            if(depth == MAX_DEPTH - 1)
-            {
-                vec3_copy(radiance, BLACK);
-            }else
-            {
-                float ndotwi = clamp(-vec3_dot(min_sr.normal, ray.direction), 0.0f, 1.0f);
-                vec3_scale(radiance, min_sr.mat.ce, min_sr.mat.ke * ndotwi);
-            }
-#else
-            vec3_scale(radiance, min_sr.mat.ce, min_sr.mat.ke);
-#endif
-            //maxToOne(radiance, radiance);
-        }else
-        {
-            if(depth > 0)
-            {
-#ifdef SEPARATE_DIRECT_INDIRECT
-                // Direct illumination
-                if(min_sr.mat.mat_type & (MATTE | PHONG) && depth == MAX_DEPTH)
-                {
-                    for(int i = 0; i < sl->num_lights; i++)
-                    {
-                        if(sl->light_types[i] == AREALIGHT)
-                        {
-                            vec3 light_dir;
-                            vec2 sample;
-                            Sampler_getSample(sample, sampler);
-                            //getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample_index);
-                            getLightDir(light_dir, sl->light_types[i], sl->light_ptrs[i], &min_sr, sample);
-                            float ndotwi = vec3_dot(light_dir, min_sr.normal);
-                            if(ndotwi > 0)
-                            {
-                                bool in_shadow = shadowTest(i, sl, so, light_dir, &min_sr);
-                                if(!in_shadow)
-                                {
-                                    directIllumShading(radiance, ndotwi, light_dir, sl->light_ptrs[i],
-                                                       sl->light_types[i], &min_sr);
-                                }
-                            }
-                        }else if(sl->light_types[i] == MESHLIGHT)
-                        {
-                            //printf("here\n");
-                            MeshLight* mesh_light_ptr = (MeshLight*)(sl->light_ptrs[i]);                            
-                            // 1. Generate sample
-                            vec3 sample, sample_normal;
-                            vec3 hit_to_sample;
-                            vec3 sample_to_hit;
-                            MeshLight_genSample(sample, sample_normal, mesh_light_ptr);
-                            // 2. check if hit surface faces sample point. if not go back to 1
-                            vec3_sub(hit_to_sample, min_sr.hit_point, sample);
-                            // 3. check if sample surface faces hit point. if not go back to 1
-                            vec3_negate(sample_to_hit, hit_to_sample);
-                            // 4. check if sample point is visible from hit point. if not, terminate
-                            if(vec3_dot(sample_normal, hit_to_sample) > 0.0f &&
-                                   vec3_dot(min_sr.normal, sample_to_hit) > 0.0f)
-                            {
-                                Ray ray;
-                                vec3_copy(ray.origin, min_sr.hit_point);
-                                vec3_normalize(ray.direction, sample_to_hit);
-                                float light_dist = vec3_length(sample_to_hit);
-                                float t = shadowIntersectTest(so, ray, light_dist);                            
-                                // 5. shade
-                                if(min_sr.mat.mat_type == MATTE)
-                                {
-                                    if(t + K_EPSILON >= light_dist)
-                                    {
-                                        vec3 f;
-                                        diffuseBRDF(f, &min_sr);
-                                        // Incident radiance
-                                        vec3 inc_radiance = {0.0f, 0.0f, 0.0f};
-                                        vec3_scale(inc_radiance, mesh_light_ptr->color, mesh_light_ptr->intensity);
-                                        vec3 wi, neg_wi;
-                                        vec3_normalize(wi, sample_to_hit);
-                                        vec3_normalize(neg_wi, hit_to_sample);
-                                        float geo_term = vec3_dot(sample_normal, neg_wi) * vec3_dot(min_sr.normal, wi) /
-                                            vec3_dot(sample_to_hit, sample_to_hit);
-
-                                        // f * L * G / pdf
-                                        vec3 tmp;
-                                        vec3_mult(tmp, f, inc_radiance);
-                                        float pdf = 1.0f / mesh_light_ptr->surface_area;
-                                        vec3_scale(tmp, tmp, geo_term * 1.0f / pdf);
-                                        vec3_add(radiance, radiance, tmp);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-#endif
-                if(min_sr.mat.mat_type == MATTE)
-                {
-                    // sampleF
-                    Ray sample_ray;
-
-                    vec3 new_sample;
-                    Sampler_getHemisphereSample(new_sample, sampler);
-                    BSDF* bsdf = &(min_sr.bsdf);
-                    orthoNormalTransform(sample_ray.direction, bsdf->tangent, bsdf->binormal, bsdf->normal,
-                                       new_sample);
-                    vec3_normalize(sample_ray.direction, sample_ray.direction);
-
-                    vec3_copy(sample_ray.origin, min_sr.hit_point);
-                    /*
-                    vec2 sample;
-                    Sampler_getSample(sample, sampler);
-                    vec3 f;
-                    float pdf = BSDF_sample_f(f, sample_ray.direction, min_sr.wo, sample, &(min_sr.bsdf));
-                    */
-                    //float rand_float = (float)rand() / (float)RAND_MAX;
-                    //float cd_avg = (min_sr.mat.cd[0] + min_sr.mat.cd[1] + min_sr.mat.cd[2]) / 3.0f;
-
-                    //if(pdf > 0.0f)
-                    {
-                        vec3 inc_radiance;
-                        pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
-                        // f
-                        vec3 brdf;
-                        vec3_scale(brdf, min_sr.mat.cd, min_sr.mat.kd / (float)PI);
-                        float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
-                        float pdf = ndotwi / (float)PI;
-                        /*
-                        if(new_pdf - pdf > K_EPSILON)
-                        {
-                            BSDF_sample_f(f, sample_ray.direction, min_sr.wo, sample, &(min_sr.bsdf));
-                        }
-                        */
-
-                        vec3 tmp;
-                        vec3_mult(tmp, inc_radiance, brdf);
-                        vec3_scale(tmp, tmp, ndotwi / pdf);
-                        //vec3_scale(tmp, tmp, 1.0 / cd_avg);
-                        vec3_add(radiance, radiance, tmp);
-                        //vec3_assign(radiance, pdf, pdf, pdf);
-                    }
-                }
-
-                if(min_sr.mat.mat_type == REFLECTIVE)
-                {
-                    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                    // NOTE: depth - 1 is a shitty hack
-                    calcSpecRadiancePT(reflected_illum, ray, &min_sr, depth-1, trace_args);
-                    assert(reflected_illum[0] >= 0.0f && reflected_illum[1] >= 0.0f &&
-                           reflected_illum[2] >= 0.0f);
-                    vec3_scale(reflected_illum, reflected_illum, min_sr.mat.ks);
-                    vec3_add(radiance, radiance, reflected_illum);
-                }
-
-                /*
-                if(min_sr.mat.mat_type == PHONG)
-                {
-                    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                    float rand_float = (float)rand() / (float)RAND_MAX;
-                    if(rand_float <= min_sr.mat.ks)
-                    {
-                        // Matte
-                        vec3 new_sample;
-                        getSample3D(new_sample, min_sr.mat.h_samples, sample_index + (MAX_DEPTH - depth));
-                        Ray sample_ray;
-                        getVec3InLocalBasis(sample_ray.direction, new_sample, min_sr.normal);
-                        vec3_copy(sample_ray.origin, min_sr.hit_point);
-
-                        vec3 inc_radiance;
-                        pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
-                        assert(inc_radiance[0] >= 0.0f && inc_radiance[1] >= 0.0f && inc_radiance[2] >= 0.0f);
-                        vec3 brdf;
-                        // TODO: figure this out
-                        //vec3_scale(brdf, min_sr.mat.cd, min_sr.mat.kd / (float)PI);
-                        vec3_scale(brdf, min_sr.mat.cd, 1.0f / (float)PI);
-                        float ndotwi = vec3_dot(min_sr.normal, sample_ray.direction);
-                        float pdf = ndotwi / (float)PI;
-
-                        vec3 tmp;
-                        vec3_mult(tmp, inc_radiance, brdf);
-                        vec3_scale(tmp, tmp, ndotwi / pdf);
-                        vec3_add(radiance, radiance, tmp);
-                    }else
-                    {
-                        // Reflective
-                        // TODO: convert samples to proper exponent
-                        vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                        // NOTE: depth - 1 is a shitty hack
-                        calcSpecRadiancePTGenSample(reflected_illum, ray, &min_sr, depth-1, trace_args);
-                        assert(reflected_illum[0] >= 0.0f && reflected_illum[1] >= 0.0f &&
-                               reflected_illum[2] >= 0.0f);
-                        // TODO: figure this out
-                        //vec3_scale(reflected_illum, reflected_illum, min_sr.mat.ks);
-                        vec3_add(radiance, radiance, reflected_illum);
-                    }
-                }
-                */
-
-                if(min_sr.mat.mat_type == TRANSPARENT)
-                {
-                    float reflect_t = TMAX;
-                    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                    float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
-                    float kr = calcFresnelReflectance(&min_sr);
-                    //if(!totalInternalReflection(&min_sr))
-
-                    float transmit_t = TMAX;
-                    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-
-                    float rand_float = (float)rand() / (float)RAND_MAX;
-                    if(rand_float <= kr) // Reflection
-                    {
-                        reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, depth, trace_args);
-                        /*
-                        assert(reflected_illum[0] >= 0.0f && reflected_illum[1] >= 0.0f &&
-                               reflected_illum[2] >= 0.0f);
-                        */
-                    }else // Transmission
-                    {
-                        vec3 transmit_dir = {0, 0, 0};
-                        float eta = calcTransmitDir(transmit_dir, &min_sr);
-                        float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
-                        float kt = 1.0f - kr;
-
-                        vec3 btdf;
-                        // TODO: since I'm using Russian roulette, it probably doesn't make sense
-                        // to multiply by kt?
-                        //vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
-                        vec3_scale(btdf, WHITE, 1 / (eta*eta) / ndotwt);
-                        Ray transmitted_ray;
-                        vec3_copy(transmitted_ray.origin, min_sr.hit_point);
-                        vec3_copy(transmitted_ray.direction, transmit_dir);
-
-                        transmit_t = pathTrace(transmitted_illum, depth-1, transmitted_ray, trace_args);
-                        assert(transmitted_illum[0] >= 0.0f && transmitted_illum[1] >= 0.0f &&
-                               transmitted_illum[2] >= 0.0f);
-                        vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
-                        vec3_mult(transmitted_illum, transmitted_illum, btdf);
-                    }
-
-                    vec3 color_filter_ref, color_filter_trans;
-                    if(ndotwo > 0.0f)
-                    {
-                        vec3_pow(color_filter_ref, min_sr.mat.cf_out, reflect_t);
-                        vec3_pow(color_filter_trans, min_sr.mat.cf_in, transmit_t);
-                    }else
-                    {
-                        vec3_pow(color_filter_ref, min_sr.mat.cf_in, reflect_t);
-                        vec3_pow(color_filter_trans, min_sr.mat.cf_out, transmit_t);
-                    }
-                    vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
-                    vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
-                    vec3_add(radiance, radiance, transmitted_illum);
-                    vec3_add(radiance, radiance, reflected_illum);
-                }
-
-            }else
-            {
-                //vec3_copy(radiance, sl->bg_color);
-            }
-        }
-        //vec3_assign(min_sr.mat.cd, min_sr.uv[0], min_sr.uv[0], min_sr.uv[0]);
-        //vec3_copy(radiance, min_sr.mat.cd);        
-    }else
-    {
-        //vec3_copy(radiance, sl->bg_color);
-        getEnvLightIncRadiance(radiance, ray.direction, sl->env_light);
-    }
-    BSDF_freeBxDFs(&(min_sr.bsdf));
-    //assert(radiance[0] >= 0.0f && radiance[1] >= 0.0f && radiance[2] >= 0.0f);
-    //vec3_assign(radiance, min_sr.uv[0], min_sr.uv[1], 0.0f);
-    //vec3_assign(min_sr.mat.cd, min_sr.uv[0], min_sr.uv[0], min_sr.uv[0]);
-    //vec3_copy(radiance, min_sr.mat.cd);
-    //vec3_copy(radiance, min_sr.normal);
-    //float tmp = min_sr.uv[0];
-    //float tmp = min_sr.uv[1];
-    //vec3_assign(radiance, tmp, tmp, tmp);
-    return min_t;
-}
-
-#else
 float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
@@ -948,10 +640,9 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     }
                 }
 #endif
-                if(min_sr.mat.mat_type == REFLECTIVE) 
+                //if(min_sr.mat.mat_type == REFLECTIVE)
+                if(min_sr.mat.mat_type == REFLECTIVE || min_sr.mat.mat_type == TRANSPARENT) 
                 {
-                    static float convergence = 1.0f;
-                    // sampleF
                     vec3 f;
                     vec3 wi;
                     vec2 sample;
@@ -1004,7 +695,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                         vec3_add(radiance, radiance, tmp);
                     }
                 }
-
+                /*
                 if(min_sr.mat.mat_type == TRANSPARENT)
                 {
                     float reflect_t = TMAX;
@@ -1058,6 +749,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     vec3_add(radiance, radiance, transmitted_illum);
                     vec3_add(radiance, radiance, reflected_illum);
                 }
+                */
             }else
             {
                 //vec3_copy(radiance, sl->bg_color);
@@ -1072,4 +764,3 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
     }
     return min_t;
 }
-#endif
