@@ -200,6 +200,7 @@ bool totalInternalReflection(const ShadeRec* sr)
 
 float calcTransmitDir(vec3 transmit_dir, const ShadeRec* sr)
 {
+    /*
     vec3 n;
     vec3_copy(n, sr->normal);
     float cos_theta_i = vec3_dot(n, sr->wo);
@@ -218,6 +219,8 @@ float calcTransmitDir(vec3 transmit_dir, const ShadeRec* sr)
     vec3_scale(tmp_vec3_2, n, cos_theta2 - cos_theta_i / eta);
     vec3_sub(transmit_dir, tmp_vec3_1, tmp_vec3_2);
     return eta;
+    */
+    return calcTransmitDir(transmit_dir, sr->normal, sr->wo, sr->mat.ior_in, sr->mat.ior_out);
 }
 
 float calcFresnelReflectance(const ShadeRec* sr)
@@ -454,6 +457,7 @@ float calcSpecRadiancePT(vec4 ref_radiance, const Ray ray, const ShadeRec* sr,
         vec3 reflected_sample = {-new_sample[0], -new_sample[1], new_sample[2]};
         getVec3InLocalBasis(sample_ray.direction, reflected_sample, reflect_dir);
     }
+    
     float phong_lobe = pow(vec3_dot(sample_ray.direction, reflect_dir), sr->mat.exp);
     float pdf = phong_lobe * (vec3_dot(sr->normal, sample_ray.direction));
     vec3 brdf;
@@ -520,7 +524,16 @@ bool isOrthoNormal(const vec3 u, const vec3 v, const vec3 w)
     return true;
 }
 
-float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
+void normalize_vector(vec3 out, vec3 in)
+{
+    vec3 tmp0;
+    vec3 tmp1 = {1.0f, 1.0f, 1.0f};
+    vec3_add(tmp0, in, tmp1);
+    vec3_scale(out, tmp0, 0.5f);
+}
+//#define OLD
+#ifdef OLD
+float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
@@ -678,7 +691,6 @@ float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                         //vec3_scale(tmp, tmp, 1.0 / cd_avg);
                         vec3_add(radiance, radiance, tmp);
                         //vec3_assign(radiance, pdf, pdf, pdf);
-                        //vec3_copy(radiance, sample_ray.direction);
                     }
                 }
 
@@ -819,7 +831,7 @@ float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
     return min_t;
 }
 
-
+#else
 float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
@@ -840,8 +852,6 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
             // TODO move texture fetch into computeScatteringFunc
             updateShadeRecWithTexInfo(&min_sr);
         }
-
-
         if(min_sr.mat.mat_type == EMISSIVE)
         {
             //TODO this
@@ -938,13 +948,34 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     }
                 }
 #endif
-                //if(min_sr.mat.mat_type == MATTE || min_sr.mat.mat_type == REFLECTIVE)
+                if(min_sr.mat.mat_type == REFLECTIVE) 
+                {
+                    static float convergence = 1.0f;
+                    // sampleF
+                    vec3 f;
+                    vec3 wi;
+                    vec2 sample;
+                    Sampler_getSample(sample, sampler);
+                    float pdf = BSDF_sample_f(f, wi, min_sr.wo, sample, &(min_sr.bsdf));
+                    if(pdf > 0.0f)
+                    {
+                        Ray sample_ray;
+                        vec3_copy(sample_ray.direction, wi);
+                        vec3_copy(sample_ray.origin, min_sr.hit_point);
+                        
+                        vec3 inc_radiance;
+                        pathTrace(inc_radiance, depth-1, sample_ray, trace_args);
+                        //float ndotwi = vec3_dot(min_sr.normal, wi);
+
+                        vec3 tmp;
+                        vec3_mult(tmp, inc_radiance, f);
+                        //vec3_scale(tmp, tmp, ndotwi / pdf);
+                        vec3_add(radiance, radiance, tmp);
+                    }
+                }
+
                 if(min_sr.mat.mat_type == MATTE)
                 {
-                    if(min_sr.mat.mat_type == REFLECTIVE)
-                    {
-                        printf("reflective\n");
-                    }
                     // sampleF
                     vec3 f;
                     vec3 wi;
@@ -972,17 +1003,6 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                         vec3_scale(tmp, tmp, ndotwi / pdf);
                         vec3_add(radiance, radiance, tmp);
                     }
-                }
-
-                if(min_sr.mat.mat_type == REFLECTIVE)
-                {
-                    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                    // NOTE: depth - 1 is a shitty hack
-                    calcSpecRadiancePT(reflected_illum, ray, &min_sr, depth-1, trace_args);
-                    assert(reflected_illum[0] >= 0.0f && reflected_illum[1] >= 0.0f &&
-                           reflected_illum[2] >= 0.0f);
-                    vec3_scale(reflected_illum, reflected_illum, min_sr.mat.ks);
-                    vec3_add(radiance, radiance, reflected_illum);
                 }
 
                 if(min_sr.mat.mat_type == TRANSPARENT)
@@ -1052,4 +1072,4 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
     }
     return min_t;
 }
-
+#endif

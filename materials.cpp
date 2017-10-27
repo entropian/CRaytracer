@@ -146,7 +146,7 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
             getMaterialSpecularTexColor(cr, mat, uv);            
         }else
         {
-            vec3_copy(cr, mat->cr);
+            vec3_copy(cr, mat->cs);
         }
         BSDF_addSpecularReflection(bsdf, cr);
     } break;

@@ -75,8 +75,11 @@ float SpecularReflection_sample_f(vec3 f, vec3 wi,
                                   const vec3 wo, const vec2 sample, const SpecularReflection* spec_ref)
 {
     // Assume in tangent space
+    vec3 ray_dir;
+    vec3_negate(ray_dir, wo);
     vec3 normal = {0.0f, 0.0f, 1.0f};
-    calcReflectRayDir(wi, normal, wo);
+    //calcReflectRayDir(wi, normal, wo);
+    calcReflectRayDir(wi, normal, ray_dir);
     vec3_copy(f, spec_ref->cr);
     return 1.0f;
 }
