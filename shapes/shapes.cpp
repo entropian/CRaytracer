@@ -582,3 +582,31 @@ int triangleAABBIntersect(Object_t obj, AABB* aabb)
     }
     return 0;
 }
+
+float shapeArea(const Object_t obj)
+{
+    switch(obj.type)
+    {
+    case SPHERE:
+    {
+
+    } break;
+    case RECTANGLE:
+    {
+
+    } break;
+    }
+}
+
+float shapePdf(const Object_t obj, const ShadeRec* sr, const vec3 wi)
+{
+    Ray ray;
+    resetRay(&ray, sr->hit_point, wi);
+    ShadeRec new_sr;
+    float t = rayIntersectObject(&new_sr, obj, ray);
+    if(t == TMAX) return 0.0f;
+    vec3 neg_wi;
+    vec3_negate(neg_wi, wi);
+    return distanceSquared(new_sr.hit_point, ray.origin) / fabs(vec3_dot(new_sr.normal, neg_wi)) *
+        shapeArea(obj);
+}

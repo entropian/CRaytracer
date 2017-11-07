@@ -37,3 +37,9 @@ float calcTransmitDir(vec3 transmit_dir, const vec3 normal, const vec3 wo, const
     vec3_sub(transmit_dir, tmp_vec3_1, tmp_vec3_2);
     return eta;
 }
+
+void resetRay(Ray* ray, const vec3 origin, const vec3 dir)
+{
+    vec3_copy(ray->origin, origin);
+    vec3_copy(ray->direction, dir);
+}

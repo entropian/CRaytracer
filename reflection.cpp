@@ -170,6 +170,19 @@ void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf)
     }
 }
 
+float BSDF_pdf(const vec3 wi, const vec3 wo, const BSDF* bsdf)
+{
+    vec3 wi_local, wo_local;
+    orthoNormalTransform(wi_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wi);
+    orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
+    float pdf = 0;
+    for(int i = 0; i < bsdf->num_bxdf; i++)
+    {
+        pdf += BxDF_pdf(wi, wo, bsdf->bxdfs[i], bsdf->types[i]);
+    }
+    return pdf;
+}
+
 float BSDF_sample_f(vec3 f, vec3 wi,
                     const vec3 wo, const vec2 sample, const BSDF* bsdf)
 {
@@ -185,8 +198,6 @@ float BSDF_sample_f(vec3 f, vec3 wi,
 
     // Transform wo to tangent space
     vec3 wi_local, wo_local;
-    //orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
-    //orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
     transposeTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
     if(wo_local[2] == 0.0f)
     {

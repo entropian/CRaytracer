@@ -53,8 +53,7 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         {
         case RECTANGLE:
         {
-            //vec2 sample;
-            //getSample2D(sample, area_light_ptr->samples2D, sample_index);
+            
             vec3 displacement;
             Rectangle* rect = (Rectangle*)(area_light_ptr->obj_ptr);
             vec3_scale(displacement, rect->width, sample[0]);
@@ -67,7 +66,6 @@ void getLightDir(vec3 r, const LightType light_type, const void* light_ptr, cons
         case SPHERE:
         {
             vec3 h_sample;
-            //getSample3D(h_sample, area_light_ptr->samples3D, sample_index);
             mapSampleToHemisphere(h_sample, sample);
             getVec3InLocalBasis(area_light_ptr->sample_point, h_sample, sr->normal);
             vec3_add(area_light_ptr->sample_point, area_light_ptr->sample_point,
@@ -411,3 +409,61 @@ void EnvLight_destroy(EnvLight* env_light)
     env_light->intensity = 0.0f;
 }
 
+float AreaLight_sample_Li(vec3 Li, vec3 wi, float* t,
+                          const ShadeRec *sr, const vec2 sample, const AreaLight* area_light)
+{
+    vec3 sample_point;
+    if(area_light->obj_type == RECTANGLE)
+    {
+        vec3 displacement;
+        Rectangle* rect = (Rectangle*)(area_light->obj_ptr);
+        vec3_scale(displacement, rect->width, sample[0]);
+        vec3_add(sample_point, rect->point, displacement);
+        vec3_scale(displacement, rect->height, sample[1]);
+        vec3_add(sample_point, sample_point, displacement);
+    }else if(area_light->obj_type == SPHERE)
+    {
+        vec3 h_sample;
+        mapSampleToHemisphere(h_sample, sample);
+        getVec3InLocalBasis(sample_point, h_sample, sr->normal);
+        vec3_add(sample_point, sample_point,
+                 ((Sphere*)(area_light->obj_ptr))->center);
+    }
+    vec3 sample_to_hit_point;    
+    vec3_sub(sample_to_hit_point, sample_point, sr->hit_point);
+    vec3_normalize(wi, sample_to_hit_point);
+
+    vec3_scale(Li, area_light->color, area_light->intensity);
+    *t = vec3_length(sample_to_hit_point);
+    return area_light->pdf;
+}
+
+float EnvLight_sample_Li(vec3 Li, vec3 wi, float* t, const ShadeRec* sr, const vec2 sample, const EnvLight* env_light)
+{
+    vec3 h_sample;
+    mapSampleToHemisphere(h_sample, sample);
+    getVec3InLocalBasis(wi, h_sample, sr->normal);
+    vec3_scale(Li, env_light->color, env_light->intensity);
+    *t = TMAX;
+    return vec3_dot(wi, sr->normal) * INV_PI;
+}
+
+float Light_sample_Li(vec3 Li, vec3 wi, float* t,
+                      const ShadeRec *sr, const vec2 sample, const void* light, const LightType type)
+{
+    // return light_pdf
+    // Store incident radiance in Li
+    switch(type)
+    {
+        case AREALIGHT:
+        {
+            AreaLight* area_light = (AreaLight*)light;
+            AreaLight_sample_Li(Li, wi, t, sr, sample, area_light);
+        } break;
+        case ENVLIGHT:
+        {
+            EnvLight* env_light = (EnvLight*)light;
+            EnvLight_sample_Li(Li, wi, t, sr, sample, env_light);
+        } break;
+    }
+}

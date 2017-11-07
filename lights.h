@@ -108,3 +108,6 @@ float calcLightDistance(const LightType light_type, const void* light_ptr, const
 void getEnvLightIncRadiance(vec3 r, const vec3 dir, EnvLight* env_light);
 void EnvLight_init_cubemap(EnvLight* env_light, char paths[][256]);
 void EnvLight_destroy(EnvLight* env_light);
+
+float Light_sample_Li(vec3 Li, vec3 wi, float* t,
+                      const ShadeRec *sr, const vec2 sample, const void* light, const LightType type);

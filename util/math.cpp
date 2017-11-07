@@ -1,5 +1,12 @@
 #include "math.h"
 
+float distanceSquared(const vec3 a, const vec3 b)
+{
+    vec3 displacement;
+    vec3_sub(displacement, a, b);
+    return vec3_dot(displacement, displacement);
+}
+
 void orthoNormalTransform(vec3 r, const vec3 u, const vec3 v, const vec3 w, const vec3 a)
 {
     vec3 u_comp, v_comp, w_comp;

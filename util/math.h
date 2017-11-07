@@ -37,6 +37,8 @@ inline void printMat3(mat3 a)
     }
 }
 
+float distanceSquared(const vec3 a, const vec3 b);
+
 
 inline float lerp(const float x, const float a, const float b)
 {
