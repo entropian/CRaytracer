@@ -361,7 +361,7 @@ int main(int argc, char** argv)
     end_time = start_time;
     int prev_percent = 0;
 
-#define MULTITHREAD
+//#define MULTITHREAD
 #ifdef MULTITHREAD
     JobQueue job_queue;
     JobQueue_init(&job_queue);
@@ -438,7 +438,8 @@ int main(int argc, char** argv)
             }
 
             vec3 radiance = {0.0f, 0.0f, 0.0f};
-            trace(radiance, params.max_depth, ray, &trace_args);
+            //trace(radiance, params.max_depth, ray, &trace_args);
+            pathTraceNew(radiance, params.max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
 
             // Planned optimizations: 

@@ -698,55 +698,116 @@ inline float powerHeuristic(int nf, float fPdf, int ng, float gPdf) {
     return (f * f) / (f * f + g * g);
 }
 
-void estimateDirect(vec3 L, Sampler* sampler, const ShadeRec* sr, const int light_index, const Scene* scene)
+void estimateDirect(vec3 L, Sampler* sampler,
+                    const ShadeRec* sr, const int light_index, const SceneLights* sl, const SceneObjects* so)
 {
     vec3_copy(L, BLACK);
-    const SceneLights* sl = &(scene->lights);
     vec3 Li, wi;
-    float light_pdf, scatter_pdf, t;
     // Sample light source
+    // Get point on light source
+    float light_pdf, scatter_pdf, t;
     vec2 sample;
     Sampler_getSample(sample, sampler);
-    light_pdf = Light_sample_Li(Li, wi, &t, sr, sample, sl->light_ptrs[light_index],
-                                sl->light_types[light_index]);
-    if(light_pdf > 0.0f && !isBlack(Li))
+    vec3 sample_point, sample_normal;
+    switch(sl->light_types[light_index])
     {
-        vec3 f;
-        BSDF_f(f, wi, sr->wo, &(sr->bsdf));
-        vec3_scale(f, f, fabs(vec3_dot(wi, sr->normal)));
-        scatter_pdf = BSDF_pdf(wi, sr->wo, &(sr->bsdf));
-        if(!isBlack(f))
+    case AREALIGHT:
+    {
+        AreaLight* area_light = (AreaLight*)(sl->light_ptrs[light_index]);
+        if(area_light->obj_type == SPHERE)
         {
-            if(!isBlack(Li))
-            {
-                // TODO delta lights
-                float weight = powerHeuristic(1, light_pdf, 1, scatter_pdf);
-                vec3 contrib;
-                vec3_mult(contrib, Li, f);
-                vec3_scale(contrib, contrib, weight);
-                vec3_add(L, L, contrib);
-            }
+            Sphere* sphere = (Sphere*)(area_light->obj_ptr);
+            vec3 hit_point_to_center;
+            vec3_sub(hit_point_to_center, sr->hit_point, sphere->center);
+            vec3 z_axis;
+            vec3_normalize(z_axis, hit_point_to_center);
+            vec3 h_sample;
+            mapSampleToHemisphere(h_sample, sample);
+            getVec3InLocalBasis(h_sample, h_sample, z_axis); // NOTE: hackish
+            vec3_scale(sample_point, h_sample, sphere->radius);
+            vec3_add(sample_point, sample_point, sphere->center);
+            vec3_copy(sample_normal, h_sample);
+            //light_pdf = 1.0 / (calcSphereArea(sphere) * 0.5f);
+            light_pdf = fabs(vec3_dot(h_sample, z_axis)) * INV_PI;
+        }else if(area_light->obj_type == RECTANGLE)
+        {
+            Rectangle* rect = (Rectangle*)(area_light->obj_ptr);
+            vec3 u, v;
+            vec3_scale(u, rect->width, sample[0]);
+            vec3_scale(v, rect->height, sample[1]);
+            vec3_add(sample_point, rect->point, u);
+            vec3_add(sample_point, sample_point, v);
+            vec3_copy(sample_normal, rect->normal);
+            light_pdf = 1.0f / (vec3_length(rect->width) * vec3_length(rect->height));
+        }
+        // Calculate wi
+        vec3 sample_to_hit_point;
+        vec3_sub(sample_to_hit_point, sample_point, sr->hit_point);
+        vec3_normalize(wi, sample_to_hit_point);
+        // Calculate PDF
+        vec3 neg_wi;
+        vec3_negate(neg_wi, wi);
+        /*
+        light_pdf *= 1.0f / vec3_dot(sample_to_hit_point, sample_to_hit_point)
+            * fabs(vec3_dot(sample_normal, neg_wi));
+            */
+        light_pdf *= vec3_dot(sample_to_hit_point, sample_to_hit_point)
+            / fabs(vec3_dot(sample_normal, neg_wi));
+        // Calculate Li
+        vec3_scale(Li, area_light->color, area_light->intensity);
+    } break;
+    case ENVLIGHT:
+    {
+        // TODO
+    } break;
+    default:        
+        printf("Invalid light type.\n");
+        return;
+    }
+
+    vec3 sample_to_hit_point;
+    vec3_sub(sample_to_hit_point, sample_point, sr->hit_point);
+    if(vec3_dot(sample_to_hit_point, sample_normal) > 0.0f ||
+       vec3_dot(sample_to_hit_point, sr->normal) < 0.0f)
+    {
+        return;
+    }
+
+    vec3 f;
+    // Calcuate BRDF
+    if(light_pdf > 0.0f && !vec3_equal(Li, BLACK))
+    {
+        BSDF_f(f, wi, sr->wo, &(sr->bsdf));
+        vec3_scale(f, f, fabs(vec3_dot(sr->normal, wi)));
+        scatter_pdf = BSDF_pdf(wi, sr->wo, &(sr->bsdf));
+    }else
+        return;
+
+    if(!vec3_equal(f, BLACK))
+    {
+        bool in_shadow = shadowTest(light_index, sl, so, wi, sr);
+        if(!in_shadow)
+        {
+            vec3 radiance;
+            vec3_mult(radiance, f, Li);
+            vec3_scale(radiance, radiance, 1.0f / light_pdf);
+            vec3_add(L, L, radiance);
         }
     }
-    
-    // Sample BSDF
-    // TODO delta lights
-    vec3 f;
-    Sampler_getSample(sample, sampler);
-    scatter_pdf = BSDF_sample_f(f, wi, sr->wo, sample, &(sr->bsdf));
-    bool sampled_specular = false;
-    
 }
 
-void uniformSampleOneLight(vec3 L, Sampler* sampler, const ShadeRec* sr, const Scene* scene)
+void uniformSampleOneLight(vec3 L, Sampler* sampler,
+                           const ShadeRec* sr, const SceneLights* sl, const SceneObjects* so)
 {
     vec3_copy(L, BLACK);
-    const SceneLights* sl = &(scene->lights);
     int num_lights = sl->num_lights;
+    // TODO: excluding env light for now
+    /*
     if(sl->env_light)
     {
         num_lights++;
     }
+    */
     if(num_lights == 0)
     {
         return;
@@ -756,11 +817,11 @@ void uniformSampleOneLight(vec3 L, Sampler* sampler, const ShadeRec* sr, const S
     float rand_float = (float)rand() / (float)RAND_MAX;
     light_index = (int)min(rand_float * num_lights, num_lights - 1);
     vec3 Ld;
-    estimateDirect(Ld, sampler, sr, light_index, scene);
+    estimateDirect(Ld, sampler, sr, light_index, sl, so);
     vec3_scale(L, Ld, 1.0f / light_pdf);
 }
 
-float pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trace_args)
+void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
@@ -787,12 +848,16 @@ float pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *t
                     float ndotwi = clamp(-vec3_dot(sr.normal, ray.direction), 0.0f, 1.0f);
                     vec3 inc_radiance;
                     vec3_scale(inc_radiance, sr.mat.ce, sr.mat.ke * ndotwi);
+                    vec3_mult(inc_radiance, inc_radiance, beta);
                     vec3_add(L, L, inc_radiance);
                 }
             }else
             {
                 vec3 env_inc_radiance;
-                getEnvLightIncRadiance(env_inc_radiance, ray.direction, sl->env_light);
+                if(sl->env_light)
+                    getEnvLightIncRadiance(env_inc_radiance, ray.direction, sl->env_light);
+                vec3_mult(env_inc_radiance, env_inc_radiance, beta);
+                vec3_add(L, L, env_inc_radiance);
             }
         }
 
@@ -802,14 +867,14 @@ float pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *t
             break;
         
         // Compute scattering functions
+        computeLocalBasis(&sr);
         computeScatteringFunc(&(sr.bsdf), sr.uv, &(sr.mat));
 
         // Sample illumination from lights to find path contribution
         vec3 contrib;
-        // TODO
-        //uniformSampleOneLight(contrib, sl, sampler);
-        //vec3_scale(contrib, contrib, beta);
-        //vec3_add(L, L, contrib);
+        uniformSampleOneLight(contrib, sampler, &sr, sl, so);
+        vec3_mult(contrib, contrib, beta);
+        vec3_add(L, L, contrib);
 
         // Sample BSDF to get new path direction
         vec3 wo, wi, f;
@@ -819,13 +884,17 @@ float pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *t
         float pdf = BSDF_sample_f(f, wi, wo, sample, &(sr.bsdf));
 
         if(vec3_equal(f, BLACK))
+        {
+            BSDF_freeBxDFs(&(sr.bsdf));                    
             break;
+        }
         vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
         vec3_mult(beta, beta, f);
         // TODO
         //specular_bounce = isSpecular(&(sr.mat));
-        vec3_copy(ray.origin, sr.hit_point);
-        vec3_copy(ray.direction, wi);
+        resetRay(&ray, sr.hit_point, wi);
+        //vec3_copy(ray.origin, sr.hit_point);
+        //vec3_copy(ray.direction, wi);
         
         // Possibly terminate the path with Russian roulette
         if(bounces > 3)
@@ -833,10 +902,13 @@ float pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *t
             float q = max(0.05, 1.0f - beta[1]);
             float rand_float = (float)rand() / (float)RAND_MAX;
             if(rand_float < q)
+            {
+                BSDF_freeBxDFs(&(sr.bsdf));
                 break;
+            }
             vec3_scale(beta, beta, 1.0f - q);
         }
+        BSDF_freeBxDFs(&(sr.bsdf));                
     }
-
-    return 1.0f;
+    vec3_copy(radiance, L);
 }
