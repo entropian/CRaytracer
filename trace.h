@@ -785,7 +785,12 @@ void estimateDirect(vec3 L, Sampler* sampler,
 
     if(!vec3_equal(f, BLACK))
     {
-        bool in_shadow = shadowTest(light_index, sl, so, wi, sr);
+        bool in_shadow;
+        float distance = vec3_length(sample_to_hit_point);
+        Ray shadow_ray;
+        resetRay(&shadow_ray, sr->hit_point, wi);
+        float t = shadowIntersectTest(so, shadow_ray, distance);
+        in_shadow = t < distance - K_EPSILON;
         if(!in_shadow)
         {
             vec3 radiance;
