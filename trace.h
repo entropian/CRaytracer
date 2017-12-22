@@ -474,8 +474,8 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                 vec3_copy(radiance, BLACK);
             }else
             {
-                float ndotwi = clamp(-vec3_dot(min_sr.normal, ray.direction), 0.0f, 1.0f);
-                vec3_scale(radiance, min_sr.mat.ce, min_sr.mat.ke * ndotwi);
+                //float ndotwi = clamp(-vec3_dot(min_sr.normal, ray.direction), 0.0f, 1.0f);
+                vec3_scale(radiance, min_sr.mat.ce, min_sr.mat.ke);
             }
 #else
             vec3_scale(radiance, min_sr.mat.ce, min_sr.mat.ke);
@@ -716,6 +716,7 @@ void estimateDirect(vec3 L, Sampler* sampler,
         AreaLight* area_light = (AreaLight*)(sl->light_ptrs[light_index]);
         if(area_light->obj_type == SPHERE)
         {
+            // TODO: Sphere light doesn't work
             Sphere* sphere = (Sphere*)(area_light->obj_ptr);
             vec3 hit_point_to_center;
             vec3_sub(hit_point_to_center, sr->hit_point, sphere->center);
@@ -727,8 +728,9 @@ void estimateDirect(vec3 L, Sampler* sampler,
             vec3_scale(sample_point, h_sample, sphere->radius);
             vec3_add(sample_point, sample_point, sphere->center);
             vec3_copy(sample_normal, h_sample);
-            //light_pdf = 1.0 / (calcSphereArea(sphere) * 0.5f);
-            light_pdf = fabs(vec3_dot(h_sample, z_axis)) * INV_PI;
+            //light_pdf = fabs(vec3_dot(h_sample, z_axis)) * INV_PI;
+            light_pdf = 1.0f / (2.0f * PI * sphere->radius*sphere->radius)
+                * fabs(vec3_dot(h_sample, z_axis)) * INV_PI;
         }else if(area_light->obj_type == RECTANGLE)
         {
             Rectangle* rect = (Rectangle*)(area_light->obj_ptr);
@@ -747,10 +749,6 @@ void estimateDirect(vec3 L, Sampler* sampler,
         // Calculate PDF
         vec3 neg_wi;
         vec3_negate(neg_wi, wi);
-        /*
-        light_pdf *= 1.0f / vec3_dot(sample_to_hit_point, sample_to_hit_point)
-            * fabs(vec3_dot(sample_normal, neg_wi));
-            */
         light_pdf *= vec3_dot(sample_to_hit_point, sample_to_hit_point)
             / fabs(vec3_dot(sample_normal, neg_wi));
         // Calculate Li
@@ -810,7 +808,7 @@ void uniformSampleOneLight(vec3 L, Sampler* sampler,
     /*
     if(sl->env_light)
     {
-        num_lights++;
+p        num_lights++;
     }
     */
     if(num_lights == 0)
@@ -850,9 +848,8 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
                 if(sr.mat.mat_type == EMISSIVE)
                 {
                     // NOTE: questionable
-                    float ndotwi = clamp(-vec3_dot(sr.normal, ray.direction), 0.0f, 1.0f);
                     vec3 inc_radiance;
-                    vec3_scale(inc_radiance, sr.mat.ce, sr.mat.ke * ndotwi);
+                    vec3_scale(inc_radiance, sr.mat.ce, sr.mat.ke);
                     vec3_mult(inc_radiance, inc_radiance, beta);
                     vec3_add(L, L, inc_radiance);
                 }
@@ -876,10 +873,13 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
         computeScatteringFunc(&(sr.bsdf), sr.uv, &(sr.mat));
 
         // Sample illumination from lights to find path contribution
-        vec3 contrib;
-        uniformSampleOneLight(contrib, sampler, &sr, sl, so);
-        vec3_mult(contrib, contrib, beta);
-        vec3_add(L, L, contrib);
+        if(!(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT))
+        {
+            vec3 contrib;        
+            uniformSampleOneLight(contrib, sampler, &sr, sl, so);
+            vec3_mult(contrib, contrib, beta);
+            vec3_add(L, L, contrib);
+        }
 
         // Sample BSDF to get new path direction
         vec3 wo, wi, f;
@@ -893,13 +893,15 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
             BSDF_freeBxDFs(&(sr.bsdf));                    
             break;
         }
-        vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
+        // NOTE: Including this conditional here, because PBRT pre divides brdf with ndotwi
+        if(!(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT))
+            vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
         vec3_mult(beta, beta, f);
-        // TODO
-        //specular_bounce = isSpecular(&(sr.mat));
+        if(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT)
+            specular_bounce = true;
+        else
+            specular_bounce = false;
         resetRay(&ray, sr.hit_point, wi);
-        //vec3_copy(ray.origin, sr.hit_point);
-        //vec3_copy(ray.direction, wi);
         
         // Possibly terminate the path with Russian roulette
         if(bounces > 3)
@@ -911,7 +913,9 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
                 BSDF_freeBxDFs(&(sr.bsdf));
                 break;
             }
-            vec3_scale(beta, beta, 1.0f - q);
+            vec3_scale(beta, beta, 1.0f / (1.0f - q));
+            // TODO Different from PBRT source
+            //vec3_scale(beta, beta, (1.0f - q));
         }
         BSDF_freeBxDFs(&(sr.bsdf));                
     }

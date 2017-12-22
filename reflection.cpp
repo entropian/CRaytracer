@@ -43,18 +43,21 @@ float Lambertian_pdf(const vec3 wi, const vec3 wo)
 {
     vec3 normal = {0.0f, 0.0f, 1.0f};
     //return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, wo)) * INV_PI: 0.0f;
+    // TODO: sameHemisphere() doesn't work because wi and wo aren't in local tangent space.
+    // Perhaps pass in wi_local and wo_local instead.
+    /*
     if(!sameHemisphere(wi, wo))
     {
         printf("not same hemisphere\n");
     }
+    */
     float dot_product = fabs(vec3_dot(wi, normal)) * INV_PI;
     if(dot_product == 0.0f)
     {
         printf("dot product 0\n");
-    }
-    
+    }    
     return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, normal)) * INV_PI: 0.0f;
-}
+}   
 
 float Lambertian_sample_f(vec3 f, vec3 wi,
                          const vec3 wo, const vec2 sample, const Lambertian* l)
