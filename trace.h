@@ -815,8 +815,6 @@ void estimateDirect(vec3 L, Sampler* sampler,
             vec3_mult(radiance, f, Li);
             vec3_scale(radiance, radiance, 1.0f / light_pdf);
             vec3_add(L, L, radiance);
-            // HERE
-            vec3_copy(L, RED);
         }
     }
 }

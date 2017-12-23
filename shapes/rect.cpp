@@ -53,10 +53,6 @@ float rayIntersectRect(ShadeRec *sr, Rectangle *rect, const Ray ray)
 
 float shadowRayIntersectRect(Rectangle *rect, const Ray ray)
 {
-    if(!rect->shadow)
-    {
-        return TMAX;
-    }
     vec3 displacement;
     vec3_sub(displacement, rect->point, ray.origin);
     vec3 normal;

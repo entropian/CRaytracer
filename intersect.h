@@ -194,7 +194,7 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
     return t;        
 }
 
-float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
+float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray, const float light_dist)
 {
     const UniformGrid* rg = (UniformGrid*)(so->accel_ptr);
     bool hits_grid = false;
@@ -274,7 +274,7 @@ float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
                 {
                     int index = IntVector_get(&(rg->cells[cell_index]), i);
                     t = shadowRayIntersectObject(so->objects[index], shadow_ray);
-                    if(t < TMAX)
+                    if(t < (light_dist - K_EPSILON))
                     {
                         return t;
                     }
@@ -300,7 +300,7 @@ float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
     for(int i = 0; i < so->num_non_grid_obj; i++)
     {
         t = shadowRayIntersectObject(so->objects[i], shadow_ray);
-        if(t < TMAX)
+        if(t < (light_dist - K_EPSILON))
         {
             return t;
         }
@@ -444,7 +444,7 @@ float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray, const fl
     // TODO: add traversal time
     if(so->accel == GRID)
     {
-        return gridShadowIntersectTest(so, shadow_ray);
+        return gridShadowIntersectTest(so, shadow_ray, light_dist);
     }else if(so->accel == BVH)
     {
         BVHNode* tree = (BVHNode*)(so->accel_ptr);
