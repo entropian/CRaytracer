@@ -273,6 +273,7 @@ typedef struct SceneLights
     bool shadow[MAX_LIGHTS];    
     LightType light_types[MAX_LIGHTS];
     void* light_ptrs[MAX_LIGHTS];
+    float power[MAX_LIGHTS];
     EnvLight* env_light;
     AmbientLight* amb_light;
     vec3 bg_color;

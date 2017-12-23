@@ -196,11 +196,6 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 
 float gridShadowIntersectTest(const SceneObjects* so, const Ray shadow_ray)
 {
-    // variables to make sense of: tx_max and tx_min,
-    // ix_step = 1, ix_stop = nx;
-    // how to find tx_max and tx_min
-
-    // first find where the ray intersects with the aabb or if its origin is inside the aabb
     const UniformGrid* rg = (UniformGrid*)(so->accel_ptr);
     bool hits_grid = false;
     int ix, iy, iz;
@@ -434,66 +429,6 @@ float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
             *sr = min_sr;
         }
         return min_t;
-
-        /*
-        ShadeRec min_sr; // min out of all objects
-        for(int i = 0; i < so->num_obj; i++)
-        {
-            if(so->num_obj - i >=4)
-            {
-
-                CACHE_ALIGN float beta[4];
-                CACHE_ALIGN float gamma[4];
-                vec3_4 v0;
-                vec3_4 v1;
-                vec3_4 v2;
-                vec3_4 ray_o;
-                vec3_4 ray_d;
-
-                SmoothTriangle* tri_ptrs[4];
-                tri_ptrs[0] = (SmoothTriangle*)so->objects[i].ptr;
-                tri_ptrs[1] = (SmoothTriangle*)so->objects[i+1].ptr;
-                tri_ptrs[2] = (SmoothTriangle*)so->objects[i+2].ptr;
-                tri_ptrs[3] = (SmoothTriangle*)so->objects[i+3].ptr;
-                vec3_4_assignv(&(v0), tri_ptrs[0]->v0, tri_ptrs[1]->v0, tri_ptrs[2]->v0, tri_ptrs[3]->v0);
-                vec3_4_assignv(&(v1), tri_ptrs[0]->v1, tri_ptrs[1]->v1, tri_ptrs[2]->v1, tri_ptrs[3]->v1);
-                vec3_4_assignv(&(v2), tri_ptrs[0]->v2, tri_ptrs[1]->v2, tri_ptrs[2]->v2, tri_ptrs[3]->v2);
-                vec3_4_assignv(&(ray_o), ray.origin, ray.origin, ray.origin, ray.origin);
-                vec3_4_assignv(&(ray_d), ray.direction, ray.direction, ray.direction, ray.direction);
-
-                __m128 tmp = calcTriangleIntersect4((__m128*)beta, (__m128*)gamma, &v0, &v1, &v2, &ray_o, &ray_d);
-                CACHE_ALIGN float t[4];
-                _mm_store_ps(t, tmp);
-                //printf("we out here t %f\n", t[0]);
-                float tmp_min_t = TMAX;
-                int min_index = -1;
-                for(int j = 0; j < 4; j++)
-                {
-                    if(t[j] < tmp_min_t)
-                    {
-                        tmp_min_t = t[j];
-                        min_index = j;
-                    }
-                }
-                //printf("tmp_min_t %f\n", tmp_min_t);
-                if(min_index != -1 && tmp_min_t < min_t)
-                {
-                    min_t = tmp_min_t;
-                    getSmoothTriangleShadeRec(&min_sr, tri_ptrs[min_index], ray, beta[min_index],
-                                              gamma[min_index], tmp_min_t);
-                }
-            }
-            i += 3;
-        }
-
-        //printf("i guess we succeeded?\n");
-        //exit(0);
-        if(min_t < TMAX)
-        {
-            *sr = min_sr;
-        }
-        return min_t;
-        */
     }
 RETURN:
 #ifdef MEASURE_TRAVERSAL_TIME
@@ -506,6 +441,7 @@ RETURN:
 
 float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray, const float light_dist)
 {
+    // TODO: add traversal time
     if(so->accel == GRID)
     {
         return gridShadowIntersectTest(so, shadow_ray);

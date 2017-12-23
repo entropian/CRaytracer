@@ -510,7 +510,12 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 freeSamples3D(scene->lights.env_light->samples3D);                
                 free(scene->lights.env_light);
             }
-            scene->lights.env_light = env_light;
+            //scene->lights.env_light = env_light;
+            SceneLights* sl = &(scene->lights);
+            sl->light_ptrs[sl->num_lights] = env_light;
+            sl->light_types[sl->num_lights] = ENVLIGHT;
+            (sl->num_lights)++;
+            sl->env_light = env_light;
         }
     }
     DBuffer_destroy(&mat_tex_pairs);

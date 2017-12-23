@@ -9,6 +9,7 @@
 #include "shading.h"
 #include "intersect.h"
 #include <assert.h>
+#include "accelerator/bvh.h"
 
 extern int MAX_DEPTH;
 #define SEPARATE_DIRECT_INDIRECT
@@ -716,7 +717,7 @@ void estimateDirect(vec3 L, Sampler* sampler,
         AreaLight* area_light = (AreaLight*)(sl->light_ptrs[light_index]);
         if(area_light->obj_type == SPHERE)
         {
-            // TODO: Sphere light doesn't work
+            // TODO: use new tangent basis for sampling
             Sphere* sphere = (Sphere*)(area_light->obj_ptr);
             vec3 hit_point_to_center;
             vec3_sub(hit_point_to_center, sr->hit_point, sphere->center);
@@ -756,7 +757,19 @@ void estimateDirect(vec3 L, Sampler* sampler,
     } break;
     case ENVLIGHT:
     {
-        // TODO
+        // TODO: better sampling method
+        // TODO: use new tangent basis for sampling
+        EnvLight* env_light = (EnvLight*)(sl->light_ptrs[light_index]);
+        vec3 h_sample;
+        mapSampleToHemisphere(h_sample, sample);
+        getVec3InLocalBasis(h_sample, h_sample, sr->normal);
+        vec3 displacement;
+        vec3_scale(displacement, h_sample, env_light->world_radius);
+        vec3_add(sample_point, sr->hit_point, displacement);
+        vec3_negate(sample_normal, h_sample);
+        vec3_copy(wi, h_sample);
+        light_pdf = fabs(vec3_dot(h_sample, sr->normal)) * INV_PI;
+        vec3_scale(Li, env_light->color, env_light->intensity);
     } break;
     default:        
         printf("Invalid light type.\n");
@@ -788,6 +801,13 @@ void estimateDirect(vec3 L, Sampler* sampler,
         Ray shadow_ray;
         resetRay(&shadow_ray, sr->hit_point, wi);
         float t = shadowIntersectTest(so, shadow_ray, distance);
+        ShadeRec tmp_sr;
+        float min_t = intersectTest(&tmp_sr, so, shadow_ray);
+        if(t == TMAX && min_t < TMAX)
+        {
+            t = shadowIntersectTest(so, shadow_ray, distance);
+            min_t = intersectTest(&tmp_sr, so, shadow_ray);
+        }
         in_shadow = t < distance - K_EPSILON;
         if(!in_shadow)
         {
@@ -795,6 +815,8 @@ void estimateDirect(vec3 L, Sampler* sampler,
             vec3_mult(radiance, f, Li);
             vec3_scale(radiance, radiance, 1.0f / light_pdf);
             vec3_add(L, L, radiance);
+            // HERE
+            vec3_copy(L, RED);
         }
     }
 }
@@ -808,7 +830,7 @@ void uniformSampleOneLight(vec3 L, Sampler* sampler,
     /*
     if(sl->env_light)
     {
-p        num_lights++;
+        num_lights++;
     }
     */
     if(num_lights == 0)
@@ -829,6 +851,25 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
     Sampler* sampler = trace_args->sampler;
+
+    // TODO: calculate world radius for env light
+    if(so->accel == BVH)
+    {
+        BVHNode* node = (BVHNode*)(so->accel_ptr);
+        vec3 dist;
+        vec3_sub(dist, node->aabb.max, node->aabb.min);
+        sl->env_light->world_radius = vec3_length(dist) * 0.5f;
+    }else if(so->accel == GRID)
+    {
+        UniformGrid* grid = (UniformGrid*)(so->accel_ptr);
+        vec3 dist;
+        vec3_sub(dist, grid->aabb.max, grid->aabb.min);
+        sl->env_light->world_radius = vec3_length(dist) * 0.5f;
+    }else if(so->accel == BVH4)
+    {
+        // TODO
+    }
+    
     
     vec3 L = {0.0f, 0.0f, 0.0f};
     vec3 beta = {1.0f, 1.0f, 1.0f};

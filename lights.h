@@ -55,6 +55,7 @@ enum EnvLightType
 typedef struct EnvLight_s
 {
     float intensity;
+    float world_radius;
     Samples3D* samples3D;
     vec3 color;
     /*
