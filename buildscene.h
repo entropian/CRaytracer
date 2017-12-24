@@ -510,12 +510,17 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 freeSamples3D(scene->lights.env_light->samples3D);                
                 free(scene->lights.env_light);
             }
-            //scene->lights.env_light = env_light;
             SceneLights* sl = &(scene->lights);
-            sl->light_ptrs[sl->num_lights] = env_light;
-            sl->light_types[sl->num_lights] = ENVLIGHT;
-            (sl->num_lights)++;
-            sl->env_light = env_light;
+            sl->env_light = env_light;            
+            if(env_light->intensity > 0.0f)
+            {
+                sl->light_ptrs[sl->num_lights] = env_light;
+                sl->light_types[sl->num_lights] = ENVLIGHT;                
+                (sl->num_lights)++;
+            }else
+            {
+                vec3_copy(sl->env_light->color, BLACK);
+            }
         }
     }
     DBuffer_destroy(&mat_tex_pairs);

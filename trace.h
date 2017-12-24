@@ -470,7 +470,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
         {
             //TODO this
 #ifdef SEPARATE_DIRECT_INDIRECT
-            if(depth == MAX_DEPTH - 1)
+            if(depth == MAX_DEPTH - 1 && min_sr.mat.mat_type == MATTE)
             {
                 vec3_copy(radiance, BLACK);
             }else
@@ -512,6 +512,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                         {
                             MeshLight* mesh_light_ptr = (MeshLight*)(sl->light_ptrs[i]);                            
                             // 1. Generate sample
+
                             vec3 sample, sample_normal;
                             vec3 hit_to_sample;
                             vec3 sample_to_hit;
@@ -595,6 +596,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                     vec2 sample;
                     Sampler_getSample(sample, sampler);
                     float pdf = BSDF_sample_f(f, wi, min_sr.wo, sample, &(min_sr.bsdf));
+                    // Output: f, wi, pdf
                     BSDF* bsdf = &(min_sr.bsdf);
                     if(!isOrthoNormal(bsdf->tangent, bsdf->binormal, bsdf->normal))
                     {
@@ -681,7 +683,7 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
         BSDF_freeBxDFs(&(min_sr.bsdf));
     }else
     {
-        //vec3_copy(radiance, sl->bg_color);
+        //if(depth != MAX_DEPTH - 1)
         getEnvLightIncRadiance(radiance, ray.direction, sl->env_light);
     }
     return min_t;
@@ -698,6 +700,7 @@ inline float powerHeuristic(int nf, float fPdf, int ng, float gPdf) {
     float f = nf * fPdf, g = ng * gPdf;
     return (f * f) / (f * f + g * g);
 }
+
 
 void estimateDirect(vec3 L, Sampler* sampler,
                     const ShadeRec* sr, const int light_index, const SceneLights* sl, const SceneObjects* so)
@@ -760,6 +763,7 @@ void estimateDirect(vec3 L, Sampler* sampler,
         // TODO: better sampling method
         // TODO: use new tangent basis for sampling
         EnvLight* env_light = (EnvLight*)(sl->light_ptrs[light_index]);
+        /*
         vec3 h_sample;
         mapSampleToHemisphere(h_sample, sample);
         getVec3InLocalBasis(h_sample, h_sample, sr->normal);
@@ -770,6 +774,16 @@ void estimateDirect(vec3 L, Sampler* sampler,
         vec3_copy(wi, h_sample);
         light_pdf = fabs(vec3_dot(h_sample, sr->normal)) * INV_PI;
         vec3_scale(Li, env_light->color, env_light->intensity);
+        */
+
+        vec3 brdf;
+        light_pdf = BSDF_sample_f(brdf, wi, sr->wo, sample, &(sr->bsdf));
+        vec3_negate(sample_normal, wi);
+        vec3 displacement;
+        vec3_scale(displacement, wi, env_light->world_radius);
+        vec3_add(sample_point, sr->hit_point, displacement);
+        vec3_scale(Li, env_light->color, env_light->intensity);
+
     } break;
     default:        
         printf("Invalid light type.\n");
@@ -824,13 +838,6 @@ void uniformSampleOneLight(vec3 L, Sampler* sampler,
 {
     vec3_copy(L, BLACK);
     int num_lights = sl->num_lights;
-    // TODO: excluding env light for now
-    /*
-    if(sl->env_light)
-    {
-        num_lights++;
-    }
-    */
     if(num_lights == 0)
     {
         return;
@@ -851,21 +858,26 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
     Sampler* sampler = trace_args->sampler;
 
     // TODO: calculate world radius for env light
-    if(so->accel == BVH)
+    if(sl->env_light)
     {
-        BVHNode* node = (BVHNode*)(so->accel_ptr);
-        vec3 dist;
-        vec3_sub(dist, node->aabb.max, node->aabb.min);
-        sl->env_light->world_radius = vec3_length(dist) * 0.5f;
-    }else if(so->accel == GRID)
-    {
-        UniformGrid* grid = (UniformGrid*)(so->accel_ptr);
-        vec3 dist;
-        vec3_sub(dist, grid->aabb.max, grid->aabb.min);
-        sl->env_light->world_radius = vec3_length(dist) * 0.5f;
-    }else if(so->accel == BVH4)
-    {
-        // TODO
+        if(so->accel == BVH)
+        {
+            BVHNode* node = (BVHNode*)(so->accel_ptr);
+            vec3 dist;
+            vec3_sub(dist, node->aabb.max, node->aabb.min);
+            //sl->env_light->world_radius = vec3_length(dist) * 0.5f;
+            sl->env_light->world_radius = vec3_length(dist) * 2.0f;
+        }else if(so->accel == GRID)
+        {
+            UniformGrid* grid = (UniformGrid*)(so->accel_ptr);
+            vec3 dist;
+            vec3_sub(dist, grid->aabb.max, grid->aabb.min);
+            //sl->env_light->world_radius = vec3_length(dist) * 0.5f;
+            sl->env_light->world_radius = vec3_length(dist) * 2.0f;
+        }else if(so->accel == BVH4)
+        {
+            // TODO
+        }
     }
     
     
@@ -873,7 +885,8 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
     vec3 beta = {1.0f, 1.0f, 1.0f};
     Ray ray = primary_ray;
     bool specular_bounce = false;
-    for(int bounces = 0; ; bounces++)
+    int bounces;
+    for(bounces = 0; ; bounces++)
     {
         // Intersect ray with scene
         ShadeRec sr;
