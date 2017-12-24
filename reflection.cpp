@@ -176,8 +176,11 @@ void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf)
 float BSDF_pdf(const vec3 wi, const vec3 wo, const BSDF* bsdf)
 {
     vec3 wi_local, wo_local;
-    orthoNormalTransform(wi_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wi);
-    orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
+    //orthoNormalTransform(wi_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wi);
+    //orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
+    // TODO may be fixed
+    transposeTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
+    transposeTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
     float pdf = 0;
     for(int i = 0; i < bsdf->num_bxdf; i++)
     {

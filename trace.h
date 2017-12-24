@@ -701,6 +701,10 @@ inline float powerHeuristic(int nf, float fPdf, int ng, float gPdf) {
     return (f * f) / (f * f + g * g);
 }
 
+void transformToLocalBasis(vec3 r, const vec3 a, const BSDF* bsdf)
+{
+    orthoNormalTransform(r, bsdf->tangent, bsdf->binormal, bsdf->normal, a);
+}
 
 void estimateDirect(vec3 L, Sampler* sampler,
                     const ShadeRec* sr, const int light_index, const SceneLights* sl, const SceneObjects* so)
@@ -761,12 +765,10 @@ void estimateDirect(vec3 L, Sampler* sampler,
     case ENVLIGHT:
     {
         // TODO: better sampling method
-        // TODO: use new tangent basis for sampling
         EnvLight* env_light = (EnvLight*)(sl->light_ptrs[light_index]);
-        /*
         vec3 h_sample;
         mapSampleToHemisphere(h_sample, sample);
-        getVec3InLocalBasis(h_sample, h_sample, sr->normal);
+        transformToLocalBasis(h_sample, h_sample, &(sr->bsdf));
         vec3 displacement;
         vec3_scale(displacement, h_sample, env_light->world_radius);
         vec3_add(sample_point, sr->hit_point, displacement);
@@ -774,16 +776,6 @@ void estimateDirect(vec3 L, Sampler* sampler,
         vec3_copy(wi, h_sample);
         light_pdf = fabs(vec3_dot(h_sample, sr->normal)) * INV_PI;
         vec3_scale(Li, env_light->color, env_light->intensity);
-        */
-
-        vec3 brdf;
-        light_pdf = BSDF_sample_f(brdf, wi, sr->wo, sample, &(sr->bsdf));
-        vec3_negate(sample_normal, wi);
-        vec3 displacement;
-        vec3_scale(displacement, wi, env_light->world_radius);
-        vec3_add(sample_point, sr->hit_point, displacement);
-        vec3_scale(Li, env_light->color, env_light->intensity);
-
     } break;
     default:        
         printf("Invalid light type.\n");
