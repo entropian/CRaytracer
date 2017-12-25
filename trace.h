@@ -201,26 +201,6 @@ bool totalInternalReflection(const ShadeRec* sr)
 
 float calcTransmitDir(vec3 transmit_dir, const ShadeRec* sr)
 {
-    /*
-    vec3 n;
-    vec3_copy(n, sr->normal);
-    float cos_theta_i = vec3_dot(n, sr->wo);
-    float eta = sr->mat.ior_in / sr->mat.ior_out;
-    if(cos_theta_i < 0.0f)
-    {
-        cos_theta_i = -cos_theta_i;
-        vec3_negate(n, n);
-        eta = 1.0f / eta;
-    }
-
-    float tmp = 1.0f - (1.0f - cos_theta_i * cos_theta_i) / (eta * eta);
-    float cos_theta2 = (float)sqrt(tmp);
-    vec3 tmp_vec3_1, tmp_vec3_2;
-    vec3_scale(tmp_vec3_1, sr->wo, -1.0f / eta);
-    vec3_scale(tmp_vec3_2, n, cos_theta2 - cos_theta_i / eta);
-    vec3_sub(transmit_dir, tmp_vec3_1, tmp_vec3_2);
-    return eta;
-    */
     return calcTransmitDir(transmit_dir, sr->normal, sr->wo, sr->mat.ior_in, sr->mat.ior_out);
 }
 
@@ -446,7 +426,7 @@ bool isOrthoNormal(const vec3 u, const vec3 v, const vec3 w)
     return true;
 }
 
-float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
+float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
@@ -470,7 +450,8 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
         {
             //TODO this
 #ifdef SEPARATE_DIRECT_INDIRECT
-            if(depth == MAX_DEPTH - 1 && min_sr.mat.mat_type == MATTE)
+            //if(depth == MAX_DEPTH - 1 && min_sr.mat.mat_type == MATTE)
+            if(depth == MAX_DEPTH - 1)
             {
                 vec3_copy(radiance, BLACK);
             }else
@@ -619,61 +600,6 @@ float pathTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
                         vec3_add(radiance, radiance, tmp);
                     }
                 }
-                /*
-                if(min_sr.mat.mat_type == TRANSPARENT)
-                {
-                    float reflect_t = TMAX;
-                    vec3 reflected_illum = {0.0f, 0.0f, 0.0f};
-                    float ndotwo = vec3_dot(min_sr.normal, min_sr.wo);
-                    float kr = calcFresnelReflectance(&min_sr);
-                    //if(!totalInternalReflection(&min_sr))
-
-                    float transmit_t = TMAX;
-                    vec3 transmitted_illum = {0.0f, 0.0f, 0.0f};
-
-                    float rand_float = (float)rand() / (float)RAND_MAX;
-                    if(rand_float <= kr) // Reflection
-                    {
-                        reflect_t = calcSpecRadiancePT(reflected_illum, ray, &min_sr, depth, trace_args);
-                    }else // Transmission
-                    {
-                        vec3 transmit_dir = {0, 0, 0};
-                        float eta = calcTransmitDir(transmit_dir, &min_sr);
-                        float ndotwt = fabs(vec3_dot(min_sr.normal, transmit_dir));
-                        float kt = 1.0f - kr;
-
-                        vec3 btdf;
-                        // TODO: since I'm using Russian roulette, it probably doesn't make sense
-                        // to multiply by kt?
-                        //vec3_scale(btdf, WHITE, kt / (eta*eta) / ndotwt);
-                        vec3_scale(btdf, WHITE, 1 / (eta*eta) / ndotwt);
-                        Ray transmitted_ray;
-                        vec3_copy(transmitted_ray.origin, min_sr.hit_point);
-                        vec3_copy(transmitted_ray.direction, transmit_dir);
-
-                        transmit_t = pathTrace(transmitted_illum, depth-1, transmitted_ray, trace_args);
-                        assert(transmitted_illum[0] >= 0.0f && transmitted_illum[1] >= 0.0f &&
-                               transmitted_illum[2] >= 0.0f);
-                        vec3_scale(transmitted_illum, transmitted_illum, ndotwt);
-                        vec3_mult(transmitted_illum, transmitted_illum, btdf);
-                    }
-
-                    vec3 color_filter_ref, color_filter_trans;
-                    if(ndotwo > 0.0f)
-                    {
-                        vec3_pow(color_filter_ref, min_sr.mat.cf_out, reflect_t);
-                        vec3_pow(color_filter_trans, min_sr.mat.cf_in, transmit_t);
-                    }else
-                    {
-                        vec3_pow(color_filter_ref, min_sr.mat.cf_in, reflect_t);
-                        vec3_pow(color_filter_trans, min_sr.mat.cf_out, transmit_t);
-                    }
-                    vec3_mult(reflected_illum, reflected_illum, color_filter_ref);
-                    vec3_mult(transmitted_illum, transmitted_illum, color_filter_trans);
-                    vec3_add(radiance, radiance, transmitted_illum);
-                    vec3_add(radiance, radiance, reflected_illum);
-                }
-                */
             }else
             {
                 //vec3_copy(radiance, sl->bg_color);
@@ -706,16 +632,13 @@ void transformToLocalBasis(vec3 r, const vec3 a, const BSDF* bsdf)
     orthoNormalTransform(r, bsdf->tangent, bsdf->binormal, bsdf->normal, a);
 }
 
-void estimateDirect(vec3 L, Sampler* sampler,
+void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
                     const ShadeRec* sr, const int light_index, const SceneLights* sl, const SceneObjects* so)
 {
     vec3_copy(L, BLACK);
     vec3 Li, wi;
     // Sample light source
-    // Get point on light source
     float light_pdf, scatter_pdf, t;
-    vec2 sample;
-    Sampler_getSample(sample, sampler);
     vec3 sample_point, sample_normal;
     switch(sl->light_types[light_index])
     {
@@ -731,7 +654,7 @@ void estimateDirect(vec3 L, Sampler* sampler,
             vec3 z_axis;
             vec3_normalize(z_axis, hit_point_to_center);
             vec3 h_sample;
-            mapSampleToHemisphere(h_sample, sample);
+            mapSampleToHemisphere(h_sample, light_sample);
             getVec3InLocalBasis(h_sample, h_sample, z_axis); // NOTE: hackish
             vec3_scale(sample_point, h_sample, sphere->radius);
             vec3_add(sample_point, sample_point, sphere->center);
@@ -743,8 +666,8 @@ void estimateDirect(vec3 L, Sampler* sampler,
         {
             Rectangle* rect = (Rectangle*)(area_light->obj_ptr);
             vec3 u, v;
-            vec3_scale(u, rect->width, sample[0]);
-            vec3_scale(v, rect->height, sample[1]);
+            vec3_scale(u, rect->width, light_sample[0]);
+            vec3_scale(v, rect->height, light_sample[1]);
             vec3_add(sample_point, rect->point, u);
             vec3_add(sample_point, sample_point, v);
             vec3_copy(sample_normal, rect->normal);
@@ -767,7 +690,7 @@ void estimateDirect(vec3 L, Sampler* sampler,
         // TODO: better sampling method
         EnvLight* env_light = (EnvLight*)(sl->light_ptrs[light_index]);
         vec3 h_sample;
-        mapSampleToHemisphere(h_sample, sample);
+        mapSampleToHemisphere(h_sample, light_sample);
         transformToLocalBasis(h_sample, h_sample, &(sr->bsdf));
         vec3 displacement;
         vec3_scale(displacement, h_sample, env_light->world_radius);
@@ -825,7 +748,7 @@ void estimateDirect(vec3 L, Sampler* sampler,
     }
 }
 
-void uniformSampleOneLight(vec3 L, Sampler* sampler,
+void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
                            const ShadeRec* sr, const SceneLights* sl, const SceneObjects* so)
 {
     vec3_copy(L, BLACK);
@@ -839,11 +762,11 @@ void uniformSampleOneLight(vec3 L, Sampler* sampler,
     float rand_float = (float)rand() / (float)RAND_MAX;
     light_index = (int)min(rand_float * num_lights, num_lights - 1);
     vec3 Ld;
-    estimateDirect(Ld, sampler, sr, light_index, sl, so);
+    estimateDirect(Ld, light_sample, scatter_sample, sr, light_index, sl, so);
     vec3_scale(L, Ld, 1.0f / light_pdf);
 }
 
-void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trace_args)
+float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
     const SceneLights *sl = trace_args->lights;
@@ -917,10 +840,13 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
         computeScatteringFunc(&(sr.bsdf), sr.uv, &(sr.mat));
 
         // Sample illumination from lights to find path contribution
+        vec2 light_sample, scatter_sample;
+        Sampler_getSample(light_sample, sampler);
+        Sampler_getSample(scatter_sample, sampler);
         if(!(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT))
         {
             vec3 contrib;        
-            uniformSampleOneLight(contrib, sampler, &sr, sl, so);
+            uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so);
             vec3_mult(contrib, contrib, beta);
             vec3_add(L, L, contrib);
         }
@@ -948,6 +874,7 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
         resetRay(&ray, sr.hit_point, wi);
         
         // Possibly terminate the path with Russian roulette
+        /*
         if(bounces > 3)
         {
             float q = max(0.05, 1.0f - beta[1]);
@@ -961,7 +888,10 @@ void pathTraceNew(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *tr
             // TODO Different from PBRT source
             //vec3_scale(beta, beta, (1.0f - q));
         }
-        BSDF_freeBxDFs(&(sr.bsdf));                
+        */
+        BSDF_freeBxDFs(&(sr.bsdf));
+
     }
     vec3_copy(radiance, L);
+    return 0.0f;
 }

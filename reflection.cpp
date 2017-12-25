@@ -54,7 +54,7 @@ float Lambertian_pdf(const vec3 wi, const vec3 wo)
     float dot_product = fabs(vec3_dot(wi, normal)) * INV_PI;
     if(dot_product == 0.0f)
     {
-        printf("dot product 0\n");
+        //printf("dot product 0\n");
     }    
     return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, normal)) * INV_PI: 0.0f;
 }   

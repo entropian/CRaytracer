@@ -361,7 +361,7 @@ int main(int argc, char** argv)
     end_time = start_time;
     int prev_percent = 0;
 
-//#define MULTITHREAD
+#define MULTITHREAD
 #ifdef MULTITHREAD
     JobQueue job_queue;
     JobQueue_init(&job_queue);
