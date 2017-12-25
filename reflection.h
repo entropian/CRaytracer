@@ -5,8 +5,9 @@
 enum BxDFType
 {
     LAMBERTIAN,
+    ORENNAYAR,
     SPECULAR_REFLECTION,
-    SPECULAR_TRANSMISSION
+    SPECULAR_TRANSMISSION,
 };
 
 typedef struct Lambertian_s
@@ -18,6 +19,16 @@ void Lambertian_f(vec3 f, const vec3 wi, const vec3 wo, const Lambertian* l);
 float Lambertian_pdf(const vec3 wi, const vec3 wo);
 float Lambertian_sample_f(vec3 f, vec3 wi,
                           const vec3 wo, const vec2 sample, const Lambertian* l);
+
+typedef struct OrenNayar_s
+{
+    vec3 r;
+    flat a, b;
+}OrenNayar;
+// TODO
+void OrenNayar_f(vec3 f, const vec3 wi, const vec3 wo, const OrenNayar* on);
+float OrenNayar_pdf(const vec3 wi, const vec3 wo);
+float OrenNayar_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const OrenNayar* on);
 
 
 typedef struct SpecularReflection_s
@@ -58,8 +69,6 @@ void freeBSDFMem();
 void* allocateBxDF();
 
 void freeBxDF(void** bxdf);
-
-
 
 void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf);
 float BSDF_sample_f(vec3 f, vec3 wi,
