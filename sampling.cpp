@@ -192,6 +192,71 @@ void genRegularSamples(Samples2D *samples)
 }
 
 
+/*
+void genMultijitteredSamples(Samples2D *samples)
+{
+    int samples_per_row = (int)sqrt(NUM_SAMPLES);    
+    if(samples_per_row * samples_per_row != NUM_SAMPLES)
+    {
+        fprintf(stderr, "num_samples must be a perfect square.\n");
+        return ;
+    }
+    prepSample2DStruct(samples);    
+    int sample_index = 0;
+    for(int p = 0; p < NUM_SAMPLE_SETS; p++)
+    {
+        for(int i = 0; i < samples_per_row; i++)
+        {
+            for(int j = 0; j < samples_per_row; j++)
+            {
+                float x = (float)rand() / (float)RAND_MAX;
+                float y = (float)rand() / (float)RAND_MAX;                
+                x += (float)(i + j * samples_per_row);
+                x /= (float)(NUM_SAMPLES);
+                y += (float)(j + i * samples_per_row);
+                y /= (float)(NUM_SAMPLES);
+                
+                samples->samples[sample_index][0] = x;
+                samples->samples[sample_index][1] = y;
+                sample_index++;
+            }
+        }
+    }
+
+    for(int p = 0; p < samples->num_sets; p++)
+    {
+        int row_offset = 0;
+        int rand_num = rand();
+        for(int i = 0; i < samples->num_samples; i++)
+        {
+            if(i % samples_per_row == 0)
+            {
+                row_offset = i + p * samples->num_samples;
+            }
+            //int target = rand() % samples_per_row + row_offset;
+            int target = rand_num % samples_per_row + row_offset;
+            float tmp = samples->samples[i + p * samples->num_samples][0];
+            samples->samples[i + p * samples->num_samples][0] = samples->samples[target][0];
+            samples->samples[target][0] = tmp;
+        }
+    }
+
+    for(int p = 0; p < samples->num_sets; p++)
+    {
+        int rand_num = rand();
+        for(int i = 0; i < samples->num_samples; i++)
+        {
+            //int target = rand() % samples_per_row * samples_per_row + (i % samples_per_row)
+            int target = rand_num % samples_per_row * samples_per_row + (i % samples_per_row)
+                + p * samples->num_samples;
+            float tmp = samples->samples[i + p * samples->num_samples][1];
+            samples->samples[i + p * samples->num_samples][1] = samples->samples[target][1];
+            samples->samples[target][1] = tmp;
+        }
+    }
+    shuffleSamples(samples);
+}
+*/
 void genMultijitteredSamples(Samples2D *samples)
 {
     int samples_per_row = (int)sqrt(NUM_SAMPLES);    
@@ -224,15 +289,13 @@ void genMultijitteredSamples(Samples2D *samples)
     for(int p = 0; p < samples->num_sets; p++)
     {
         int row_offset = 0;
-        int rand_num = rand();
         for(int i = 0; i < samples->num_samples; i++)
         {
             if(i % samples_per_row == 0)
             {
                 row_offset = i + p * samples->num_samples;
             }
-            //int target = rand() % samples_per_row + row_offset;
-            int target = rand_num % samples_per_row + row_offset;
+            int target = rand() % samples_per_row + row_offset;
             float tmp = samples->samples[i + p * samples->num_samples][0];
             samples->samples[i + p * samples->num_samples][0] = samples->samples[target][0];
             samples->samples[target][0] = tmp;
@@ -240,11 +303,10 @@ void genMultijitteredSamples(Samples2D *samples)
     }
     for(int p = 0; p < samples->num_sets; p++)
     {
-        int rand_num = rand();
+
         for(int i = 0; i < samples->num_samples; i++)
         {
-            //int target = rand() % samples_per_row * samples_per_row + (i % samples_per_row)
-            int target = rand_num % samples_per_row * samples_per_row + (i % samples_per_row)
+            int target = rand() % samples_per_row * samples_per_row + (i % samples_per_row)
                 + p * samples->num_samples;
             float tmp = samples->samples[i + p * samples->num_samples][1];
             samples->samples[i + p * samples->num_samples][1] = samples->samples[target][1];
@@ -534,6 +596,10 @@ void Sampler_getSample(vec2 out, Sampler* sampler)
     int offset = sampler->set_sequence[(sampler->cur_dimension)++] * NUM_SAMPLES;
     int sample_index = offset + sampler->cur_sample_index;
     vec2_copy(out, global_samples.samples[sample_index]);
+    // HERE
+    //float rand_float_1 = (float)rand() / (float)RAND_MAX;
+    //float rand_float_2 = (float)rand() / (float)RAND_MAX;
+    //vec2_assign(out, rand_float_1, rand_float_2);
 }
 
 // Need test?

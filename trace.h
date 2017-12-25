@@ -582,6 +582,8 @@ float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
                     if(!isOrthoNormal(bsdf->tangent, bsdf->binormal, bsdf->normal))
                     {
                         printf("not orthonormal\n");
+                        vec3_copy(radiance, WHITE);
+                        BSDF_freeBxDFs(&(min_sr.bsdf));
                     }
                     if(pdf > 0.0f)
                     {
