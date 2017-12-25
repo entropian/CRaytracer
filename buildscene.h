@@ -539,6 +539,7 @@ void initAreaLights(SceneLights* sl)
     vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
     // Rectangle
+    /*
     Rectangle* rect = (Rectangle*)malloc(sizeof(Rectangle));
     rect->mat = (Material*)malloc(sizeof(Material)); // NOTE: memory leak?
     rect->shadow = true;
@@ -567,6 +568,7 @@ void initAreaLights(SceneLights* sl)
     sl->light_ptrs[sl->num_lights] = area_light_ptr;
     sl->light_types[sl->num_lights] = AREALIGHT;
     (sl->num_lights)++;
+    */
     // Area light
     /*
     if(sl->num_lights == MAX_LIGHTS){return;}

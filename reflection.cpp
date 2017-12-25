@@ -42,16 +42,14 @@ void Lambertian_f(vec3 f, const vec3 wi, const vec3 wo, const Lambertian* l)
 float Lambertian_pdf(const vec3 wi, const vec3 wo)
 {
     vec3 normal = {0.0f, 0.0f, 1.0f};
-    //return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, wo)) * INV_PI: 0.0f;
-    // TODO: sameHemisphere() doesn't work because wi and wo aren't in local tangent space.
-    // Perhaps pass in wi_local and wo_local instead.
     /*
     if(!sameHemisphere(wi, wo))
     {
         printf("not same hemisphere\n");
     }
     */
-    float dot_product = fabs(vec3_dot(wi, normal)) * INV_PI;
+    //float dot_product = fabs(vec3_dot(wi, normal)) * INV_PI;
+    float dot_product = fabs(cosTheta(wi)) * INV_PI;
     if(dot_product == 0.0f)
     {
         //printf("dot product 0\n");
@@ -72,6 +70,44 @@ float Lambertian_sample_f(vec3 f, vec3 wi,
     vec3_scale(f, f, INV_PI);
     mapSampleToHemisphere(wi, sample);
     return Lambertian_pdf(wi, tmp_wo);
+}
+
+void OrenNayar_f(vec3 f, const vec3 wi, const vec3 wo, const OrenNayar* on)
+{
+/*
+    Float sinThetaI = SinTheta(wi);
+    Float sinThetaO = SinTheta(wo);
+    // Compute cosine term of Oren-Nayar model
+    Float maxCos = 0;
+    if (sinThetaI > 1e-4 && sinThetaO > 1e-4) {
+        Float sinPhiI = SinPhi(wi), cosPhiI = CosPhi(wi);
+        Float sinPhiO = SinPhi(wo), cosPhiO = CosPhi(wo);
+        Float dCos = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
+        maxCos = std::max((Float)0, dCos);
+    }
+
+    // Compute sine and tangent terms of Oren-Nayar model
+    Float sinAlpha, tanBeta;
+    if (AbsCosTheta(wi) > AbsCosTheta(wo)) {
+        sinAlpha = sinThetaO;
+        tanBeta = sinThetaI / AbsCosTheta(wi);
+    } else {
+        sinAlpha = sinThetaI;
+        tanBeta = sinThetaO / AbsCosTheta(wo);
+    }
+    return R * InvPi * (A + B * maxCos * sinAlpha * tanBeta);
+ */
+    
+}
+
+float OrenNayar_pdf(const vec3 wi, const vec3 wo)
+{
+    return 0.0f;
+}
+
+float OrenNayar_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const OrenNayar* on)
+{
+    return 0.0f;
 }
 
 float SpecularReflection_sample_f(vec3 f, vec3 wi,
@@ -96,7 +132,8 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
     }else
     {
         float eta = calcTransmitDir(wi, normal, wo, spec_trans->ior_in, spec_trans->ior_out);
-        float ndotwi = fabs(vec3_dot(normal, wi));
+        float ndotwi = fabs(cosTheta(wi));
+        //float ndotwi = fabs(vec3_dot(normal, wi));
         //float kt = 1.0f - kr;
         //vec3_scale(f, WHITE, kt / (eta*eta) / ndotwi);
         //vec3_scale(f, WHITE, kt / (eta*eta));

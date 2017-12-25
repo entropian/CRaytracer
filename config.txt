@@ -1,9 +1,9 @@
-scene_file cornell_box.txt
+scene_file test_scene2.txt
 window_width  960
 window_height  960
-image_width  480
-image_height 480
-num_samples  100
+image_width  960
+image_height 960
+num_samples  225
 num_sample_sets 83
 max_depth  6
 trace_type PATHTRACE

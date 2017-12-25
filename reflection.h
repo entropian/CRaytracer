@@ -2,6 +2,44 @@
 #include "util/vec.h"
 #include "mempool.h"
 #include <stdio.h>
+#include "util/util.h"
+
+inline float cosTheta(const vec3 w) { return w[2]; }
+inline float cos2Theta(const vec3 w) { return w[2] * w[2]; }
+inline float absCosTheta(const vec3 &w) { return fabs(w[2]); }
+inline float sin2Theta(const vec3 w) {
+    return max((float)0, (float)1 - cos2Theta(w));
+}
+
+inline float sinTheta(const vec3 w) { return sqrt(sin2Theta(w)); }
+
+inline float tanTheta(const vec3 w) { return sinTheta(w) / cosTheta(w); }
+
+inline float tan2Theta(const vec3 w) {
+    return sin2Theta(w) / cos2Theta(w);
+}
+
+inline float cosPhi(const vec3 w) {
+    float sin_theta = sinTheta(w);
+    return (sin_theta == 0) ? 1 : clamp(w[0] / sin_theta, -1.0f, 1.0f);
+}
+
+inline float sinPhi(const vec3 w) {
+    float sin_theta = sinTheta(w);
+    return (sin_theta == 0) ? 0 : clamp(w[1] / sin_theta, -1.0f, 1.0f);
+}
+
+inline float cos2Phi(const vec3 w) { return cosPhi(w) * cosPhi(w); }
+
+inline float sin2Phi(const vec3 w) { return sinPhi(w) * sinPhi(w); }
+
+inline float cosDPhi(const vec3 wa, const vec3 wb) {
+    return clamp(
+        (wa[0] * wb[0] + wa[1] * wb[1]) / sqrt((wa[0] * wa[0] + wa[1] * wa[1]) *
+                                                (wb[0] * wb[0] + wb[1] * wb[1])),
+        -1, 1);
+}
+
 enum BxDFType
 {
     LAMBERTIAN,
@@ -23,7 +61,7 @@ float Lambertian_sample_f(vec3 f, vec3 wi,
 typedef struct OrenNayar_s
 {
     vec3 r;
-    flat a, b;
+    float a, b;
 }OrenNayar;
 // TODO
 void OrenNayar_f(vec3 f, const vec3 wi, const vec3 wo, const OrenNayar* on);
