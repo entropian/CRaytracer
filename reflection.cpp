@@ -8,6 +8,23 @@ bool sameHemisphere(const vec3 a, const vec3 b)
     return a[2] * b[2] > 0.0f;
 }
 
+float cosHemispherePdf(const vec3 wi, const vec3 wo)
+{
+    float dot_product = fabs(cosTheta(wi)) * INV_PI;
+    if(dot_product == 0.0f)
+    {
+        //printf("dot product 0\n");
+    }    
+    //return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, normal)) * INV_PI: 0.0f;
+    return sameHemisphere(wi, wo) ? absCosTheta(wi) * INV_PI: 0.0f;    
+}
+
+float cosHemisphereSample(vec3 wi, const vec3 wo, const vec2 sample)
+{
+    mapSampleToHemisphere(wi, sample);
+    return cosHemispherePdf(wi, wo);
+}
+
 float calcFresnelReflectance(const vec3 normal, const vec3 wo, const float ior_in, const float ior_out)
 {
     vec3 n;
@@ -41,7 +58,6 @@ void Lambertian_f(vec3 f, const vec3 wi, const vec3 wo, const Lambertian* l)
 
 float Lambertian_pdf(const vec3 wi, const vec3 wo)
 {
-    vec3 normal = {0.0f, 0.0f, 1.0f};
     /*
     if(!sameHemisphere(wi, wo))
     {
@@ -49,13 +65,9 @@ float Lambertian_pdf(const vec3 wi, const vec3 wo)
     }
     */
     //float dot_product = fabs(vec3_dot(wi, normal)) * INV_PI;
-    float dot_product = fabs(cosTheta(wi)) * INV_PI;
-    if(dot_product == 0.0f)
-    {
-        //printf("dot product 0\n");
-    }    
-    return sameHemisphere(wi, wo) ? fabs(vec3_dot(wi, normal)) * INV_PI: 0.0f;
-}   
+    return cosHemispherePdf(wi, wo);
+}
+
 
 float Lambertian_sample_f(vec3 f, vec3 wi,
                          const vec3 wo, const vec2 sample, const Lambertian* l)
@@ -68,46 +80,51 @@ float Lambertian_sample_f(vec3 f, vec3 wi,
     }
     vec3_copy(f, l->cd);
     vec3_scale(f, f, INV_PI);
-    mapSampleToHemisphere(wi, sample);
-    return Lambertian_pdf(wi, tmp_wo);
+    return cosHemisphereSample(wi, tmp_wo, sample);
 }
 
 void OrenNayar_f(vec3 f, const vec3 wi, const vec3 wo, const OrenNayar* on)
 {
-/*
-    Float sinThetaI = SinTheta(wi);
-    Float sinThetaO = SinTheta(wo);
+    float sin_theta_i = sinTheta(wi);
+    float sin_theta_o = sinTheta(wo);
     // Compute cosine term of Oren-Nayar model
-    Float maxCos = 0;
-    if (sinThetaI > 1e-4 && sinThetaO > 1e-4) {
-        Float sinPhiI = SinPhi(wi), cosPhiI = CosPhi(wi);
-        Float sinPhiO = SinPhi(wo), cosPhiO = CosPhi(wo);
-        Float dCos = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
-        maxCos = std::max((Float)0, dCos);
+    float max_cos = 0.0f;
+    if (sin_theta_i > 1e-4 && sin_theta_o > 1e-4) {
+        float sin_phi_i = sinPhi(wi), cos_phi_i = cosPhi(wi);
+        float sin_phi_o = sinPhi(wo), cos_phi_o = cosPhi(wo);
+        float d_cos = cos_phi_i * cos_phi_o + sin_phi_i * sin_phi_o;
+        max_cos = max((float)0, d_cos);
     }
 
     // Compute sine and tangent terms of Oren-Nayar model
-    Float sinAlpha, tanBeta;
-    if (AbsCosTheta(wi) > AbsCosTheta(wo)) {
-        sinAlpha = sinThetaO;
-        tanBeta = sinThetaI / AbsCosTheta(wi);
+    float sin_alpha, tan_beta;
+    if (absCosTheta(wi) > absCosTheta(wo)) {
+        sin_alpha = sin_theta_o;
+        tan_beta = sin_theta_i / absCosTheta(wi);
     } else {
-        sinAlpha = sinThetaI;
-        tanBeta = sinThetaO / AbsCosTheta(wo);
+        sin_alpha = sin_theta_i;
+        tan_beta = sin_theta_o / absCosTheta(wo);
     }
-    return R * InvPi * (A + B * maxCos * sinAlpha * tanBeta);
- */
-    
+    //return R * InvPi * (A + B * maxCos * sinAlpha * tanBeta);
+    vec3_scale(f, on->r, on->a + on->b * max_cos * sin_alpha * tan_beta);
 }
 
 float OrenNayar_pdf(const vec3 wi, const vec3 wo)
 {
-    return 0.0f;
+    return cosHemispherePdf(wi, wo);
 }
 
 float OrenNayar_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const OrenNayar* on)
 {
-    return 0.0f;
+    vec3 tmp_wo;
+    vec3_copy(tmp_wo, wo);
+    if(tmp_wo[2] < 0.0f)
+    {
+        tmp_wo[2] *= -1.0f;
+    }
+    float pdf = cosHemisphereSample(wi, tmp_wo, sample);
+    OrenNayar_f(f, wi, wo, on);
+    return pdf;
 }
 
 float SpecularReflection_sample_f(vec3 f, vec3 wi,
@@ -150,6 +167,10 @@ void BxDF_f(vec3 f, const vec3 wi, const vec3 wo, const void* bxdf, const BxDFTy
     {
         return Lambertian_f(f, wi, wo, (Lambertian*)bxdf);
     } break;
+    case ORENNAYAR:
+    {
+        return OrenNayar_f(f, wi, wo, (OrenNayar*)bxdf);
+    } break;
     case SPECULAR_REFLECTION:
     case SPECULAR_TRANSMISSION:
         break;
@@ -163,6 +184,10 @@ float BxDF_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const voi
     case LAMBERTIAN:
     {
         return Lambertian_sample_f(f, wi, wo, sample, (Lambertian*)bxdf);
+    } break;
+    case ORENNAYAR:
+    {
+        return OrenNayar_sample_f(f, wi, wo, sample, (OrenNayar*)bxdf);
     } break;
     case SPECULAR_REFLECTION:
     {
@@ -184,6 +209,10 @@ float BxDF_pdf(const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType ty
     {
         return Lambertian_pdf(wi, wo);
     } break;
+    case ORENNAYAR:
+    {
+        return OrenNayar_pdf(wi, wo);
+    }
     case SPECULAR_REFLECTION:
     {
         return 0.0f;
@@ -291,6 +320,21 @@ void BSDF_addLambertian(BSDF* bsdf, const vec3 cd)
     vec3_copy(l->cd, cd);
     bsdf->bxdfs[bsdf->num_bxdf] = l;
     bsdf->types[bsdf->num_bxdf] = LAMBERTIAN;
+    bsdf->num_bxdf++;
+}
+
+
+void BSDF_addOrenNayar(BSDF* bsdf, const vec3 r, const float sigma)
+{
+    float sigma_rad = degToRad(sigma);
+    float sigma2 = sigma_rad * sigma_rad;
+    OrenNayar* on = (OrenNayar*)allocateBxDF();
+    on->a = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
+    on->b = 0.45f * sigma2 / (sigma2 + 0.09f);
+    vec3_copy(on->r, r);
+
+    bsdf->bxdfs[bsdf->num_bxdf] = on;
+    bsdf->types[bsdf->num_bxdf] = ORENNAYAR;
     bsdf->num_bxdf++;
 }
 

@@ -6,7 +6,7 @@
 
 inline float cosTheta(const vec3 w) { return w[2]; }
 inline float cos2Theta(const vec3 w) { return w[2] * w[2]; }
-inline float absCosTheta(const vec3 &w) { return fabs(w[2]); }
+inline float absCosTheta(const vec3 w) { return fabs(w[2]); }
 inline float sin2Theta(const vec3 w) {
     return max((float)0, (float)1 - cos2Theta(w));
 }
