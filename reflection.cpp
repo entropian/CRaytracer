@@ -106,7 +106,7 @@ void OrenNayar_f(vec3 f, const vec3 wi, const vec3 wo, const OrenNayar* on)
         tan_beta = sin_theta_o / absCosTheta(wo);
     }
     //return R * InvPi * (A + B * maxCos * sinAlpha * tanBeta);
-    vec3_scale(f, on->r, on->a + on->b * max_cos * sin_alpha * tan_beta);
+    vec3_scale(f, on->r, (on->a + on->b * max_cos * sin_alpha * tan_beta) * INV_PI);
 }
 
 float OrenNayar_pdf(const vec3 wi, const vec3 wo)

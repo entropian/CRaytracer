@@ -186,6 +186,50 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, 
     return true;
 }
 
+bool parseMatteEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
+{
+    return true;
+}
+
+bool parseReflectiveEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
+{
+    return true;
+}
+
+bool parseTransparentEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
+{
+    return true;
+}
+
+bool parMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
+{
+    char buffer[128];
+    char type_name[128];
+    if(!getNextTokenInFile(type_name, fp)){return false;}
+    mat->mat_type = getMatTypeFromString(type_name);
+    switch(mat->mat_type)
+    {
+    case MATTE:
+    {
+        return parseMatteEntry(mat, name, scene, fp, mat_tex_aux);
+    } break;
+    case REFLECTIVE:
+    {
+        return parseReflectiveEntry(mat, name, scene, fp, mat_tex_aux);
+    } break;
+    case TRANSPARENT:
+    {
+        return parseTransparentEntry(mat, name, scene, fp, mat_tex_aux);
+    } break;
+    case INVALID_MAT_TYPE:
+    {
+        fprintf(stderr, "Invalid material type %s.\n", type_name);
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+        return false;
+    } break;
+    }
+}
+
 bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
 {
     char buffer[128];

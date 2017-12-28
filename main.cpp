@@ -438,8 +438,8 @@ int main(int argc, char** argv)
             }
 
             vec3 radiance = {0.0f, 0.0f, 0.0f};
-            //trace(radiance, params.max_depth, ray, &trace_args);
-            pathTraceNew(radiance, params.max_depth, ray, &trace_args);
+            trace(radiance, params.max_depth, ray, &trace_args);
+            //pathTraceOld(radiance, params.max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
 
             // Planned optimizations: 

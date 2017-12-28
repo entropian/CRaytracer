@@ -3,7 +3,7 @@ window_width  960
 window_height  960
 image_width  960
 image_height 960
-num_samples  100
+num_samples  1600
 num_sample_sets 83
 max_depth  6
 trace_type PATHTRACE

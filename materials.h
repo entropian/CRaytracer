@@ -25,6 +25,12 @@ enum TextureType
     NOISE = 8
 };
 
+typedef struct MaterialNew_s
+{
+    void* data;
+    MatType mat_type;
+}MaterialNew;
+
 typedef struct Material_s
 {
     MatType mat_type;
