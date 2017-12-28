@@ -31,6 +31,23 @@ typedef struct MaterialNew_s
     MatType mat_type;
 }MaterialNew;
 
+typedef struct Matte_s
+{
+    vec3 color;
+    float sigma;
+    Texture* tex_array[2];   // Diffuse and normal maps
+}Matte;
+
+typedef struct Reflective_s
+{
+    vec3 color;
+}Reflective;
+
+typedef struct Transparent_s
+{
+    float ior_in, ior_out;
+}Transparent;
+
 typedef struct Material_s
 {
     MatType mat_type;
