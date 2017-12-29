@@ -296,6 +296,17 @@ void procMatTexPairs(Scene *scene, const MatTexNamePair *pairs, const unsigned i
     }
 }
 
+/*
+void linkMaterialTextures(Scene *scene)
+{
+    SceneMaterials* sm = (SceneMaterials*)(scene->materials);
+    for(int i = 0; i < sm->size; i++)
+    {
+        
+    }
+}
+*/
+
 void loadSceneFile(Scene* scene, const char* scenefile)
 {
     /*

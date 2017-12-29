@@ -28,6 +28,7 @@ enum TextureType
 typedef struct MaterialNew_s
 {
     void* data;
+    char name[MAX_NAME_LENGTH];
     MatType mat_type;
 }MaterialNew;
 
@@ -35,7 +36,10 @@ typedef struct Matte_s
 {
     vec3 color;
     float sigma;
-    Texture* tex_array[2];   // Diffuse and normal maps
+    Texture* diffuse;   // Diffuse and normal maps
+    Texture* normal;
+    char diffuse_file_name[MAX_NAME_LENGTH];
+    char normal_file_name[MAX_NAME_LENGTH];
 }Matte;
 
 typedef struct Reflective_s

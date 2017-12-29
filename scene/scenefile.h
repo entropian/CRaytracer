@@ -186,22 +186,93 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, 
     return true;
 }
 
-bool parseMatteEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
+bool parseMatteEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
 {
+    Matte* matte = (Matte*)malloc(sizeof(Matte));
+    mat->data = matte;
+    mat->mat_type = MATTE;
+    char buffer[128];
+    if(!getNextTokenInFile(buffer, fp)){return false;} // Skip over NAME
+    if(!getNextTokenInFile(mat->name, fp)){return false;} // get material name
+    stringCopy(*name, NAME_LENGTH, mat->name);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over COLOR
+    if(!parseColor(matte->color, fp)){return false;} // get material color
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over SIGMA
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // get sigma
+    matte->sigma = atof(buffer);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}
+    if(strcmp(buffer, "END") == 0)
+        return true;
+    if(strcmp(buffer, "DIFFUSE_MAP") == 0)
+    {
+        char tex_file_name[MAX_NAME_LENGTH];
+        if(parseTexture(scene, fp, tex_file_name))
+        {
+            stringCopy(matte->diffuse_file_name, MAX_NAME_LENGTH, tex_file_name);
+        }else
+        {
+            matte->diffuse = NULL;
+            matte->diffuse_file_name[0] = '\0';
+        }
+        if(!getNextTokenInFile(buffer, fp)){return false;}
+    }
+    if(strcmp(buffer, "END") == 0)
+        return true;
+    if(strcmp(buffer, "NORMAL_MAP") == 0)
+    {
+        char tex_file_name[MAX_NAME_LENGTH];
+        if(parseTexture(scene, fp, tex_file_name))
+        {
+            stringCopy(matte->normal_file_name, MAX_NAME_LENGTH, tex_file_name);
+        }else
+        {
+            matte->normal = NULL;
+            matte->normal_file_name[0] = '\0';
+        }
+        if(!getNextTokenInFile(buffer, fp)){return false;}        
+    }
     return true;
 }
 
-bool parseReflectiveEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
+bool parseReflectiveEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
 {
+    Reflective* ref = (Reflective*)malloc(sizeof(Reflective));
+    mat->data = ref;    
+    char buffer[128];
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
+    if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
+    stringCopy(*name, NAME_LENGTH, mat->name);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip COLOR
+    if(!parseColor(ref->color, fp)){return false;} // get material color
+    if(!parseColor(ref->color, fp)){return false;} // Skip END
     return true;
 }
 
-bool parseTransparentEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
+bool parseTransparentEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
 {
+    Transparent* trans = (Transparent*)malloc(sizeof(Transparent));
+    mat->data = trans;    
+    char buffer[128];
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
+    if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
+    stringCopy(*name, NAME_LENGTH, mat->name);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip IOR_IN
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // get ior_in
+    trans->ior_in = atof(buffer);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip IOR_OUT
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // get ior_out
+    trans->ior_out = atof(buffer);
+    if(!getNextTokenInFile(buffer, fp)){return false;}      
     return true;
 }
 
-bool parMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
+bool parseMatEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp, DBuffer *tex_file_names)
 {
     char buffer[128];
     char type_name[128];
@@ -211,15 +282,15 @@ bool parMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *ma
     {
     case MATTE:
     {
-        return parseMatteEntry(mat, name, scene, fp, mat_tex_aux);
+        return parseMatteEntry(mat, name, scene, fp);
     } break;
     case REFLECTIVE:
     {
-        return parseReflectiveEntry(mat, name, scene, fp, mat_tex_aux);
+        return parseReflectiveEntry(mat, name, scene, fp);
     } break;
     case TRANSPARENT:
     {
-        return parseTransparentEntry(mat, name, scene, fp, mat_tex_aux);
+        return parseTransparentEntry(mat, name, scene, fp);
     } break;
     case INVALID_MAT_TYPE:
     {
