@@ -6,7 +6,7 @@
 #include "util/util.h"
 #include "scene/scenedata.h"
 #include "trace.h"
-
+/*
 typedef struct PhotonmapConfig_s
 {
     int num_photons;
@@ -16,7 +16,7 @@ typedef struct PhotonmapConfig_s
     float photon_radius;
     float caustic_radius;
 }PhotonmapConfig;
-
+*/
 typedef struct ConfigParams_s
 {    
     unsigned int window_width;
@@ -30,7 +30,7 @@ typedef struct ConfigParams_s
     AccelType accel_type;
     bool image_save;
     bool caustic_map;
-    PhotonmapConfig pm_config;
+    //PhotonmapConfig pm_config;
     char file_name[128];
 }ConfigParams;
 
@@ -95,10 +95,11 @@ void parseConfigFile(ConfigParams* cp)
             }else if(strcmp(buffer, "PATHTRACE") == 0)
             {
                 cp->trace_type = PATHTRACE;
-            }else if(strcmp(buffer, "PHOTONMAP") == 0)
+            }/*else if(strcmp(buffer, "PHOTONMAP") == 0)
             {
                 cp->trace_type = PHOTONMAP;
             }
+             */
         }else if(strcmp(buffer, "accel_struct") == 0)
         {
             getNextTokenInFile(buffer, fp);
@@ -131,7 +132,7 @@ void parseConfigFile(ConfigParams* cp)
             {
                 cp->caustic_map = true;
             }
-        }else if(strcmp(buffer, "num_photons") == 0)
+        }/*else if(strcmp(buffer, "num_photons") == 0)
         {
             getNextTokenInFile(buffer, fp);
             cp->pm_config.num_photons = atoi(buffer);
@@ -155,7 +156,8 @@ void parseConfigFile(ConfigParams* cp)
         {
             getNextTokenInFile(buffer, fp);
             cp->pm_config.num_estimate = atoi(buffer);
-        }        
+        }
+         */
     }
     fclose(fp);
 }

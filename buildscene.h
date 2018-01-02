@@ -182,7 +182,8 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
     {
         Mesh* mesh = meshes[i];
         Material *mat_for_mesh = Scene_findMaterial(scene, mesh->mat_name);
-        if(!mat_for_mesh)
+        // NOTE: ignoreing mtl materials for now and use material defined in scene file
+        //if(!mat_for_mesh)
         {
             mat_for_mesh = mat_default;
         }
@@ -261,7 +262,7 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
     }
     return triangle_count;
 }
-
+/*
 void procMatTexPairs(Scene *scene, const MatTexNamePair *pairs, const unsigned int num_pair)
 {
     for(int i = 0; i < num_pair; i++)
@@ -295,32 +296,34 @@ void procMatTexPairs(Scene *scene, const MatTexNamePair *pairs, const unsigned i
         }
     }
 }
+*/
 
-/*
 void linkMaterialTextures(Scene *scene)
 {
-    SceneMaterials* sm = (SceneMaterials*)(scene->materials);
+    SceneMaterials* sm = (SceneMaterials*)&(scene->materials);
+    SceneTextures* st = (SceneTextures*)&(scene->textures);
     for(int i = 0; i < sm->size; i++)
     {
-        
-    }
+        Material* mat = &(sm->materials[i]);
+        switch(mat->mat_type)
+        {
+        case MATTE:
+        {
+            Matte* matte = (Matte*)mat->data;
+            matte->diffuse = findTexture(matte->diffuse_file_name, st);
+            matte->normal = findTexture(matte->normal_file_name, st);
+        } break;
+        default:
+        {
+            
+        } break;
+        }
+    }    
 }
-*/
+
 
 void loadSceneFile(Scene* scene, const char* scenefile)
 {
-    /*
-    SceneLights* sl = &(scene->lights);
-    for(int i = 0; i < sl->num_lights; i++)
-    {
-        if(sl->light_types[i] == AREALIGHT)
-        {
-            AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
-            Object_t obj = {area_light_ptr->obj_type, area_light_ptr->obj_ptr};
-            Scene_addObject(scene, &obj);
-        }
-    }
-    */
     FILE* fp;
     openFile(&fp, scenefile, "r");
     char buffer[128];
@@ -347,13 +350,15 @@ void loadSceneFile(Scene* scene, const char* scenefile)
       Once all texture loadings are done, iterate through the aux struct, get corresponding texture
       pointers and store it in the material.
      */
-    DBuffer mat_tex_pairs = DBuffer_create(MatTexNamePair);
-    int num_mat = parseMaterials(scene, fp, &mat_tex_pairs);
+    //DBuffer mat_tex_pairs = DBuffer_create(MatTexNamePair);
+    int num_mat = parseMaterials(scene, fp);
 
-    MatTexNamePair *pair_array = (MatTexNamePair*)DBuffer_data_ptr(mat_tex_pairs);
-    const unsigned int num_pair = DBuffer_size(mat_tex_pairs);
-    procMatTexPairs(scene, pair_array, num_pair);
-    DBuffer_erase(&mat_tex_pairs);
+    //MatTexNamePair *pair_array = (MatTexNamePair*)DBuffer_data_ptr(mat_tex_pairs);
+    //const unsigned int num_pair = DBuffer_size(mat_tex_pairs);
+    // Old
+    //procMatTexPairs(scene, pair_array, num_pair);
+    linkMaterialTextures(scene);
+    //DBuffer_erase(&mat_tex_pairs);
 
     //char buffer[128];
     while(getNextTokenInFile(buffer, fp))
@@ -376,7 +381,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 MeshEntry mesh_entry;
                 parseMesh(&mesh_entry, &shapes, &materials, &num_mesh, &num_mat,
                           mesh_file_names, &num_file_names, fp);
-
+                /*
                 for(int i = 0; i < num_mat; i++)
                 {
                     const OBJMaterial *obj_mat = &(materials[i]);
@@ -465,6 +470,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 const unsigned int num_pair = DBuffer_size(mat_tex_pairs);
                 procMatTexPairs(scene, pair_array, num_pair);
                 DBuffer_erase(&mat_tex_pairs);
+                */
                 if(materials){free(materials);}
 
                 for(int i = 0; i < num_mesh; i++)
@@ -534,7 +540,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
             }
         }
     }
-    DBuffer_destroy(&mat_tex_pairs);
+    //DBuffer_destroy(&mat_tex_pairs);
 }
 #ifdef OLD
 void initAreaLights(SceneLights* sl)
@@ -786,53 +792,6 @@ void initSceneLights(SceneLights* sl)
     {
         sl->light_ptrs[i] = NULL;
     }
-    /*
-    sl->num_lights = 0;
-    // Directional light
-    if(sl->num_lights == MAX_LIGHTS){return;}
-    DirLight* dir_light_ptr = (DirLight*)malloc(sizeof(DirLight));
-    float intensity = 0.0f;
-    //vec3 direction = {10.0f, 10.0f, 10.0f};
-    vec3 direction = {1.0f, 0.0f, 10.0f};
-    vec3_normalize(direction, direction);
-    assignDirLight(dir_light_ptr, intensity, WHITE, direction);
-    sl->shadow[sl->num_lights] = true;
-    sl->light_ptrs[sl->num_lights] = dir_light_ptr;
-    sl->light_types[sl->num_lights] = DIRECTIONAL;
-    (sl->num_lights)++;
-    */
-    
-    // Point light
-    /*
-    if(sl->num_lights == MAX_LIGHTS){return;}
-    PointLight* point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
-    point_light_ptr->dist_atten = true;
-    //intensity = 1000000.0f;
-    intensity = 100000.0f;
-    point_light_ptr->flux = intensity * 4.0f * PI;
-    //vec3 point = {500.0f, 225.0f, -290.0f};
-    vec3 point = {450.0f, 225.0f, -225.0f};
-    assignPointLight(point_light_ptr, intensity, WHITE, point);
-    point_light_ptr->proj_map = NULL;
-    sl->shadow[sl->num_lights] = true;    
-    sl->light_ptrs[sl->num_lights] = point_light_ptr;
-    sl->light_types[sl->num_lights] = POINTLIGHT;    
-    (sl->num_lights)++;
-    */
-    /*
-    if(sl->num_lights == MAX_LIGHTS){return;}
-    point_light_ptr = (PointLight*)malloc(sizeof(PointLight));
-    point_light_ptr->dist_atten = false;    
-    intensity = 1000000.0f;
-    vec3_assign(point, 500.0f, 225.0f, -290.0f);
-    //vec3 point = {250.0f, 490.0f, -290.0f};
-    //vec3 point = {250.0f, 490.0f, -490.0f};
-    assignPointLight(point_light_ptr, intensity, WHITE, point);
-    sl->shadow[sl->num_lights] = true;    
-    sl->light_ptrs[sl->num_lights] = point_light_ptr;
-    sl->light_types[sl->num_lights] = POINTLIGHT;    
-    (sl->num_lights)++;    
-    */
 
     //initAreaLights(sl);
     //initEnvLight(sl);
@@ -851,8 +810,9 @@ int initAreaLights(Scene* scene)
         if((obj.type == RECTANGLE || obj.type == SPHERE) && mat->mat_type == EMISSIVE)
         {
             AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
-            area_light_ptr->intensity = mat->ke;
-            vec3_copy(area_light_ptr->color, mat->ce);
+            Emissive* emissive = (Emissive*)mat->data;
+            area_light_ptr->intensity = emissive->intensity;
+            vec3_copy(area_light_ptr->color, emissive->color);
             if(obj.type == RECTANGLE)
             {
                 Rectangle* rect = (Rectangle*)(obj.ptr);
@@ -1047,6 +1007,7 @@ void initMeshLights(Scene* scene)
         if(mat->mat_type == EMISSIVE && (obj.type == FLAT_TRIANGLE || obj.type == SMOOTH_TRIANGLE))
         {
             Mesh* tri_mesh_ptr = NULL;
+            Emissive* emissive = (Emissive*)mat->data;
             vec3 v0, v1, v2;
             if(obj.type == FLAT_TRIANGLE)
             {
@@ -1070,8 +1031,10 @@ void initMeshLights(Scene* scene)
                 // Encountering a new mesh light when not previously in one
                 cur_light_mesh_ptr = tri_mesh_ptr;
                 cur_mesh_light = (MeshLight*)malloc(sizeof(MeshLight));
-                cur_mesh_light->intensity = mat->ke;
-                vec3_copy(cur_mesh_light->color, mat->ce);
+                //cur_mesh_light->intensity = mat->ke;
+                //vec3_copy(cur_mesh_light->color, mat->ce);
+                cur_mesh_light->intensity = emissive->intensity;
+                vec3_copy(cur_mesh_light->color, emissive->color);
                 MeshLight_init(cur_mesh_light, tri_mesh_ptr);
                 cur_mesh_light->obj_type = obj.type;
                 cur_light_mesh_ptr = tri_mesh_ptr;
@@ -1085,8 +1048,8 @@ void initMeshLights(Scene* scene)
                 cur_light_mesh_ptr = tri_mesh_ptr;         
                 cur_mesh_light = (MeshLight*)malloc(sizeof(MeshLight));
                 cur_mesh_light->obj_type = obj.type;
-                cur_mesh_light->intensity = mat->ke;
-                vec3_copy(cur_mesh_light->color, mat->ce);
+                cur_mesh_light->intensity = emissive->intensity;
+                vec3_copy(cur_mesh_light->color, emissive->color);
                 MeshLight_init(cur_mesh_light, tri_mesh_ptr);
             }
             MeshLight_addTriangle(cur_mesh_light, obj);
@@ -1126,5 +1089,4 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
     // NOTE: taken out to main so that projection map can be built before the
     // mesh triangles are scrambled.
     //buildSceneAccel(scene);
-    //Scene_printMaterials(scene);
 }

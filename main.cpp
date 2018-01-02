@@ -27,7 +27,7 @@
 #include "texture.h"
 #include "noise.h"
 #include "imagefile.h"
-#include "photonmap.h"
+//#include "photonmap.h"
 #include "projmap.h"
 #include "imagestate.h"
 #include "reflection.h"
@@ -102,10 +102,10 @@ typedef struct ThreadData_s
     Camera* camera;
     Scene* scene;
     Samples3D* h_samples;
-    Photonmap* photon_map;
-    Photonmap* caustic_map;
-    PhotonQueryVars *query_vars;
-    float* caustic_buffer;
+    //Photonmap* photon_map;
+    //Photonmap* caustic_map;
+    //PhotonQueryVars *query_vars;
+    //float* caustic_buffer;
     float* color_buffer;
     unsigned char* image;
     ConfigParams* params;
@@ -139,6 +139,7 @@ void* threadFunc(void* vargp)
             trace_args.objects = &(thread_data->scene->objects);
             trace_args.lights = &(thread_data->scene->lights);
             trace_args.sampler = &sampler;
+            /*
             if(thread_data->params->trace_type == PHOTONMAP)
             {
                 trace_args.photon_map = thread_data->photon_map;
@@ -150,7 +151,7 @@ void* threadFunc(void* vargp)
                                 thread_data->caustic_buffer[i*3+1], thread_data->caustic_buffer[i*3+2]);
                 }
             }
-
+            */
             vec3 radiance = {0.0f, 0.0f, 0.0f};
             thread_data->trace(radiance, thread_data->params->max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
@@ -212,7 +213,6 @@ int main(int argc, char** argv)
     GlViewport viewport;
     initViewport(&viewport);
 
-
     unsigned char *image;
     int num_pixels = params.image_width * params.image_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
@@ -267,6 +267,7 @@ int main(int argc, char** argv)
     buildSceneAccel(&scene);
 
     // Photon map
+    /*
     const int num_photons = params.pm_config.num_photons;
     const int max_bounce = params.pm_config.photon_depth;
     const int num_caustic_photons = params.pm_config.num_caustic_photons;
@@ -295,6 +296,7 @@ int main(int argc, char** argv)
             Photonmap_balance(&caustic_map);
         }
     }
+    */
 
     // Reminder
     //destroySceneAccel(&scene);
@@ -323,22 +325,22 @@ int main(int argc, char** argv)
     {
         trace = getTraceFunc(params.trace_type);
     }
-
+    /*
     if(params.trace_type == PHOTONMAP && params.caustic_map)
     {
         const int num_caustic_samples = 4;
         calcCausticBuffer(caustic_buffer, camera, &film, &scene, &caustic_map, &query_vars, num_caustic_samples);
     }
-
+    */
     ThreadData thread_data;
     thread_data.prev_num_samples = prev_num_samples;
     thread_data.film = &film;
     thread_data.camera = camera;
     thread_data.scene = &scene;
-    thread_data.photon_map = &photon_map;
-    thread_data.caustic_map = &caustic_map;
-    thread_data.query_vars = &query_vars;
-    thread_data.caustic_buffer = caustic_buffer;
+    //thread_data.photon_map = &photon_map;
+    //thread_data.caustic_map = &caustic_map;
+    //thread_data.query_vars = &query_vars;
+    //thread_data.caustic_buffer = caustic_buffer;
     thread_data.color_buffer = color_buffer;
     thread_data.image = image;
     thread_data.params = &params;
@@ -361,7 +363,7 @@ int main(int argc, char** argv)
     end_time = start_time;
     int prev_percent = 0;
 
-#define MULTITHREAD
+//#define MULTITHREAD
 #ifdef MULTITHREAD
     JobQueue job_queue;
     JobQueue_init(&job_queue);
@@ -425,6 +427,7 @@ int main(int argc, char** argv)
             trace_args.objects = &(scene.objects);
             trace_args.lights = &(scene.lights);
             trace_args.sampler = &sampler;
+            /*
             if(params.trace_type == PHOTONMAP)
             {
                 trace_args.photon_map = &photon_map;
@@ -436,6 +439,7 @@ int main(int argc, char** argv)
                                 caustic_buffer[i*3], caustic_buffer[i*3+1], caustic_buffer[i*3+2]);
                 }
             }
+            */
 
             vec3 radiance = {0.0f, 0.0f, 0.0f};
             trace(radiance, params.max_depth, ray, &trace_args);
@@ -496,6 +500,7 @@ int main(int argc, char** argv)
     // Clean up
     freeBSDFMem();
     Scene_destroy(&scene);
+    /*
     if(params.trace_type == PHOTONMAP)
     {
         Photonmap_destroy(&photon_map);
@@ -505,6 +510,7 @@ int main(int argc, char** argv)
             free(caustic_buffer);
         }
     }
+    */
     free(color_buffer);
 
     double frames_per_sec = 10.0;

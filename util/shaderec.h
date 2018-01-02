@@ -18,7 +18,7 @@ typedef struct ShadeRec
     BSDF bsdf;
 } ShadeRec;
 
-
+#if 0
 static void updateShadeRecWithTexInfo(ShadeRec *sr)
 {
     if(sr->mat.tex_flags & DIFFUSE)
@@ -50,3 +50,4 @@ static void updateShadeRecWithTexInfo(ShadeRec *sr)
         sr->mat.kd = 1.0f - sr->mat.ks;
     }
 }
+#endif

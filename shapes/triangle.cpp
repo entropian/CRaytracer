@@ -187,7 +187,8 @@ float rayIntersectFlatTriangle(ShadeRec* sr, FlatTriangle* tri, const Ray ray)
     float gamma, beta; // For smooth triangles. Unused here.    
     float t = calcTriangleIntersect(&beta, &gamma, tri->v0, tri->v1, tri->v2, ray);
 
-    if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
+    //if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
+    if(tri->mesh_ptr->num_texcoords > 0)
     {
         interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
     }    
@@ -270,10 +271,12 @@ float getSmoothTriangleShadeRec(ShadeRec* sr, SmoothTriangle* tri, const Ray ray
     vec3_copy(surface_normal, sr->normal);
     assert(surface_normal[0] != 0.0f || surface_normal[1] != 0.0f || surface_normal[2] != 0.0f);
     
-    if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
+    //if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
+    if(tri->mesh_ptr->num_texcoords > 0)
     {
         interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
-        if(tri->mat->tex_flags & NORMAL)
+        //if(tri->mat->tex_flags & NORMAL)
+        if(Material_hasNormalMap(tri->mat))
         {
             vec3 tangent, binormal, tex_normal, normal, tmp;
             interpTriangleVec3(tmp, beta, gamma,
@@ -284,7 +287,8 @@ float getSmoothTriangleShadeRec(ShadeRec* sr, SmoothTriangle* tri, const Ray ray
             vec3_cross(binormal, sr->normal, tangent);
             vec3_normalize(binormal, binormal);
 
-            getMaterialNormalTexColor(tex_normal, tri->mat, sr->uv);
+            //getMaterialNormalTexColor(tex_normal, tri->mat, sr->uv);
+            Material_getNormalMapValue(tex_normal, tri->mat, sr->uv);
             orthoNormalTransform(normal, tangent, binormal, sr->normal, tex_normal);
             vec3_normalize(normal, normal);
             vec3_copy(sr->normal, normal);

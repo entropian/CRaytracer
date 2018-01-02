@@ -18,11 +18,12 @@ enum TraceType
 {
     RAYCAST,
     WHITTED,
-    PATHTRACE,
-    PHOTONMAP
+    PATHTRACE
+    //PHOTONMAP
 };
 
 // Definition in photonmap.h
+/*
 struct Photonmap_s;
 typedef struct Photonmap_s Photonmap;
 struct PhotonQueryVars_s;
@@ -30,7 +31,7 @@ typedef struct PhotonQueryVars_s PhotonQueryVars;
 void calcPhotonmapComponent(vec3, const vec3, const PhotonQueryVars*,
                                  const Photonmap*, const Photonmap*,
                                  const SceneObjects*, const ShadeRec*, const vec3);
-
+*/
 typedef struct TraceArgs_s
 {
     Sampler* sampler;
@@ -40,10 +41,10 @@ typedef struct TraceArgs_s
     SceneLights *lights;
 
     // Data used for photon mapping
-    Photonmap *photon_map;
-    Photonmap *caustic_map;
-    PhotonQueryVars *query_vars;
-    vec3 caustic_rad;
+    //Photonmap *photon_map;
+    //Photonmap *caustic_map;
+    //PhotonQueryVars *query_vars;
+    //vec3 caustic_rad;
 
     // Currently not really used
     Material* medium_mat;
@@ -53,7 +54,7 @@ typedef struct TraceArgs_s
 float raycast(vec3, int, const Ray, TraceArgs *trace_args);
 float whittedTrace(vec3, int, const Ray, TraceArgs *trace_args);
 float pathTrace(vec3, int, const Ray, TraceArgs *trace_args);
-float whittedPhotonTrace(vec3, int, const Ray, TraceArgs *trace_args);
+//float whittedPhotonTrace(vec3, int, const Ray, TraceArgs *trace_args);
 float raycastMedium(vec3, int, const Ray, TraceArgs *trace_args);
 float whittedTraceMedium(vec3, int, const Ray, TraceArgs *trace_args);
 
@@ -68,24 +69,28 @@ traceFunc getTraceFunc(const TraceType trace_type)
     traceFunc func;
     switch(trace_type)
     {
+        /*
     case RAYCAST:
         func = &raycast;
         break;
     case WHITTED:
         func = &whittedTrace;
         break;
+        */
     case PATHTRACE:
         func = &pathTrace;
         break;
+        /*
     case PHOTONMAP:
         func = &whittedPhotonTrace;
         break;
+        */
     default:
-        func = &raycast;
+        func = &pathTrace;
     }
     return func;
 }
-
+#if 0
 float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
@@ -152,7 +157,9 @@ float raycast(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
     }
     return min_t;
 }
+#endif
 
+#if 0
 // Calculate specular incident radiance and brdf
 float calcSpecRefRadiance(vec3 spec_ref_radiance,
                           const int depth,  const Ray ray, const ShadeRec* sr,
@@ -186,11 +193,13 @@ float calcSpecRefRadiance(vec3 spec_ref_radiance,
     vec3_scale(spec_ref_radiance, spec_ref_radiance, vec3_dot(normal, sample_ray.direction) / pdf);
     return t;
 }
+#endif
 
-bool totalInternalReflection(const ShadeRec* sr)
+bool totalInternalReflection(const ShadeRec* sr, const float ior_in, const float ior_out)
 {
     float cos_theta_i = vec3_dot(sr->normal, sr->wo);
-    float eta = sr->mat.ior_in / sr->mat.ior_out;
+    //float eta = sr->mat.ior_in / sr->mat.ior_out;
+    float eta = ior_in / ior_out;
 
     if(cos_theta_i < 0.0f)
     {
@@ -201,16 +210,30 @@ bool totalInternalReflection(const ShadeRec* sr)
 
 float calcTransmitDir(vec3 transmit_dir, const ShadeRec* sr)
 {
-    return calcTransmitDir(transmit_dir, sr->normal, sr->wo, sr->mat.ior_in, sr->mat.ior_out);
+    if(sr->mat.mat_type != TRANSPARENT)
+    {
+        fprintf(stderr, "Not refractive material.\n");
+        return 0.0f;
+    }
+    Transparent* trans = (Transparent*)sr->mat.data;
+    //return calcTransmitDir(transmit_dir, sr->normal, sr->wo, sr->mat.ior_in, sr->mat.ior_out);
+    return calcTransmitDir(transmit_dir, sr->normal, sr->wo, trans->ior_in, trans->ior_out);
 }
 
+// Maybe this could be deleted
 float calcFresnelReflectance(const ShadeRec* sr)
 {
+    if(sr->mat.mat_type != TRANSPARENT)
+    {
+        fprintf(stderr, "Not refractive material.\n");
+        return 0.0f;
+    }
+    Transparent* trans = (Transparent*)sr->mat.data;    
     vec3 n;
     vec3_copy(n, sr->normal);
     // NOTE: not sure about the next line
     float cos_theta_i = vec3_dot(n, sr->wo);
-    float eta = sr->mat.ior_in / sr->mat.ior_out;    
+    float eta = trans->ior_in / trans->ior_out;    
     if(cos_theta_i < 0.0f)
     {
         cos_theta_i = -cos_theta_i;
@@ -228,7 +251,7 @@ float calcFresnelReflectance(const ShadeRec* sr)
     float fresnel_reflectance = 0.5f * (r_parallel * r_parallel + r_perpendicular * r_perpendicular);
     return fresnel_reflectance;
 }
-
+#if 0
 void whittedShade(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args, const ShadeRec *sr)
 {
     const SceneObjects *so = trace_args->objects;
@@ -337,7 +360,8 @@ void whittedShade(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args
         }
     }
 }
-
+#endif
+#if 0
 float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
@@ -368,7 +392,8 @@ float whittedTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
     */
     return min_t;
 }
-
+#endif
+#if 0 
 float whittedPhotonTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
@@ -398,7 +423,7 @@ float whittedPhotonTrace(vec3 radiance, int depth, const Ray ray, TraceArgs *tra
     }
     return min_t;
 }
-
+#endif
 void computeLocalBasis(ShadeRec* sr)
 {
     vec3_copy(sr->bsdf.normal, sr->normal);
@@ -425,7 +450,7 @@ bool isOrthoNormal(const vec3 u, const vec3 v, const vec3 w)
     if(vec3_dot(v, w) > K_EPSILON) return false;
     return true;
 }
-
+#if 0
 float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
@@ -616,6 +641,7 @@ float pathTraceOld(vec3 radiance, int depth, const Ray ray, TraceArgs *trace_arg
     }
     return min_t;
 }
+#endif
 
 bool isBlack(const vec3 c)
 {
@@ -816,9 +842,9 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             {
                 if(sr.mat.mat_type == EMISSIVE)
                 {
-                    // NOTE: questionable
+                    Emissive* emissive = (Emissive*)sr.mat.data;
                     vec3 inc_radiance;
-                    vec3_scale(inc_radiance, sr.mat.ce, sr.mat.ke);
+                    vec3_scale(inc_radiance, emissive->color, emissive->intensity);
                     vec3_mult(inc_radiance, inc_radiance, beta);
                     vec3_add(L, L, inc_radiance);
                 }
@@ -892,7 +918,6 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         }
         */
         BSDF_freeBxDFs(&(sr.bsdf));
-
     }
     if(bounces > 0)
         vec3_scale(L, L, 1.0f / bounces);

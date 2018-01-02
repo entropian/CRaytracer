@@ -43,9 +43,9 @@ void Scene_addObject(Scene* scene, const Object_t* obj)
     SceneObjects_push_obj(&(scene->objects), obj);
 }
 
-Material* Scene_addMaterial(Scene* scene, const Material* mat, const char* name)
+Material* Scene_addMaterial(Scene* scene, const Material* mat)
 {
-    return SceneMaterials_push(&(scene->materials), mat, name);
+    return SceneMaterials_push(&(scene->materials), mat);
 }
 
 Material* Scene_findMaterial(Scene* scene, const char* name)
@@ -88,7 +88,7 @@ void Scene_printMaterials(Scene *scene)
     SceneMaterials *sm = &(scene->materials);
     for(int i = 0; i < sm->size; i++)
     {
-        printf("%s\n", sm->names[i]);
-        printMaterial(&(sm->materials[i]));
+        printf("%s\n", sm->materials[i].name);
+        //printMaterial(&(sm->materials[i]));
     }
 }

@@ -98,6 +98,8 @@ Texture* SceneTextures_push(SceneTextures* st, const Texture* tex, const char* n
 
 Texture* findTexture(const char* tex_name, const SceneTextures* st)
 {
+    if(tex_name[0] == '\0')        
+        return NULL;
     for(int i = 0; i < st->size; i++)
     {
         if(strcmp(tex_name, st->names[i]) == 0)
@@ -108,15 +110,23 @@ Texture* findTexture(const char* tex_name, const SceneTextures* st)
     //fprintf(stderr, "Texture not found.\n");
     return NULL;
 }
+/*
+  // Old
+typedef struct SceneMaterials_s
+{
+    int size;
+    int max;
+    Material* materials;
+}SceneMaterials;
+*/
 
 typedef struct SceneMaterials_s
 {
     int size;
     int max;
     Material* materials;
-    char** names;
 }SceneMaterials;
-
+/*
 SceneMaterials SceneMaterials_create()
 {
     SceneMaterials sm;
@@ -130,33 +140,29 @@ SceneMaterials SceneMaterials_create()
     sm.max = DEFAULT_MATERIAL;
     return sm;
 }
+*/
 
+SceneMaterials SceneMaterials_create()
+{
+    SceneMaterials sm;
+    sm.materials = (Material*)malloc(sizeof(Material) * DEFAULT_MATERIAL);
+    sm.size = 1;
+    sm.max = DEFAULT_MATERIAL;
+    return sm;
+}
 void SceneMaterials_destroy(SceneMaterials* sm)
 {
-    for(int i = 0; i < sm->size; i++)
-    {
-        free(sm->names[i]);
-    }    
     free(sm->materials);
-    free(sm->names);
     sm->size = sm->max = 0;
 }
 
-Material* SceneMaterials_push(SceneMaterials* sm, const Material* mat, const char* name)
+Material* SceneMaterials_push(SceneMaterials* sm, const Material* mat)
 {
     DBuffer mat_buffer;
     DBuffer_assume(&mat_buffer, (char*)sm->materials, sm->size, sm->max, sizeof(Material));
     DBuffer_push(mat_buffer, *mat);    
 
-    DBuffer name_buffer;
-    DBuffer_assume(&name_buffer, (char*)sm->names, sm->size, sm->max, sizeof(char*));
-    char* mat_name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
-    //strcpy_s(mat_name, NAME_LENGTH, name);
-    stringCopy(mat_name, MAX_NAME_LENGTH, name);
-    DBuffer_push(name_buffer, mat_name);
-    
     sm->materials = (Material*)(mat_buffer.data);
-    sm->names = (char**)(name_buffer.data);
     sm->size = DBuffer_size(mat_buffer);
     sm->max = DBuffer_max_elements(mat_buffer);
     return &(sm->materials[sm->size - 1]);
@@ -166,7 +172,7 @@ Material* findMaterial(const char* mat_name, const SceneMaterials* sm)
 {
     for(int i = 0; i < sm->size; i++)
     {
-        if(strcmp(mat_name, sm->names[i]) == 0)
+        if(strcmp(mat_name, sm->materials[i].name) == 0)
         {
             return &(sm->materials[i]);
         }
@@ -301,9 +307,6 @@ int SceneLights_addLight(void* light_ptr, LightType light_type, SceneLights* sl)
     sl->num_lights++;
     return 1;
 }
-
-Material* tmp_mat = (Material*)malloc(sizeof(Material));
-vec3 color = {0.4f, 0.4f, 0.4f};
 
 void freeSceneObjects(SceneObjects* so)
 {

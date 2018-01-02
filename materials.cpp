@@ -28,81 +28,48 @@ MatType getMatTypeFromString(const char* str)
     }
 }
 
-void printMaterial(const Material* mat)
-{
-    printf("%s\n", mat->name);
-    printf("ka %f, kd %f\n", mat->ka, mat->kd);
-    printf("ks %f, ke %f\n", mat->ks, mat->ke);
-    printf("exp %f\n", mat->exp);
-    printVec3WithText("ca", mat->cd);
-    printVec3WithText("cd", mat->cd);
-    printVec3WithText("cs", mat->cs);
-    printVec3WithText("ce", mat->cs);
-    printf("ior_in %f, ior_out %f\n", mat->ior_in, mat->ior_out);
-    printVec3WithText("cf_in", mat->cf_in);
-    printVec3WithText("cf_out", mat->cf_out);
-}
 
-void initMaterial(Material *mat)
-{
-    mat->mat_type = INVALID_MAT_TYPE;
-    mat->tex_flags = 0;
-    mat->ka = mat->kd = mat->ks = mat->ke = mat->kr = mat->exp = 0.0f;
-    mat->ior_in = mat->ior_out = 0.0f;
-    vec3_copy(mat->ca, BLACK);
-    vec3_copy(mat->cd, BLACK);
-    vec3_copy(mat->cs, BLACK);
-    vec3_copy(mat->cr, BLACK);
-    vec3_copy(mat->ce, BLACK);
-    vec3_copy(mat->cf_in, BLACK);
-    vec3_copy(mat->cf_out, BLACK);
-    mat->h_samples = NULL;
-    for(int i = 0; i < 3; i++)
-    {
-        mat->tex_array[i] = NULL;
-    }
-}
-
-void initDefaultMatteMat(Material* mat, const vec3 color)
-{
-    vec3_copy(mat->cd, color);
-    vec3_copy(mat->ca, color);
-    mat->kd = 0.6f;
-    mat->ka = 1.0f;
-    mat->mat_type  = MATTE;
-    mat->h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-    mat->tex_flags = NO_TEXTURE;
-}
-
-void initDefaultPhongMat(Material* mat, const vec3 color)
-{
-    vec3_copy(mat->cd, color);
-    vec3_copy(mat->cs, color);
-    vec3_copy(mat->ca, color);    
-    mat->kd = 0.6f;
-    mat->ka = 1.0f;
-    mat->ks = 0.4f;
-    mat->exp = 10.0f;            
-    mat->mat_type = PHONG;
-    mat->h_samples = genHemisphereSamples(MULTIJITTERED, DEFAULT_GLOSSINESS);
-    mat->tex_flags = NO_TEXTURE;    
-}
-
+/*
 void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv)
 {
     getTexColor(texel, mat->tex_array[DIFFUSE_MAP_INDEX], uv);
 }
-
+*/
+void Matte_getDiffuseColor(vec3 color, const Matte* matte, const vec2 uv)
+{
+    if(matte->diffuse)
+    {
+        getTexColor(color, matte->diffuse, uv);
+    }else
+    {
+        vec3_copy(color, matte->color);
+    }
+}
+/*
 void getMaterialNormalTexColor(vec3 texel, const Material *mat, const vec2 uv)
 {
     getTexColor(texel, mat->tex_array[NORMAL_MAP_INDEX], uv);
 }
-
+*/
+void Matte_getNormalMapColor(vec3 color, const Matte* matte, const vec2 uv)
+{
+    if(matte->normal)
+    {
+        getTexColor(color, matte->normal, uv);
+    }
+}
+/*
 void getMaterialSpecularTexColor(vec3 texel, const Material *mat, const vec2 uv)
 {
     getTexColor(texel, mat->tex_array[SPEC_MAP_INDEX], uv);
 }
+*/
+void Reflective_getColor(vec3 color, const Reflective* ref)
+{
+    vec3_copy(color, ref->color);
+}
 
+/*
 void setMaterialDiffuseTexPtr(Material *mat, Texture *tex)
 {
     mat->tex_array[DIFFUSE_MAP_INDEX] = tex;
@@ -120,7 +87,8 @@ void setMaterialSpecularTexPtr(Material *mat, Texture *tex)
     mat->tex_array[SPEC_MAP_INDEX] = tex;
     mat->tex_flags |= SPECULAR;
 }
-
+*/
+/*
 void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
 {
     bsdf->num_bxdf = 0;
@@ -153,6 +121,66 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
     case TRANSPARENT:
     {
         BSDF_addSpecularTransmission(bsdf, mat->ior_in, mat->ior_out, mat->cf_in, mat->cf_out);
+    } break;
+    }
+}
+*/
+
+void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
+{
+    bsdf->num_bxdf = 0;
+    switch(mat->mat_type)
+    {
+    case MATTE:
+    {
+        vec3 color;
+        Matte* matte = (Matte*)mat->data;
+        Matte_getDiffuseColor(color, matte, uv);
+        if(matte->sigma == 0.0f)
+        {
+            BSDF_addLambertian(bsdf, color);
+        }else
+        {
+            BSDF_addOrenNayar(bsdf, color, matte->sigma);
+        }        
+    } break;
+    case REFLECTIVE:
+    {
+        vec3 color;
+        Reflective* ref = (Reflective*)mat->data;
+        Reflective_getColor(color, ref);
+        BSDF_addSpecularReflection(bsdf, color);
+    } break;
+    case TRANSPARENT:
+    {
+        Transparent* trans = (Transparent*)mat->data;
+        BSDF_addSpecularTransmission(bsdf, trans->ior_in, trans->ior_out, trans->cf_in, trans->cf_out);
+    } break;
+    }
+}
+
+bool Material_hasNormalMap(const Material* mat)
+{
+    switch(mat->mat_type)
+    {
+    case MATTE:
+        return true;
+    case REFLECTIVE:
+        return false;
+    case TRANSPARENT:
+        return false;
+    }
+    return false;
+}
+
+void Material_getNormalMapValue(vec3 value, const Material* mat, const vec2 uv)
+{
+    switch(mat->mat_type)
+    {
+    case MATTE:
+    {
+        Matte* matte = (Matte*)mat->data;
+        Matte_getNormalMapColor(value, matte, uv);
     } break;
     }
 }

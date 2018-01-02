@@ -136,6 +136,7 @@ typedef struct MatTexNamePair_s
     TextureType tex_type;
 }MatTexNamePair;
 
+#if 0
 bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, const char *mat_name)
 {
     char buffer[128];
@@ -185,8 +186,8 @@ bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, 
     }
     return true;
 }
-
-bool parseMatteEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
+#endif
+bool parseMatteEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Matte* matte = (Matte*)malloc(sizeof(Matte));
     mat->data = matte;
@@ -194,7 +195,6 @@ bool parseMatteEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
     char buffer[128];
     if(!getNextTokenInFile(buffer, fp)){return false;} // Skip over NAME
     if(!getNextTokenInFile(mat->name, fp)){return false;} // get material name
-    stringCopy(*name, NAME_LENGTH, mat->name);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over COLOR
     if(!parseColor(matte->color, fp)){return false;} // get material color
@@ -237,14 +237,13 @@ bool parseMatteEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
     return true;
 }
 
-bool parseReflectiveEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
+bool parseReflectiveEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Reflective* ref = (Reflective*)malloc(sizeof(Reflective));
     mat->data = ref;    
     char buffer[128];
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
     if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
-    stringCopy(*name, NAME_LENGTH, mat->name);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip COLOR
     if(!parseColor(ref->color, fp)){return false;} // get material color
@@ -252,14 +251,13 @@ bool parseReflectiveEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
     return true;
 }
 
-bool parseTransparentEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp)
+bool parseTransparentEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Transparent* trans = (Transparent*)malloc(sizeof(Transparent));
     mat->data = trans;    
     char buffer[128];
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
     if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
-    stringCopy(*name, NAME_LENGTH, mat->name);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip IOR_IN
     if(!getNextTokenInFile(buffer, fp)){return false;}  // get ior_in
@@ -268,11 +266,37 @@ bool parseTransparentEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip IOR_OUT
     if(!getNextTokenInFile(buffer, fp)){return false;}  // get ior_out
     trans->ior_out = atof(buffer);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_IN
+    if(!parseColor(trans->cf_in, fp)){return false;}    
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CF_OUT
+    if(!parseColor(trans->cf_out, fp)){return false;}
+    
     if(!getNextTokenInFile(buffer, fp)){return false;}      
     return true;
 }
 
-bool parseMatEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp, DBuffer *tex_file_names)
+bool parseEmissiveEntry(Material* mat, Scene* scene, FILE* fp)
+{
+    Emissive* emissive = (Emissive*)malloc(sizeof(Emissive));
+    mat->data = emissive;
+    char buffer[128];
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
+    if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word COLOR
+    if(!parseColor(emissive->color, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip INTENSITY
+    if(!getNextTokenInFile(buffer, fp)){return false;}  
+    emissive->intensity = atof(buffer);
+    
+    if(!getNextTokenInFile(buffer, fp)){return false;}    
+    return true;
+}
+
+bool parseMatEntry(Material* mat, Scene* scene, FILE* fp)
 {
     char buffer[128];
     char type_name[128];
@@ -282,16 +306,20 @@ bool parseMatEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp, DBuffe
     {
     case MATTE:
     {
-        return parseMatteEntry(mat, name, scene, fp);
+        return parseMatteEntry(mat, scene, fp);
     } break;
     case REFLECTIVE:
     {
-        return parseReflectiveEntry(mat, name, scene, fp);
+        return parseReflectiveEntry(mat, scene, fp);
     } break;
     case TRANSPARENT:
     {
-        return parseTransparentEntry(mat, name, scene, fp);
+        return parseTransparentEntry(mat, scene, fp);
     } break;
+    case EMISSIVE:
+    {
+        return parseEmissiveEntry(mat, scene, fp);
+    }
     case INVALID_MAT_TYPE:
     {
         fprintf(stderr, "Invalid material type %s.\n", type_name);
@@ -300,7 +328,7 @@ bool parseMatEntry(MaterialNew* mat, char** name, Scene* scene, FILE* fp, DBuffe
     } break;
     }
 }
-
+/*
 bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
 {
     char buffer[128];
@@ -408,7 +436,8 @@ bool parseMatEntry(Material* mat, char** name, Scene* scene, FILE* fp, DBuffer *
         return true;
     }
 }
-
+*/
+/*
 int parseMaterials(Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
 {
     char buffer[128];
@@ -420,6 +449,22 @@ int parseMaterials(Scene* scene, FILE* fp, DBuffer *mat_tex_aux)
             char* name = (char*)malloc(sizeof(char) * MAX_NAME_LENGTH);
             parseMatEntry(&mat, &name, scene, fp, mat_tex_aux);
             Scene_addMaterial(scene, &mat, name);
+        }
+    }
+    return Scene_getNumMaterials(scene);
+}
+*/
+
+int parseMaterials(Scene* scene, FILE* fp)
+{
+    char buffer[128];
+    while(getNextTokenInFile(buffer, fp) && strcmp(buffer, "END_MATERIALS") != 0)
+    {
+        if(strcmp(buffer, "MATERIAL") == 0)
+        {
+            Material mat;
+            parseMatEntry(&mat, scene, fp);
+            Scene_addMaterial(scene, &mat);
         }
     }
     return Scene_getNumMaterials(scene);
@@ -774,7 +819,7 @@ bool parseMesh(MeshEntry* mesh_entry, OBJShape** shapes, OBJMaterial** materials
         start = glfwGetTime();
         parseSuccessful = loadOBJ(shapes, materials, num_mesh, num_mat, buffer);
         end = glfwGetTime();
-        printf("Loading %s took %f sec.\n", buffer, end - start);
+        printf("Loadded %s in %f sec.\n", buffer, end - start);
     }else
     {
         num_mesh = 0;

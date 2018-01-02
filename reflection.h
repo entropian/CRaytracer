@@ -113,6 +113,7 @@ float BSDF_sample_f(vec3 f, vec3 wi,
                     const vec3 wo, const vec2 sample, const BSDF* bsdf);
 float BSDF_pdf(const vec3 wi, const vec3 wo, const BSDF* bsdf);
 void BSDF_addLambertian(BSDF* bsdf, const vec3 cd);
+void BSDF_addOrenNayar(BSDF* bsdf, const vec3 r, const float sigma);
 void BSDF_addSpecularReflection(BSDF* bsdf, const vec3 cr);
 void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float ior_out, const vec3 cf_in,
                                   const vec3 cf_out);

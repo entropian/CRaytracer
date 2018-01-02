@@ -25,12 +25,12 @@ enum TextureType
     NOISE = 8
 };
 
-typedef struct MaterialNew_s
+typedef struct Material_s
 {
     void* data;
     char name[MAX_NAME_LENGTH];
     MatType mat_type;
-}MaterialNew;
+}Material;
 
 typedef struct Matte_s
 {
@@ -50,9 +50,16 @@ typedef struct Reflective_s
 typedef struct Transparent_s
 {
     float ior_in, ior_out;
+    vec3 cf_in, cf_out;
 }Transparent;
 
-typedef struct Material_s
+typedef struct Emissive_s
+{
+    vec3 color;
+    float intensity;
+}Emissive;
+
+typedef struct MaterialOld_s
 {
     MatType mat_type;
     unsigned int tex_flags;
@@ -64,17 +71,17 @@ typedef struct Material_s
     Texture* tex_array[4];
     char name[MAX_NAME_LENGTH];
     Samples3D* h_samples;
-}Material;
+}MaterialOld;
 
 const unsigned int DIFFUSE_MAP_INDEX = 0;
 const unsigned int NORMAL_MAP_INDEX = 1;
 const unsigned int SPEC_MAP_INDEX = 2;
 
 MatType getMatTypeFromString(const char* str);
-void printMaterial(const Material* mat);
-void initMaterial(Material *mat);
-void initDefaultMatteMat(Material* mat, const vec3 color);
-void initDefaultPhongMat(Material* mat, const vec3 color);
+//void printMaterial(const Material* mat);
+//void initMaterial(Material *mat);
+//void initDefaultMatteMat(Material* mat, const vec3 color);
+//void initDefaultPhongMat(Material* mat, const vec3 color);
 void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv);
 void getMaterialNormalTexColor(vec3 texel, const Material *mat, const vec2 uv);
 void getMaterialSpecularTexColor(vec3 texel, const Material *mat, const vec2 uv);
@@ -82,3 +89,5 @@ void setMaterialDiffuseTexPtr(Material *mat, Texture *tex);
 void setMaterialNormalTexPtr(Material *mat, Texture *tex);
 void setMaterialSpecularTexPtr(Material *mat, Texture *tex);
 void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat);
+bool Material_hasNormalMap(const Material* mat);
+void Material_getNormalMapValue(vec3 value, const Material* mat, const vec2 uv);

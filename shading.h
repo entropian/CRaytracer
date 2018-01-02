@@ -12,6 +12,7 @@
 #include "texture.h"
 #include "noise.h"
 
+#if 0
 void diffuseBRDF(vec3 f, const ShadeRec* sr)
 {
     vec3 reflectance;
@@ -39,7 +40,8 @@ void diffuseBRDF(vec3 f, const ShadeRec* sr)
 
     vec3_scale(f, reflectance, 1.0f/(float)PI);
 }
-
+#endif
+#if 0
 void diffuseShading(vec3 radiance, const vec3 inc_radiance_cos,
                     const ShadeRec* sr)
 {
@@ -49,7 +51,8 @@ void diffuseShading(vec3 radiance, const vec3 inc_radiance_cos,
     vec3_mult(diffuse_comp, inc_radiance_cos, f);
     vec3_add(radiance, radiance, diffuse_comp);
 }
-
+#endif
+#if 0 
 void specularShading(vec3 radiance, const vec3 light_dir,
                      const vec3 inc_radiance_cos, const ShadeRec* sr)
 {
@@ -67,6 +70,7 @@ void specularShading(vec3 radiance, const vec3 light_dir,
     vec3_mult(tmp, inc_radiance_cos, tmp);
     vec3_add(radiance, radiance, tmp);
 }
+#endif
 
 float AOTest(const vec3 h_sample, const SceneObjects *so, const ShadeRec* sr)
 {
@@ -77,7 +81,7 @@ float AOTest(const vec3 h_sample, const SceneObjects *so, const ShadeRec* sr)
     vec3_copy(shadow_ray.origin, sr->hit_point);
     return shadowIntersectTest(so, shadow_ray, TMAX);
 }
-
+#if 0
 void ambientShading(vec3 radiance, const AmbientLight* amb_light, const vec3 sample,
                     const SceneObjects* so, const ShadeRec* sr)
 {
@@ -100,7 +104,9 @@ void ambientShading(vec3 radiance, const AmbientLight* amb_light, const vec3 sam
         }
     }
 }
+#endif
 extern void maxToOne(vec3, const vec3);
+#if 0
 void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
                       const AreaLight* area_light_ptr, const ShadeRec* sr)
 {
@@ -158,7 +164,8 @@ void areaLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
         vec3_add(radiance, radiance, tmp);
     }
 }
-
+#endif
+#if 0 
 void areaLightShadingNew(vec3 radiance, const float ndotwi, const vec3 light_dir,
                       const AreaLight* area_light_ptr, const ShadeRec* sr)
 {
@@ -197,7 +204,8 @@ void areaLightShadingNew(vec3 radiance, const float ndotwi, const vec3 light_dir
     vec3_scale(tmp, tmp, geo_term * 1.0f/area_light_ptr->pdf);
     vec3_add(radiance, radiance, tmp);
 }
-
+#endif
+#if 0 
 void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir, const AreaLight* area_light_ptr,
                          const vec3 inc_rad, const ShadeRec* sr)
 {
@@ -255,7 +263,8 @@ void areaLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir
         vec3_add(radiance, radiance, tmp);
     }
 }
-
+#endif
+#if 0 
 void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
                      const EnvLight* env_light_ptr, const ShadeRec* sr)
 {
@@ -276,7 +285,8 @@ void envLightShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
         vec3_add(radiance, radiance, spec_radiance);
     }
 }
-
+#endif
+#if 0 
 void envLightShadingNew(vec3 radiance, const float ndotwi, const vec3 light_dir,
                      const EnvLight* env_light_ptr, const ShadeRec* sr)
 {
@@ -291,7 +301,8 @@ void envLightShadingNew(vec3 radiance, const float ndotwi, const vec3 light_dir,
     float pdf = ndotwi / (float)PI;
     vec3_scale(radiance, radiance, 1.0f/pdf);
 }
-
+#endif
+#if 0
 void envLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir, const EnvLight* env_light_ptr,
                      const vec3 inc_rad, const ShadeRec* sr)
 {
@@ -311,7 +322,7 @@ void envLightShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir,
         vec3_add(radiance, radiance, spec_radiance);
     }
 }
-
+#endif
 // divide vec3 a by its max component if max component > 1
 void maxToOne(vec3 r, const vec3 a)
 {
@@ -324,6 +335,7 @@ void maxToOne(vec3 r, const vec3 a)
     }
 }
 
+#if 0
 void directIllumShading(vec3 radiance, const float ndotwi, const vec3 light_dir, const void* light_ptr,
                   const LightType light_type, const ShadeRec* sr)
 {
@@ -355,7 +367,8 @@ void directIllumShading(vec3 radiance, const float ndotwi, const vec3 light_dir,
         }
     }
 }
-
+#endif
+#if 0
 void directIllumShadingNew(vec3 radiance, const float ndotwi, const vec3 light_dir, const void* light_ptr,
                   const LightType light_type, const ShadeRec* sr)
 {
@@ -392,7 +405,8 @@ void directIllumShadingNew(vec3 radiance, const float ndotwi, const vec3 light_d
         */
     }
 }
-
+#endif
+#if 0
 void directIllumShadingRad(vec3 radiance, const float ndotwi, const vec3 light_dir, const void* light_ptr,
                            const LightType light_type, const vec3 inc_rad, const ShadeRec* sr)
 {
@@ -423,7 +437,7 @@ void directIllumShadingRad(vec3 radiance, const float ndotwi, const vec3 light_d
         }
     }
 }
-
+#endif
 bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects* so,
                 const vec3 light_dir, const ShadeRec* sr)
 {
