@@ -129,69 +129,10 @@ int parseTextureFileName(Scene* scene, const char *file_name)
     return 1;
 }
 
-typedef struct MatTexNamePair_s
-{
-    char mat_name[MAX_NAME_LENGTH];
-    char tex_name[MAX_NAME_LENGTH];
-    TextureType tex_type;
-}MatTexNamePair;
-
-#if 0
-bool parseTextures(Material* mat, Scene* scene, FILE* fp, DBuffer *mat_tex_aux, const char *mat_name)
-{
-    char buffer[128];
-    mat->tex_flags = NO_TEXTURE;
-    Texture* tex_ptr;
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type
-    if(strcmp(buffer, "END") == 0)
-    {
-        return true;
-    }
-    if(strcmp(buffer, "NOISE") == 0)
-    {
-        mat->tex_flags |= NOISE;
-        return true;
-        //if(!getNextTokenInFile(buffer, fp)){return false;}
-    }
-
-    if(strcmp(buffer, "DIFFUSE_MAP") == 0)
-    {
-        char tex_file_name[MAX_NAME_LENGTH];
-        int status = parseTexture(scene, fp, tex_file_name);
-        if(status)
-        {
-            // Storing material name and texture name pair for binding later
-            MatTexNamePair pair;
-            pair.tex_type = DIFFUSE;
-            stringCopy(pair.tex_name, MAX_NAME_LENGTH, tex_file_name);
-            stringCopy(pair.mat_name, MAX_NAME_LENGTH, mat_name);
-            DBuffer_push(*mat_tex_aux, pair);
-        }
-        if(!getNextTokenInFile(buffer, fp)){return false;}    // Get texture type
-    }
-
-    if(strcmp(buffer, "NORMAL_MAP") == 0)
-    {
-        char tex_file_name[MAX_NAME_LENGTH];
-        int status = parseTexture(scene, fp, tex_file_name);
-        if(status)
-        {
-            // Storing material name and texture name pair for binding later
-            MatTexNamePair pair;
-            pair.tex_type = NORMAL;
-            stringCopy(pair.tex_name, MAX_NAME_LENGTH, tex_file_name);
-            stringCopy(pair.mat_name, MAX_NAME_LENGTH, mat_name);
-            DBuffer_push(*mat_tex_aux, pair);
-        }
-    }
-    return true;
-}
-#endif
 bool parseMatteEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Matte* matte = (Matte*)malloc(sizeof(Matte));
     mat->data = matte;
-    mat->mat_type = MATTE;
     char buffer[128];
     if(!getNextTokenInFile(buffer, fp)){return false;} // Skip over NAME
     if(!getNextTokenInFile(mat->name, fp)){return false;} // get material name
@@ -247,7 +188,7 @@ bool parseReflectiveEntry(Material* mat, Scene* scene, FILE* fp)
 
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip COLOR
     if(!parseColor(ref->color, fp)){return false;} // get material color
-    if(!parseColor(ref->color, fp)){return false;} // Skip END
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip END
     return true;
 }
 

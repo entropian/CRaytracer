@@ -73,8 +73,9 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
     case REFLECTIVE:
     {
         vec3 color;
-        Reflective* ref = (Reflective*)mat->data;
+        Reflective* ref = (Reflective*)mat->data;        
         Reflective_getColor(color, ref);
+        //printVec3WithText("ref color", color);
         BSDF_addSpecularReflection(bsdf, color);
     } break;
     case TRANSPARENT:
