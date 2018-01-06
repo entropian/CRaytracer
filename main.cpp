@@ -102,10 +102,6 @@ typedef struct ThreadData_s
     Camera* camera;
     Scene* scene;
     Samples3D* h_samples;
-    //Photonmap* photon_map;
-    //Photonmap* caustic_map;
-    //PhotonQueryVars *query_vars;
-    //float* caustic_buffer;
     float* color_buffer;
     unsigned char* image;
     ConfigParams* params;
@@ -139,19 +135,7 @@ void* threadFunc(void* vargp)
             trace_args.objects = &(thread_data->scene->objects);
             trace_args.lights = &(thread_data->scene->lights);
             trace_args.sampler = &sampler;
-            /*
-            if(thread_data->params->trace_type == PHOTONMAP)
-            {
-                trace_args.photon_map = thread_data->photon_map;
-                trace_args.query_vars = thread_data->query_vars;
-                if(thread_data->params->caustic_map)
-                {
-                    trace_args.caustic_map = thread_data->caustic_map;
-                    vec3_assign(trace_args.caustic_rad, thread_data->caustic_buffer[i*3],
-                                thread_data->caustic_buffer[i*3+1], thread_data->caustic_buffer[i*3+2]);
-                }
-            }
-            */
+
             vec3 radiance = {0.0f, 0.0f, 0.0f};
             thread_data->trace(radiance, thread_data->params->max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
@@ -266,38 +250,6 @@ int main(int argc, char** argv)
     int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
     buildSceneAccel(&scene);
 
-    // Photon map
-    /*
-    const int num_photons = params.pm_config.num_photons;
-    const int max_bounce = params.pm_config.photon_depth;
-    const int num_caustic_photons = params.pm_config.num_caustic_photons;
-    Photonmap photon_map, caustic_map;
-    float* caustic_buffer = NULL;
-    PhotonQueryVars query_vars;
-    if(params.trace_type == PHOTONMAP)
-    {
-        Photonmap_init(&photon_map, num_photons, max_bounce);
-        emitPhotons(&photon_map, &(scene.objects), &(scene.lights));
-        Photonmap_balance(&photon_map);
-        query_vars.nphotons = params.pm_config.num_estimate;
-        query_vars.photon_radius = params.pm_config.photon_radius;
-        query_vars.caustic_radius = params.pm_config.caustic_radius;
-        query_vars.caustic = params.caustic_map;
-        if(params.caustic_map)
-        {
-            caustic_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
-            if(!caustic_buffer)
-            {
-                fprintf(stderr, "Couldn't allocate memory for caustic buffer.\n");
-            }
-            Photonmap_init(&caustic_map, num_caustic_photons, max_bounce);
-            // TODO enable after fixing calcCausticObjectsAABB()
-            emitCaustics(&caustic_map, &(scene.objects), &(scene.lights), aabbs, num_aabb);
-            Photonmap_balance(&caustic_map);
-        }
-    }
-    */
-
     // Reminder
     //destroySceneAccel(&scene);
     //scene.objects.accel = GRID;
@@ -317,30 +269,13 @@ int main(int argc, char** argv)
 
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs*);
-    //if(medium_mat)
-    if(NULL)
-    {
-        //trace = getTraceMediumFunc(params.trace_type);
-    }else
-    {
-        trace = getTraceFunc(params.trace_type);
-    }
-    /*
-    if(params.trace_type == PHOTONMAP && params.caustic_map)
-    {
-        const int num_caustic_samples = 4;
-        calcCausticBuffer(caustic_buffer, camera, &film, &scene, &caustic_map, &query_vars, num_caustic_samples);
-    }
-    */
+    trace = getTraceFunc(params.trace_type);
+    
     ThreadData thread_data;
     thread_data.prev_num_samples = prev_num_samples;
     thread_data.film = &film;
     thread_data.camera = camera;
     thread_data.scene = &scene;
-    //thread_data.photon_map = &photon_map;
-    //thread_data.caustic_map = &caustic_map;
-    //thread_data.query_vars = &query_vars;
-    //thread_data.caustic_buffer = caustic_buffer;
     thread_data.color_buffer = color_buffer;
     thread_data.image = image;
     thread_data.params = &params;
@@ -427,27 +362,10 @@ int main(int argc, char** argv)
             trace_args.objects = &(scene.objects);
             trace_args.lights = &(scene.lights);
             trace_args.sampler = &sampler;
-            /*
-            if(params.trace_type == PHOTONMAP)
-            {
-                trace_args.photon_map = &photon_map;
-                trace_args.query_vars = &query_vars;
-                if(params.caustic_map)
-                {
-                    trace_args.caustic_map = &caustic_map;
-                    vec3_assign(trace_args.caustic_rad,
-                                caustic_buffer[i*3], caustic_buffer[i*3+1], caustic_buffer[i*3+2]);
-                }
-            }
-            */
-
+            
             vec3 radiance = {0.0f, 0.0f, 0.0f};
             trace(radiance, params.max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
-
-            // Planned optimizations: 
-            // Irradiance caching?
-            // SIMD triangle intersection for uniform grid?
 
             color_buffer[i*3] += color[0];
             color_buffer[i*3 + 1] += color[1];
@@ -499,17 +417,6 @@ int main(int argc, char** argv)
     // Clean up
     freeBSDFMem();
     Scene_destroy(&scene);
-    /*
-    if(params.trace_type == PHOTONMAP)
-    {
-        Photonmap_destroy(&photon_map);
-        if(params.caustic_map)
-        {
-            Photonmap_destroy(&caustic_map);
-            free(caustic_buffer);
-        }
-    }
-    */
     free(color_buffer);
 
     double frames_per_sec = 10.0;
