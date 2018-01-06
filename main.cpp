@@ -32,7 +32,7 @@
 #include "imagestate.h"
 #include "reflection.h"
 
-#define SHOW_PROGRESS 1
+#define SHOW_PROGRESS 2
 
 extern double g_traversal_time;
 
@@ -443,7 +443,6 @@ int main(int argc, char** argv)
 
             vec3 radiance = {0.0f, 0.0f, 0.0f};
             trace(radiance, params.max_depth, ray, &trace_args);
-            //pathTraceOld(radiance, params.max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
 
             // Planned optimizations: 

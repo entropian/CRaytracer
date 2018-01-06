@@ -29,12 +29,6 @@ MatType getMatTypeFromString(const char* str)
 }
 
 
-/*
-void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv)
-{
-    getTexColor(texel, mat->tex_array[DIFFUSE_MAP_INDEX], uv);
-}
-*/
 void Matte_getDiffuseColor(vec3 color, const Matte* matte, const vec2 uv)
 {
     if(matte->diffuse)
@@ -45,12 +39,6 @@ void Matte_getDiffuseColor(vec3 color, const Matte* matte, const vec2 uv)
         vec3_copy(color, matte->color);
     }
 }
-/*
-void getMaterialNormalTexColor(vec3 texel, const Material *mat, const vec2 uv)
-{
-    getTexColor(texel, mat->tex_array[NORMAL_MAP_INDEX], uv);
-}
-*/
 void Matte_getNormalMapColor(vec3 color, const Matte* matte, const vec2 uv)
 {
     if(matte->normal)
@@ -58,73 +46,11 @@ void Matte_getNormalMapColor(vec3 color, const Matte* matte, const vec2 uv)
         getTexColor(color, matte->normal, uv);
     }
 }
-/*
-void getMaterialSpecularTexColor(vec3 texel, const Material *mat, const vec2 uv)
-{
-    getTexColor(texel, mat->tex_array[SPEC_MAP_INDEX], uv);
-}
-*/
+
 void Reflective_getColor(vec3 color, const Reflective* ref)
 {
     vec3_copy(color, ref->color);
 }
-
-/*
-void setMaterialDiffuseTexPtr(Material *mat, Texture *tex)
-{
-    mat->tex_array[DIFFUSE_MAP_INDEX] = tex;
-    mat->tex_flags |= DIFFUSE;
-}
-
-void setMaterialNormalTexPtr(Material *mat, Texture *tex)
-{
-    mat->tex_array[NORMAL_MAP_INDEX] = tex;
-    mat->tex_flags |= NORMAL;
-}
-
-void setMaterialSpecularTexPtr(Material *mat, Texture *tex)
-{
-    mat->tex_array[SPEC_MAP_INDEX] = tex;
-    mat->tex_flags |= SPECULAR;
-}
-*/
-/*
-void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
-{
-    bsdf->num_bxdf = 0;
-    switch(mat->mat_type)
-    {
-    case MATTE:
-    {
-        vec3 cd;
-        if(mat->tex_flags & DIFFUSE)
-        {
-            getMaterialDiffuseTexColor(cd, mat, uv);
-        }else
-        {
-            vec3_copy(cd, mat->cd);
-        }
-        BSDF_addLambertian(bsdf, cd);
-    } break;
-    case REFLECTIVE:
-    {
-        vec3 cr;
-        if(mat->tex_flags & SPECULAR)
-        {
-            getMaterialSpecularTexColor(cr, mat, uv);            
-        }else
-        {
-            vec3_copy(cr, mat->cs);
-        }
-        BSDF_addSpecularReflection(bsdf, cr);
-    } break;
-    case TRANSPARENT:
-    {
-        BSDF_addSpecularTransmission(bsdf, mat->ior_in, mat->ior_out, mat->cf_in, mat->cf_out);
-    } break;
-    }
-}
-*/
 
 void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
 {

@@ -59,29 +59,11 @@ typedef struct Emissive_s
     float intensity;
 }Emissive;
 
-typedef struct MaterialOld_s
-{
-    MatType mat_type;
-    unsigned int tex_flags;
-    float ka, kd, ks, ke, kr, exp;
-    float ior_in, ior_out;
-    vec3 ca, cd, cs, ce, cr;
-    vec3 cf_in, cf_out;
-    float extinct_coeff, scatter_coeff;
-    Texture* tex_array[4];
-    char name[MAX_NAME_LENGTH];
-    Samples3D* h_samples;
-}MaterialOld;
-
 const unsigned int DIFFUSE_MAP_INDEX = 0;
 const unsigned int NORMAL_MAP_INDEX = 1;
 const unsigned int SPEC_MAP_INDEX = 2;
 
 MatType getMatTypeFromString(const char* str);
-//void printMaterial(const Material* mat);
-//void initMaterial(Material *mat);
-//void initDefaultMatteMat(Material* mat, const vec3 color);
-//void initDefaultPhongMat(Material* mat, const vec3 color);
 void getMaterialDiffuseTexColor(vec3 texel, const Material *mat, const vec2 uv);
 void getMaterialNormalTexColor(vec3 texel, const Material *mat, const vec2 uv);
 void getMaterialSpecularTexColor(vec3 texel, const Material *mat, const vec2 uv);
