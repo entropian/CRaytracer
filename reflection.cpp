@@ -25,6 +25,8 @@ float cosHemisphereSample(vec3 wi, const vec3 wo, const vec2 sample)
     return cosHemispherePdf(wi, wo);
 }
 
+// Dielectric
+// TODO assume normal is 0 0 1
 float calcFresnelReflectance(const vec3 normal, const vec3 wo, const float ior_in, const float ior_out)
 {
     vec3 n;
@@ -159,6 +161,77 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
     return 1.0f;
 }
 
+float MicrofacetDistribution_D(const vec3 wh, const MicrofacetDistribution* distrib)
+{
+    if(distrib->type == BECKMANN)
+    {
+        float tan_2_theta = tan2Theta(wh);
+        // TODO check if tan_2_theta is infinite
+        float cos_4_theta = cos2Theta(wh) * cos2Theta(wh);
+        return exp(-tan_2_theta * (cos2Phi(wh) / (distrib->alphax * distrib->alphax) +
+                                   sin2Phi(wh) / (distrib->alphay * distrib->alphay))) /
+            (PI * distrib->alphax * distrib->alphay * cos_4_theta);
+    }else if(distrib->type == TROWBRIDGEREITZ)
+    {
+        float tan_2_theta = tan2Theta(wh);
+        // TODO check if tan_2_theta is infinite
+        float cos_4_theta = cos2Theta(wh) * cos2Theta(wh);
+        float e = (cos2Phi(wh) / (distrib->alphax * distrib->alphay) +
+                   sin2Phi(wh) / (distrib->alphax * distrib->alphay)) * tan_2_theta;
+        return 1.0f / (PI * distrib->alphax * distrib->alphay * cos_4_theta * (1.0f + e) * (1.0f + e));
+    }
+}
+
+float MicrofacetDistribution_Lambda(const vec3 w, const MicrofacetDistribution* distrib)
+{
+    if(distrib->type == BECKMANN)
+    {
+        float abs_tan_theta = fabs(tanTheta(w));
+        // TODO check if abs_tan_theta is infinite
+        float alpha = sqrt(cos2Phi(w) * distrib->alphax * distrib->alphax +
+                           sin2Phi(w) * distrib->alphay * distrib->alphay);
+        float a = 1.0f / (alpha * abs_tan_theta);
+        if(a >= 1.6f)
+            return 0.0f;
+        return (1.0f - 1.259f * a + 0.396f * a * a) /
+            (3.535f * a + 2.181f * a * a);
+    }else if(distrib->type == TROWBRIDGEREITZ)
+    {
+        float abs_tan_theta = fabs(tanTheta(w));
+        // TODO check if abs_tan_theta is infinite
+        float alpha = sqrt(cos2Phi(w) * distrib->alphax * distrib->alphax +
+                           sin2Phi(w) * distrib->alphay * distrib->alphay);
+        float alpha_2_tan_2_theta = (alpha * abs_tan_theta) * (alpha * abs_tan_theta);
+        return (-1.0f + sqrt(1.0f + alpha_2_tan_2_theta)) / 2.0f;
+    }
+}
+
+float MicrofacetDistribution_G1(const vec3 w, const MicrofacetDistribution* distrib)
+{
+    return 1.0f / (1.0f + MicrofacetDistribution_Lambda(w, distrib));
+}
+
+float MicrofacetDistribution_G(const vec3 wo, const vec3 wi, const MicrofacetDistribution* distrib)
+{
+    return 1.0f / (1.0f + MicrofacetDistribution_Lambda(wo, distrib) + MicrofacetDistribution_Lambda(wi, distrib));
+}
+
+void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetReflection* mf)
+{
+    float cos_theta_o = absCosTheta(wo), cos_theta_i = absCosTheta(wi);
+    vec3 wh;
+    vec3_add(wh, wi, wo);
+    if(cos_theta_i == 0.0f || cos_theta_o == 0.0f) return;
+    if(wh[0] == 0.0f && wh[1] == 0.0f && wh[2] == 0.0f) return;
+    vec3_normalize(wh, wh);
+    vec3 normal = {0.0f, 0.0f, 1.0f};
+    float fresnel_reflectance = calcFresnelReflectance(normal, wo, mf->ior_in, mf->ior_out);
+    float scale_factor = MicrofacetDistribution_D(wh, &(mf->distrib)) *
+        MicrofacetDistribution_G(wo, wi, &(mf->distrib)) * fresnel_reflectance /
+        (4.0f * cos_theta_i * cos_theta_o);
+    vec3_scale(f, mf->color, scale_factor);
+}
+
 void BxDF_f(vec3 f, const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType type)
 {
     switch(type)
@@ -174,6 +247,10 @@ void BxDF_f(vec3 f, const vec3 wi, const vec3 wo, const void* bxdf, const BxDFTy
     case SPECULAR_REFLECTION:
     case SPECULAR_TRANSMISSION:
         break;
+    case MICROFACET_REFLECTION:
+    {
+        return MicrofacetReflection_f(f, wi, wo, (MicrofacetReflection*)bxdf);
+    } break;
     }    
 }
 
@@ -196,6 +273,10 @@ float BxDF_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const voi
     case SPECULAR_TRANSMISSION:
     {
         return SpecularTransmission_sample_f(f, wi, wo, sample, (SpecularTransmission*)bxdf);
+    } break;
+    case MICROFACET_REFLECTION:
+    {
+        // TODO
     } break;
     }
     return 0.0f;
@@ -221,6 +302,10 @@ float BxDF_pdf(const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType ty
     {
         return 0.0f;
     } break;
+    case MICROFACET_REFLECTION:
+    {
+        // TODO
+    }
     }
     return 0.0f;
 }
@@ -340,11 +425,23 @@ void BSDF_addOrenNayar(BSDF* bsdf, const vec3 r, const float sigma)
 
 void BSDF_addSpecularReflection(BSDF* bsdf, const vec3 cr)
 {
+    /*
     SpecularReflection* spec_ref = (SpecularReflection*)allocateBxDF();
     vec3_copy(spec_ref->cr, cr);
     bsdf->bxdfs[bsdf->num_bxdf] = spec_ref;
     bsdf->types[bsdf->num_bxdf] = SPECULAR_REFLECTION;
     bsdf->num_bxdf++;
+    */
+    MicrofacetReflection* mr = (MicrofacetReflection*)allocateBxDF();
+    vec3_copy(mr->color, cr);
+    mr->distrib.alphax = 10.0f;
+    mr->distrib.alphay = 10.0f;
+    mr->ior_in = 1.5f;
+    mr->ior_out = 1.0f;
+    mr->distrib.type = BECKMANN;
+    bsdf->bxdfs[bsdf->num_bxdf] = mr;
+    bsdf->types[bsdf->num_bxdf] = MICROFACET_REFLECTION;
+    bsdf->num_bxdf++;    
 }
 
 void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float ior_out, const vec3 cf_in,
@@ -357,6 +454,21 @@ void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float io
     vec3_copy(spec_trans->cf_out, cf_out);
     bsdf->bxdfs[bsdf->num_bxdf] = spec_trans;
     bsdf->types[bsdf->num_bxdf] = SPECULAR_TRANSMISSION;
+    bsdf->num_bxdf++;
+}
+
+void BSDF_addMicrofacetReflection(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
+                                  const float alphax, const float alphay, const FacetDistribType type)
+{
+    MicrofacetReflection* mr = (MicrofacetReflection*)allocateBxDF();
+    vec3_copy(mr->color, color);
+    mr->distrib.alphax = alphax;
+    mr->distrib.alphay = alphay;
+    mr->ior_in = ior_in;
+    mr->ior_out = ior_out;
+    mr->distrib.type = type;
+    bsdf->bxdfs[bsdf->num_bxdf] = mr;
+    bsdf->types[bsdf->num_bxdf] = MICROFACET_REFLECTION;
     bsdf->num_bxdf++;
 }
 
@@ -373,7 +485,9 @@ static MemPool bsdf_mem_pool;
 
 bool initBSDFMem(const int num_threads, const int num_depth)
 {
-    MemPool_init(&bsdf_mem_pool, sizeof(SpecularTransmission), num_threads * num_depth * MAX_BXDF);    
+    float bxdf_size = max(sizeof(SpecularTransmission), sizeof(MicrofacetReflection));
+    //MemPool_init(&bsdf_mem_pool, sizeof(SpecularTransmission), num_threads * num_depth * MAX_BXDF);
+    MemPool_init(&bsdf_mem_pool, bxdf_size, num_threads * num_depth * MAX_BXDF);    
 }
 
 void freeBSDFMem()

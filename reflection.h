@@ -46,13 +46,13 @@ enum BxDFType
     ORENNAYAR,
     SPECULAR_REFLECTION,
     SPECULAR_TRANSMISSION,
+    MICROFACET_REFLECTION
 };
 
 typedef struct Lambertian_s
 {
     vec3 cd;    
 }Lambertian;
-
 void Lambertian_f(vec3 f, const vec3 wi, const vec3 wo, const Lambertian* l);
 float Lambertian_pdf(const vec3 wi, const vec3 wo);
 float Lambertian_sample_f(vec3 f, vec3 wi,
@@ -63,7 +63,6 @@ typedef struct OrenNayar_s
     vec3 r;
     float a, b;
 }OrenNayar;
-// TODO
 void OrenNayar_f(vec3 f, const vec3 wi, const vec3 wo, const OrenNayar* on);
 float OrenNayar_pdf(const vec3 wi, const vec3 wo);
 float OrenNayar_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const OrenNayar* on);
@@ -74,7 +73,6 @@ typedef struct SpecularReflection_s
     vec3 cr;
     // TODO: fresnel
 }SpecularReflection;
-
 float SpecularReflection_sample_f(vec3 f, vec3 wi,
                                   const vec3 wo, const vec2 sample, const SpecularReflection* spec_ref);
 
@@ -83,13 +81,37 @@ typedef struct SpecularTransmission_s
     float ior_in, ior_out;
     vec3 cf_in, cf_out;
 }SpecularTransmission;
-
 float SpecularTransmission_sample_f(vec3 f, vec3 wi,
                                     const vec3 wo, const vec2 sample, const SpecularTransmission* spec_trans);
-
 void BxDF_f(vec3 f, const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType type);
 float BxDF_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const void* bxdf, const BxDFType type);
 float BxDF_pdf(const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType type);
+
+enum FacetDistribType
+{
+    BECKMANN,
+    TROWBRIDGEREITZ
+};
+
+typedef struct MicrofacetDistribution_s
+{
+    // Distribution could be either Beckmann or TrowbridgeReitz
+    // Both distributions use the same data    
+    float alphax, alphay;
+    FacetDistribType type;
+}MicrofacetDistribution;
+
+float MicrofacetDistribution_D(const vec3 wh, const MicrofacetDistribution* distrib);
+void MicrofacetDistribution_sample_wh(vec3 wh, const vec3 wo, const vec2 sample, const MicrofacetDistribution* mf);
+
+typedef struct MicrofacetReflection_s
+{
+    vec3 color;
+    float ior_in, ior_out;
+    MicrofacetDistribution distrib;
+    // TODO: add enum to signify whether to use fresnel dielectric or conductor
+}MicrofacetReflection;
+void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetReflection* mf);
 
 const int MAX_BXDF = 8;
 typedef struct BSDF_s

@@ -7,7 +7,7 @@ num_samples  1600
 num_sample_sets 83
 max_depth  6
 trace_type PATHTRACE
-accel_struct BVH
+accel_struct BVH4
 num_photons 1000000
 caustic_map no
 num_caustic_photons 2000000
