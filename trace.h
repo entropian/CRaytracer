@@ -408,8 +408,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         if(!(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT))
             vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
         vec3_mult(beta, beta, f);
-        if(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT ||
-           sr.mat.mat_type == MICROFACET_REFLECTION)
+        if(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT)
             specular_bounce = true;
         else
             specular_bounce = false;
