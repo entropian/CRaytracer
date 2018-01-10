@@ -155,7 +155,7 @@ float SpecularReflection_sample_f(vec3 f, vec3 wi,
     // Assume in tangent space
     vec3_assign(wi, -wo[0], -wo[1], wo[2]);
     vec3_copy(f, spec_ref->cr);
-    return 1.0f;
+    return fabs(cosTheta(wi));
 }
 
 float SpecularTransmission_sample_f(vec3 f, vec3 wi,
@@ -178,7 +178,7 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
         //vec3_scale(f, WHITE, kt / (eta*eta));
         vec3_scale(f, WHITE, (eta*eta));
     }
-    return 1.0f;
+    return fabs(cosTheta(wi));
 }
 
 void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetReflection* mf)
@@ -434,14 +434,14 @@ void BSDF_addOrenNayar(BSDF* bsdf, const vec3 r, const float sigma)
 
 void BSDF_addSpecularReflection(BSDF* bsdf, const vec3 cr)
 {
-    /*
+
     SpecularReflection* spec_ref = (SpecularReflection*)allocateBxDF();
     vec3_copy(spec_ref->cr, cr);
     bsdf->bxdfs[bsdf->num_bxdf] = spec_ref;
     bsdf->types[bsdf->num_bxdf] = SPECULAR_REFLECTION;
     bsdf->num_bxdf++;
-    */
 
+    /*
     MicrofacetReflection* mr = (MicrofacetReflection*)allocateBxDF();
     vec3_copy(mr->color, cr);
     mr->distrib.alphax = 0.3;
@@ -452,7 +452,7 @@ void BSDF_addSpecularReflection(BSDF* bsdf, const vec3 cr)
     bsdf->bxdfs[bsdf->num_bxdf] = mr;
     bsdf->types[bsdf->num_bxdf] = MICROFACET_REFLECTION;
     bsdf->num_bxdf++;
-
+    */
 }
 
 void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float ior_out, const vec3 cf_in,

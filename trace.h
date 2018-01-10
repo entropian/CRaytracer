@@ -397,17 +397,12 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec2 sample;
         Sampler_getSample(sample, sampler);
         float pdf = BSDF_sample_f(f, wi, wo, sample, &(sr.bsdf));
-
         if(vec3_equal(f, BLACK) || pdf == 0.0f)
         {
             BSDF_freeBxDFs(&(sr.bsdf));                    
             break;
         }
-        // NOTE: Including this conditional here, because PBRT pre divides brdf with ndotwi
-        // TODO: Now maybe necessary to fix this
-        //if(!(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT))
-        if(!(sr.mat.mat_type == TRANSPARENT))
-            vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
+        vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
         vec3_mult(beta, beta, f);
         if(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT)
             specular_bounce = true;
