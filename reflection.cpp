@@ -21,11 +21,10 @@ float cosHemisphereSample(vec3 wi, const vec3 wo, const vec2 sample)
 }
 
 // Dielectric
-// TODO assume normal is 0 0 1
 //float calcFresnelReflectance(const vec3 normal, const vec3 wo, const float ior_in, const float ior_out)
-float calcFresnelReflectance(const vec3 normal, const vec3 wo, float etaT, float etaI)
+float calcFresnelReflectance(const vec3 normal, const vec3 wo, float etaI, float etaT)
 {
-    /*
+    /*      
     cosThetaI = Clamp(cosThetaI, -1, 1);
     // Potentially swap indices of refraction
     bool entering = cosThetaI > 0.f;
@@ -47,6 +46,9 @@ float calcFresnelReflectance(const vec3 normal, const vec3 wo, float etaT, float
                   ((etaI * cosThetaI) + (etaT * cosThetaT));
     return (Rparl * Rparl + Rperp * Rperp) / 2;      
      */
+    /*
+      
+     */
     vec3 n;
     vec3_copy(n, normal);
     float cos_theta_i = vec3_dot(n, wo);
@@ -65,11 +67,10 @@ float calcFresnelReflectance(const vec3 normal, const vec3 wo, float etaT, float
     if(sin_theta_t >= 1.0f) return 1.0f;
     float cos_theta_t = sqrtf(max(0.0f, 1- sin_theta_t * sin_theta_t));
     float r_parl = ((etaT * cos_theta_i) - (etaI * cos_theta_t)) /
-                  ((etaT * cos_theta_i) + (etaI * cos_theta_t));
+                   ((etaT * cos_theta_i) + (etaI * cos_theta_t));
     float r_perp = ((etaI * cos_theta_i) - (etaT * cos_theta_t)) /
-                  ((etaI * cos_theta_i) + (etaT * cos_theta_t));
-    return (r_parl * r_parl + r_perp * r_perp) / 2;      
-
+                   ((etaI * cos_theta_i) + (etaT * cos_theta_t));
+    return (r_parl * r_parl + r_perp * r_perp) / 2;
 }
 
 void Lambertian_f(vec3 f, const vec3 wi, const vec3 wo, const Lambertian* l)
@@ -127,7 +128,6 @@ void OrenNayar_f(vec3 f, const vec3 wi, const vec3 wo, const OrenNayar* on)
         sin_alpha = sin_theta_i;
         tan_beta = sin_theta_o / absCosTheta(wo);
     }
-    //return R * InvPi * (A + B * maxCos * sinAlpha * tanBeta);
     vec3_scale(f, on->r, (on->a + on->b * max_cos * sin_alpha * tan_beta) * INV_PI);
 }
 
@@ -162,7 +162,7 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
                                     const vec3 wo, const vec2 sample, const SpecularTransmission* spec_trans)
 {
     vec3 normal = {0.0f, 0.0f, 1.0f};
-    float kr = calcFresnelReflectance(normal, wo, spec_trans->ior_in, spec_trans->ior_out);
+    float kr = calcFresnelReflectance(normal, wo, spec_trans->ior_out, spec_trans->ior_in);
     float rand_float = (float)rand() / (float)RAND_MAX;
     if(rand_float <= kr)
     {
@@ -202,7 +202,7 @@ void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const Microfac
     vec3_normalize(wh, wh);
     float fresnel_reflectance = calcFresnelReflectance(wh, wi, mf->ior_out, mf->ior_in);
     float scale_factor = MicrofacetDistribution_D(wh, &(mf->distrib)) *
-        MicrofacetDistribution_G(wo, wi, &(mf->distrib)) * fresnel_reflectance /
+        MicrofacetDistribution_G(wo, wi, &(mf->distrib)) * (1-fresnel_reflectance) /
         (4.0f * cos_theta_i * cos_theta_o);
     vec3_scale(f, mf->color, scale_factor);
 }
@@ -224,11 +224,16 @@ float MicrofacetReflection_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 s
     if(wo[2] == 0.0f) return 0.0f;
     vec3 wh;
     MicrofacetDistribution_sample_wh(wh, wo, sample, &(mr->distrib));
-    calcReflectRayDir(wi, wh, wo);
-    if(!sameHemisphere(wo, wi)) return 0.0f;
-
+    vec3 neg_wo;
+    vec3_negate(neg_wo, wo);
+    calcReflectRayDir(wi, wh, neg_wo);
+    if(!sameHemisphere(wo, wi))
+    {
+        return 0.0f;
+    }
+    
     MicrofacetReflection_f(f, wi, wo, mr);
-    return MicrofacetDistribution_pdf(wo, wh, &(mr->distrib)) / (4.0f * vec3_dot(wo, wh));    
+    return MicrofacetDistribution_pdf(wo, wh, &(mr->distrib)) / (4.0f * vec3_dot(wo, wh));
 }
 
 float MicrofacetReflection_pdf(const vec3 wi, const vec3 wo, const MicrofacetReflection* mr)
@@ -284,10 +289,7 @@ float BxDF_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const voi
     } break;
     case MICROFACET_REFLECTION:
     {
-        //return MicrofacetReflection_sample_f(f, wi, wo, sample, (MicrofacetReflection*)bxdf);
-        float pdf = cosHemisphereSample(wi, wo, sample);
-        MicrofacetReflection_f(f, wi, wo, (MicrofacetReflection*)bxdf);
-        return pdf;
+        return MicrofacetReflection_sample_f(f, wi, wo, sample, (MicrofacetReflection*)bxdf);
     } break;
     }
     return 0.0f;
@@ -315,9 +317,8 @@ float BxDF_pdf(const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType ty
     } break;
     case MICROFACET_REFLECTION:
     {
-        //MicrofacetReflection* mr = (MicrofacetReflection*)bxdf;
-        //return MicrofacetReflection_pdf(wi, wo, mr);
-        return cosHemispherePdf(wi, wo);
+        MicrofacetReflection* mr = (MicrofacetReflection*)bxdf;
+        return MicrofacetReflection_pdf(wi, wo, mr);
     }
     }
     return 0.0f;
@@ -340,9 +341,6 @@ void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf)
 float BSDF_pdf(const vec3 wi, const vec3 wo, const BSDF* bsdf)
 {
     vec3 wi_local, wo_local;
-    //orthoNormalTransform(wi_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wi);
-    //orthoNormalTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
-    // TODO may be fixed
     transposeTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
     transposeTransform(wo_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wo);
     float pdf = 0;
@@ -381,10 +379,8 @@ float BSDF_sample_f(vec3 f, vec3 wi,
     if(pdf == 0.0f)
     {
         vec3_copy(f, BLACK);
-        //printf("pdf 0\n");
         return pdf;
     }
-    //transposeTransform(wi, bsdf->tangent, bsdf->binormal, bsdf->normal, wi_local);
     orthoNormalTransform(wi, bsdf->tangent, bsdf->binormal, bsdf->normal, wi_local);
 
     // Add pdfs from other BxDFs
@@ -448,8 +444,8 @@ void BSDF_addSpecularReflection(BSDF* bsdf, const vec3 cr)
 
     MicrofacetReflection* mr = (MicrofacetReflection*)allocateBxDF();
     vec3_copy(mr->color, cr);
-    mr->distrib.alphax = 0.2f;
-    mr->distrib.alphay = 0.2f;
+    mr->distrib.alphax = 0.3;
+    mr->distrib.alphay = 0.3;
     mr->ior_in = 1.5f;
     mr->ior_out = 1.0f;
     mr->distrib.type = BECKMANN;

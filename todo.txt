@@ -1,9 +1,8 @@
+Perfect specular lacks fresnel
 Normal mapping is broken in the new local basis system
-area light castin shadow
 add uv coords and partial derivatives to the rest of the primitives
 try not to keep pointers to elements in dynamic array when it's still growing
 dragon ugh
-glossy object edge don't look right. lack fresnel
 multithreading obj loading
 
 Use a pointer into mesh index array instead of using three ints for indices

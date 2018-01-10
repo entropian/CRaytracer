@@ -46,7 +46,7 @@ float MicrofacetDistribution_Lambda(const vec3 w, const MicrofacetDistribution* 
          */
         float abs_tan_theta = fabs(tanTheta(w));
         if(isinf(abs_tan_theta)) return 0.0f;
-        float alpha = sqrt(cos2Phi(w) * distrib->alphax * distrib->alphax +
+        float alpha = sqrtf(cos2Phi(w) * distrib->alphax * distrib->alphax +
                            sin2Phi(w) * distrib->alphay * distrib->alphay);
         float a = 1.0f / (alpha * abs_tan_theta);
         if(a >= 1.6f)
@@ -109,13 +109,15 @@ void MicrofacetDistribution_sample_wh(vec3 wh, const vec3 wo, const vec2 sample,
     if(distrib->alphax == distrib->alphay)
     {
         float log_sample = logf(sample[0]);
-        if(isinf(log_sample)) log_sample = 0.0f;
+        if(isinf(log_sample))
+            log_sample = 0.0f;
         tan_2_theta = -distrib->alphax * distrib->alphax * log_sample;
         phi = sample[1] * 2.0f * PI;
     }else
     {
         float log_sample = logf(sample[0]);
-        if(isinf(log_sample)) log_sample = 0.0f;
+        if(isinf(log_sample))
+            log_sample = 0.0f;
         phi = atanf(distrib->alphay / distrib->alphax *
                     tanf(2.0f * PI * sample[1] + 0.5f * PI));
         if(sample[1] > 0.5f) phi += PI;
