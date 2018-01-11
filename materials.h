@@ -9,20 +9,9 @@ enum MatType
 {
     INVALID_MAT_TYPE = 0,
     MATTE = 1,
-    PHONG = 2,
-    REFLECTIVE = 4,
-    TRANSPARENT = 8,
-    EMISSIVE = 16,
-    PARTICIPATING = 32
-};
-
-enum TextureType
-{
-    NO_TEXTURE = 0,
-    DIFFUSE = 1,
-    NORMAL = 2,
-    SPECULAR = 4,
-    NOISE = 8
+    REFLECTIVE = 2,
+    TRANSPARENT = 4,
+    EMISSIVE = 8
 };
 
 typedef struct Material_s
