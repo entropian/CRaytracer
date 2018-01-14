@@ -23,11 +23,12 @@ float AOTest(const vec3 h_sample, const SceneObjects *so, const ShadeRec* sr)
     return shadowIntersectTest(so, shadow_ray, TMAX);
 }
 
-extern void maxToOne(vec3, const vec3);
+//extern void maxToOne(vec3, const vec3);
 
 // divide vec3 a by its max component if max component > 1
-void maxToOne(vec3 r, const vec3 a)
+void toneMap(vec3 r, const vec3 a)
 {
+    /*
     float max;
     max = (a[0] > a[1]) ? a[0] : a[1];
     max = (max > a[2]) ? max : a[2];
@@ -35,6 +36,20 @@ void maxToOne(vec3 r, const vec3 a)
     {
         vec3_scale(r, a, 1.0f/max);
     }
+    */
+    /*
+    float exposure = -2.0f;
+    r[0] = 1.0f - expf(a[0] * exposure);
+    r[1] = 1.0f - expf(a[1] * exposure);
+    r[2] = 1.0f - expf(a[2] * exposure);
+    */
+
+    vec3 denom;
+    denom[0] = 1.0f / (a[0] + 1.0f);
+    denom[1] = 1.0f / (a[1] + 1.0f);
+    denom[2] = 1.0f / (a[2] + 1.0f);    
+    vec3_mult(r, a, denom);
+    vec3_pow(r, r, 1.0f / 2.20f);
 }
 bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects* so,
                 const vec3 light_dir, const ShadeRec* sr)

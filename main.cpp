@@ -146,7 +146,7 @@ void* threadFunc(void* vargp)
             vec3_assign(color, thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 +1],
                         thread_data->color_buffer[i*3 + 2]);
             vec3_scale(color, color, 1/(float)(thread_data->p+1 + thread_data->prev_num_samples));
-            maxToOne(color, color);
+            toneMap(color, color);
 
             thread_data->image[i*3] = (char)(color[0] * 255.0f);
             thread_data->image[i*3 + 1] = (char)(color[1] * 255.0f);
@@ -372,7 +372,7 @@ int main(int argc, char** argv)
             color_buffer[i*3 + 2] += color[2];
             vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
             vec3_scale(color, color, 1/(float)(p+1 + prev_num_samples));
-            maxToOne(color, color);
+            toneMap(color, color);
 
             image[i*3] = (char)(color[0] * 255.0f);
             image[i*3 + 1] = (char)(color[1] * 255.0f);

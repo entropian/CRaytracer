@@ -9,9 +9,10 @@ enum MatType
 {
     INVALID_MAT_TYPE = 0,
     MATTE = 1,
-    REFLECTIVE = 2,
+    MIRROR = 2,
     TRANSPARENT = 4,
-    EMISSIVE = 8
+    EMISSIVE = 8,
+    PLASTIC = 16
 };
 
 typedef struct Material_s
@@ -31,10 +32,10 @@ typedef struct Matte_s
     char normal_file_name[MAX_NAME_LENGTH];
 }Matte;
 
-typedef struct Reflective_s
+typedef struct Mirror_s
 {
     vec3 color;
-}Reflective;
+}Mirror;
 
 typedef struct Transparent_s
 {
@@ -47,6 +48,13 @@ typedef struct Emissive_s
     vec3 color;
     float intensity;
 }Emissive;
+
+typedef struct Platic_s
+{
+    vec3 kd;
+    vec3 ks;
+    float roughness;
+}Plastic;
 
 const unsigned int DIFFUSE_MAP_INDEX = 0;
 const unsigned int NORMAL_MAP_INDEX = 1;

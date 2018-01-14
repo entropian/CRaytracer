@@ -7,21 +7,18 @@ MatType getMatTypeFromString(const char* str)
     if(strcmp(str, "MATTE") == 0)
     {
         return MATTE;
-    }else if(strcmp(str, "PHONG") == 0)
+    }else if(strcmp(str, "MIRROR") == 0)
     {
-        return PHONG;
-    }else if(strcmp(str, "REFLECTIVE") == 0)
-    {
-        return REFLECTIVE;
+        return MIRROR;
     }else if(strcmp(str, "TRANSPARENT") == 0)
     {
         return TRANSPARENT;
     }else if(strcmp(str, "EMISSIVE") == 0)
     {
         return EMISSIVE;
-    }else if(strcmp(str, "PARTICIPATING") == 0)
+    }else if(strcmp(str, "PLASTIC") == 0)
     {
-        return PARTICIPATING;
+        return PLASTIC;
     }else
     {
         return INVALID_MAT_TYPE;
@@ -47,9 +44,9 @@ void Matte_getNormalMapColor(vec3 color, const Matte* matte, const vec2 uv)
     }
 }
 
-void Reflective_getColor(vec3 color, const Reflective* ref)
+void Mirror_getColor(vec3 color, const Mirror* mirror)
 {
-    vec3_copy(color, ref->color);
+    vec3_copy(color, mirror->color);
 }
 
 void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
@@ -70,11 +67,11 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
             BSDF_addOrenNayar(bsdf, color, matte->sigma);
         }        
     } break;
-    case REFLECTIVE:
+    case MIRROR:
     {
         vec3 color;
-        Reflective* ref = (Reflective*)mat->data;        
-        Reflective_getColor(color, ref);
+        Mirror* ref = (Mirror*)mat->data;        
+        Mirror_getColor(color, ref);
         //printVec3WithText("ref color", color);
         BSDF_addSpecularReflection(bsdf, color);
     } break;
@@ -82,6 +79,24 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
     {
         Transparent* trans = (Transparent*)mat->data;
         BSDF_addSpecularTransmission(bsdf, trans->ior_in, trans->ior_out, trans->cf_in, trans->cf_out);
+    } break;
+    case PLASTIC:
+    {
+        Plastic* plastic = (Plastic*)mat->data;
+        // TODO: add texture for matte
+        if(!vec3_equal(plastic->kd, BLACK))
+            BSDF_addLambertian(bsdf, plastic->kd);
+        if(!vec3_equal(plastic->ks, BLACK))
+        {
+            if(plastic->roughness == 0.0f)
+            {
+                BSDF_addSpecularReflection(bsdf, plastic->ks);
+            }else
+            {
+                BSDF_addMicrofacetReflection(bsdf, plastic->ks, 1.5f, 1.0f,
+                                             plastic->roughness, plastic->roughness, BECKMANN);
+            }
+        }
     } break;
     }
 }
@@ -92,7 +107,7 @@ bool Material_hasNormalMap(const Material* mat)
     {
     case MATTE:
         return true;
-    case REFLECTIVE:
+    case MIRROR:
         return false;
     case TRANSPARENT:
         return false;

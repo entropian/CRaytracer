@@ -1,4 +1,6 @@
-Perfect specular lacks fresnel
+figure out how to manage specular vs non-specular brdfs in the same material
+Add microfacet materials: glass, metal, plastic?
+Transparent material might not be working with environment light
 Get Trowbridge-Reitz working
 Normal mapping is broken in the new local basis system
 add uv coords and partial derivatives to the rest of the primitives

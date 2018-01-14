@@ -32,7 +32,7 @@ int calcCausticBoundingSpheres(vec3 *centers, float *radii, const SceneObjects *
             fprintf(stderr, "Null material pointer.\n");
             continue;
         }
-        if(mat->mat_type == REFLECTIVE || mat->mat_type == TRANSPARENT)
+        if(mat->mat_type == MIRROR || mat->mat_type == TRANSPARENT)
         {
             if(obj.type != FLAT_TRIANGLE && obj.type != SMOOTH_TRIANGLE)
             {

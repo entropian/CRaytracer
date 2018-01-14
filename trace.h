@@ -383,7 +383,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec2 light_sample, scatter_sample;
         Sampler_getSample(light_sample, sampler);
         Sampler_getSample(scatter_sample, sampler);
-        if(!(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT))
+        if(!(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT))
         {
             vec3 contrib;        
             uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so);
@@ -396,7 +396,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec3_negate(wo, ray.direction);
         vec2 sample;
         Sampler_getSample(sample, sampler);
-        float pdf = BSDF_sample_f(f, wi, wo, sample, &(sr.bsdf));
+        bool is_specular;
+        float pdf = BSDF_sample_f(f, wi, &is_specular, wo, sample, &(sr.bsdf));
         if(vec3_equal(f, BLACK) || pdf == 0.0f)
         {
             BSDF_freeBxDFs(&(sr.bsdf));                    
@@ -404,7 +405,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         }
         vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
         vec3_mult(beta, beta, f);
-        if(sr.mat.mat_type == REFLECTIVE || sr.mat.mat_type == TRANSPARENT)
+        //if(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT)
+        if(is_specular)
             specular_bounce = true;
         else
             specular_bounce = false;

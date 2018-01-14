@@ -178,9 +178,9 @@ bool parseMatteEntry(Material* mat, Scene* scene, FILE* fp)
     return true;
 }
 
-bool parseReflectiveEntry(Material* mat, Scene* scene, FILE* fp)
+bool parseMirrorEntry(Material* mat, Scene* scene, FILE* fp)
 {
-    Reflective* ref = (Reflective*)malloc(sizeof(Reflective));
+    Mirror* ref = (Mirror*)malloc(sizeof(Mirror));
     mat->data = ref;    
     char buffer[128];
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
@@ -218,6 +218,28 @@ bool parseTransparentEntry(Material* mat, Scene* scene, FILE* fp)
     return true;
 }
 
+bool parsePlasticEntry(Material* mat, Scene* scene, FILE* fp)
+{
+    Plastic* plastic = (Plastic*)malloc(sizeof(Plastic));
+    mat->data = plastic;    
+    char buffer[128];
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
+    if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KD
+    if(!parseColor(plastic->kd, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KS
+    if(!parseColor(plastic->ks, fp)){return false;}    
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip ROUGHNESS
+    if(!getNextTokenInFile(buffer, fp)){return false;}  
+    plastic->roughness = atof(buffer);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}      
+    return true;
+}
+
 bool parseEmissiveEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Emissive* emissive = (Emissive*)malloc(sizeof(Emissive));
@@ -249,9 +271,9 @@ bool parseMatEntry(Material* mat, Scene* scene, FILE* fp)
     {
         return parseMatteEntry(mat, scene, fp);
     } break;
-    case REFLECTIVE:
+    case MIRROR:
     {
-        return parseReflectiveEntry(mat, scene, fp);
+        return parseMirrorEntry(mat, scene, fp);
     } break;
     case TRANSPARENT:
     {
@@ -261,6 +283,10 @@ bool parseMatEntry(Material* mat, Scene* scene, FILE* fp)
     {
         return parseEmissiveEntry(mat, scene, fp);
     }
+    case PLASTIC:
+    {
+        return parsePlasticEntry(mat, scene, fp);
+    };
     case INVALID_MAT_TYPE:
     {
         fprintf(stderr, "Invalid material type %s.\n", type_name);
