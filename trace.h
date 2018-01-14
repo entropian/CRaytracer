@@ -174,7 +174,8 @@ void transformToLocalBasis(vec3 r, const vec3 a, const BSDF* bsdf)
 }
 
 void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
-                    const ShadeRec* sr, const int light_index, const SceneLights* sl, const SceneObjects* so)
+                    const ShadeRec* sr, const int light_index, const SceneLights* sl, const SceneObjects* so,
+                    const BxDFFlags excluded_bxdf)
 {
     vec3_copy(L, BLACK);
     vec3 Li, wi;
@@ -258,7 +259,7 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
     // Calcuate BRDF
     if(light_pdf > 0.0f && !vec3_equal(Li, BLACK))
     {
-        BSDF_f(f, wi, sr->wo, &(sr->bsdf));
+        BSDF_f(f, wi, sr->wo, &(sr->bsdf), excluded_bxdf);
         vec3_scale(f, f, fabs(vec3_dot(sr->normal, wi)));
         scatter_pdf = BSDF_pdf(wi, sr->wo, &(sr->bsdf));
     }else
@@ -290,7 +291,8 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
 }
 
 void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
-                           const ShadeRec* sr, const SceneLights* sl, const SceneObjects* so)
+                           const ShadeRec* sr, const SceneLights* sl, const SceneObjects* so,
+                           const BxDFFlags excluded_bxdf)
 {
     vec3_copy(L, BLACK);
     int num_lights = sl->num_lights;
@@ -303,7 +305,7 @@ void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_s
     float rand_float = (float)rand() / (float)RAND_MAX;
     light_index = (int)min(rand_float * num_lights, num_lights - 1);
     vec3 Ld;
-    estimateDirect(Ld, light_sample, scatter_sample, sr, light_index, sl, so);
+    estimateDirect(Ld, light_sample, scatter_sample, sr, light_index, sl, so, excluded_bxdf);
     vec3_scale(L, Ld, 1.0f / light_pdf);
 }
 
@@ -340,7 +342,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
     vec3 L = {0.0f, 0.0f, 0.0f};
     vec3 beta = {1.0f, 1.0f, 1.0f};
     Ray ray = primary_ray;
-    bool specular_bounce = false;
+    BxDFFlags sampled_flags = BSDF_NONE;
+    BxDFFlags excluded_from_direct = (BxDFFlags)(BSDF_SPECULAR | BSDF_GLOSSY);
     int bounces;
     for(bounces = 0; ; bounces++)
     {
@@ -348,7 +351,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         ShadeRec sr;
         float t = intersectTest(&sr, so, ray);        
         // Possibly add emitted light at intersection
-        if(bounces == 0 || specular_bounce)
+        if(bounces == 0 || sampled_flags & excluded_from_direct)
         {
             if(t < TMAX)
             {
@@ -386,7 +389,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         if(!(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT))
         {
             vec3 contrib;        
-            uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so);
+            uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct);
             vec3_mult(contrib, contrib, beta);
             vec3_add(L, L, contrib);
         }
@@ -397,7 +400,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec2 sample;
         Sampler_getSample(sample, sampler);
         bool is_specular;
-        float pdf = BSDF_sample_f(f, wi, &is_specular, wo, sample, &(sr.bsdf));
+        float pdf = BSDF_sample_f(f, wi, &sampled_flags, wo, sample, &(sr.bsdf));
         if(vec3_equal(f, BLACK) || pdf == 0.0f)
         {
             BSDF_freeBxDFs(&(sr.bsdf));                    
@@ -405,11 +408,6 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         }
         vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
         vec3_mult(beta, beta, f);
-        //if(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT)
-        if(is_specular)
-            specular_bounce = true;
-        else
-            specular_bounce = false;
         resetRay(&ray, sr.hit_point, wi);
         
         // Possibly terminate the path with Russian roulette

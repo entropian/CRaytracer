@@ -324,7 +324,7 @@ float BxDF_pdf(const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType ty
     return 0.0f;
 }
 
-void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf)
+void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf, const BxDFFlags excluded)
 {
     vec3 wi_local, wo_local;
     orthoNormalTransform(wi_local, bsdf->tangent, bsdf->binormal, bsdf->normal, wi);
@@ -332,10 +332,8 @@ void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf)
     vec3_copy(f, BLACK);
     for(int i = 0; i < bsdf->num_bxdf; i++)
     {
-        // TODO temporary
         BxDFType type = bsdf->types[i];
-        if(!(type == SPECULAR_REFLECTION || type == SPECULAR_TRANSMISSION ||
-               type == MICROFACET_REFLECTION))
+        if(!(getBxDFFlagsFromType(type) & excluded))
         {
             vec3 cur_f = {0.0f, 0.0f, 0.0f};        
             BxDF_f(cur_f, wi, wo, bsdf->bxdfs[i], bsdf->types[i]);
@@ -357,23 +355,20 @@ float BSDF_pdf(const vec3 wi, const vec3 wo, const BSDF* bsdf)
     return pdf;
 }
 
-float BSDF_sample_f(vec3 f, vec3 wi, bool* is_specular,
+float BSDF_sample_f(vec3 f, vec3 wi, BxDFFlags* sampled_flags,
                     const vec3 wo, const vec2 sample, const BSDF* bsdf)
 {
     if(bsdf->num_bxdf == 0)
     {
         vec3_copy(f, BLACK);
+        *sampled_flags = BSDF_NONE;
         printf("0 bxdf\n");
         return 0.0f;
     }
     // Choose BxDF
     int bxdf_index = (int)(sample[0] * bsdf->num_bxdf);
     BxDFType bxdf_type = bsdf->types[bxdf_index];
-    if(bxdf_type == SPECULAR_REFLECTION || bxdf_type == SPECULAR_TRANSMISSION ||
-       bxdf_type == MICROFACET_REFLECTION)
-        *is_specular = true;
-    else
-        *is_specular = false;
+    *sampled_flags = getBxDFFlagsFromType(bxdf_type);
     vec2 remapped_sample = {sample[0] * bsdf->num_bxdf - bxdf_index, sample[1]};
 
     // Transform wo to tangent space
@@ -395,15 +390,9 @@ float BSDF_sample_f(vec3 f, vec3 wi, bool* is_specular,
     }
     orthoNormalTransform(wi, bsdf->tangent, bsdf->binormal, bsdf->normal, wi_local);
 
-    /*
     // Add pdfs from other BxDFs
-    if(bsdf->types[bxdf_index] == SPECULAR_REFLECTION ||
-       bsdf->types[bxdf_index] == SPECULAR_TRANSMISSION)
-        return pdf;
-    */
-
-    // Add pdfs from other BxDFs
-    if(!(bsdf->types[bxdf_index] == SPECULAR_REFLECTION || bsdf->types[bxdf_index] == SPECULAR_TRANSMISSION))
+    //if(!(bsdf->types[bxdf_index] == SPECULAR_REFLECTION || bsdf->types[bxdf_index] == SPECULAR_TRANSMISSION))
+    if(!(*sampled_flags & BSDF_SPECULAR))
     {
         for(int i = 0; i < bsdf->num_bxdf; i++)
         {
@@ -516,7 +505,6 @@ static MemPool bsdf_mem_pool;
 bool initBSDFMem(const int num_threads, const int num_depth)
 {
     float bxdf_size = max(sizeof(SpecularTransmission), sizeof(MicrofacetReflection));
-    //MemPool_init(&bsdf_mem_pool, sizeof(SpecularTransmission), num_threads * num_depth * MAX_BXDF);
     MemPool_init(&bsdf_mem_pool, bxdf_size, num_threads * num_depth * MAX_BXDF);    
 }
 
@@ -527,12 +515,10 @@ void freeBSDFMem()
 
 void* allocateBxDF()
 {
-    //printf("allocating\n");
     return MemPool_requestElement(&bsdf_mem_pool);
 }
 
 void freeBxDF(void** bxdf)
 {
-    //printf("freeing\n");
     MemPool_releaseElement(&bsdf_mem_pool, bxdf);
 }

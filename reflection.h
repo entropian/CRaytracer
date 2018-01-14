@@ -5,6 +5,17 @@
 #include "util/util.h"
 #include "microfacet.h"
 
+enum BxDFFlags
+{
+    BSDF_NONE = 0,
+    BSDF_REFLECTION = 1,
+    BSDF_TRANSMISSION = 2,
+    BSDF_DIFFUSE = 4,
+    BSDF_GLOSSY = 8,
+    BSDF_SPECULAR = 16,
+    BSDF_ALL = BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE | BSDF_GLOSSY | BSDF_SPECULAR,
+};
+
 enum BxDFType
 {
     LAMBERTIAN,
@@ -14,9 +25,27 @@ enum BxDFType
     MICROFACET_REFLECTION
 };
 
+inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
+{
+    switch(type)
+    {
+    case LAMBERTIAN:
+    case ORENNAYAR:
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE);
+    case SPECULAR_REFLECTION:
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_SPECULAR);
+    case SPECULAR_TRANSMISSION:
+        return (BxDFFlags)(BSDF_TRANSMISSION | BSDF_SPECULAR);
+    case MICROFACET_REFLECTION:
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_GLOSSY);
+    default:
+        return BSDF_NONE;
+    }
+}
+
 typedef struct Lambertian_s
 {
-    vec3 cd;    
+    vec3 cd;
 }Lambertian;
 void Lambertian_f(vec3 f, const vec3 wi, const vec3 wo, const Lambertian* l);
 float Lambertian_pdf(const vec3 wi, const vec3 wo);
@@ -81,8 +110,8 @@ void* allocateBxDF();
 
 void freeBxDF(void** bxdf);
 
-void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf);
-float BSDF_sample_f(vec3 f, vec3 wi, bool* is_specular,
+void BSDF_f(vec3 f, const vec3 wi, const vec3 wo, const BSDF* bsdf, const BxDFFlags excluded_bxdf);
+float BSDF_sample_f(vec3 f, vec3 wi, BxDFFlags* sampled_flags,
                     const vec3 wo, const vec2 sample, const BSDF* bsdf);
 float BSDF_pdf(const vec3 wi, const vec3 wo, const BSDF* bsdf);
 void BSDF_addLambertian(BSDF* bsdf, const vec3 cd);
