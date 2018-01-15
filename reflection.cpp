@@ -245,6 +245,106 @@ float MicrofacetReflection_pdf(const vec3 wi, const vec3 wo, const MicrofacetRef
     return MicrofacetDistribution_pdf(wo, wh, &(mr->distrib)) / (4.0f * vec3_dot(wo, wh));    
 }
 
+void MicrofacetTransmission_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetTransmission * mt)
+{
+    /*
+    if (SameHemisphere(wo, wi)) return 0;  // transmission only
+
+    Float cosThetaO = CosTheta(wo);
+    Float cosThetaI = CosTheta(wi);
+    if (cosThetaI == 0 || cosThetaO == 0) return Spectrum(0);
+
+    // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
+    Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB);
+    Vector3f wh = Normalize(wo + wi * eta);
+    if (wh.z < 0) wh = -wh;
+
+    Spectrum F = fresnel.Evaluate(Dot(wo, wh));
+
+    Float sqrtDenom = Dot(wo, wh) + eta * Dot(wi, wh);
+    Float factor = (mode == TransportMode::Radiance) ? (1 / eta) : 1;
+
+    return (Spectrum(1.f) - F) * T *
+           std::abs(distribution->D(wh) * distribution->G(wo, wi) * eta * eta *
+                    AbsDot(wi, wh) * AbsDot(wo, wh) * factor * factor /
+                    (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom));
+     */
+    if(sameHemisphere(wo, wi)) return;
+
+    float cos_theta_o = cosTheta(wo);
+    float cos_theta_i = cosTheta(wi);
+    if(cos_theta_i == 0.0f || cos_theta_o == 0.0f)
+    {
+        vec3_copy(f, BLACK);
+        return;
+    }
+    
+    //float eta = cosTheta(wo) > 0.0f ? (mt->ior_out / mt->ior_in) : (mt->ior_in / mt->ior_out);
+    float eta = cosTheta(wo) > 0.0f ? (mt->ior_in / mt->ior_out) : (mt->ior_out / mt->ior_in);
+    vec3 wh, scaled_wi;
+    vec3_scale(scaled_wi, wi, eta);
+    vec3_add(wh, wo, scaled_wi);
+    vec3_normalize(wh, wh);
+    if(wh[2] < 0.0f) vec3_negate(wh, wh);
+
+    float fresnel_reflectance = calcFresnelReflectance(wh, wo, mt->ior_out, mt->ior_in);
+    float sqrt_denom = vec3_dot(wo, wh) + eta * vec3_dot(wi, wh);
+    // TODO transport mode?
+    float denom = cos_theta_i * cos_theta_o * sqrt_denom * sqrt_denom;
+    const MicrofacetDistribution* distrib = &(mt->distrib);
+    float numerator = (1.0f - fresnel_reflectance) * fabs(MicrofacetDistribution_D(wh, distrib)) *
+        MicrofacetDistribution_G(wo, wi, distrib) * eta * eta * fabs(vec3_dot(wi, wh)) * fabs(vec3_dot(wo, wh));
+    vec3_scale(f, mt->color, numerator / denom);
+}
+
+float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
+                                      const MicrofacetTransmission* mt)
+{
+    // TODO
+    /*
+    if (wo.z == 0) return 0.;
+    Vector3f wh = distribution->Sample_wh(wo, u);
+    Float eta = CosTheta(wo) > 0 ? (etaA / etaB) : (etaB / etaA);
+    if (!Refract(wo, (Normal3f)wh, eta, wi)) return 0;
+    *pdf = Pdf(wo, *wi);
+    return f(wo, *wi);
+     */
+    if(wo[2] == 0) return 0.0f;
+    vec3 wh;
+    MicrofacetDistribution_sample_wh(wh, wo, sample, &(mt->distrib));
+    //float eta = cosTheta(wo) > 0.0f ? (mt->ior_out / mt->ior_in) : (mt->ior_in / mt->ior_out);
+    float eta = cosTheta(wo) > 0.0f ? (mt->ior_in / mt->ior_out) : (mt->ior_out / mt->ior_in);
+    vec3 normal = {0.0f, 0.0f, 0.0f};
+    eta = calcTransmitDir(wi, normal, wo, mt->ior_in, mt->ior_out);
+    MicrofacetTransmission_f(f, wi, wo, mt);
+    return MicrofacetTransmission_pdf(wi, wo, mt);
+}
+
+float MicrofacetTransmission_pdf(const vec3 wi, const vec3 wo, const MicrofacetTransmission* mt)
+{
+    /*
+    if (SameHemisphere(wo, wi)) return 0;
+    // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
+    Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB);
+    Vector3f wh = Normalize(wo + wi * eta);
+
+    // Compute change of variables _dwh\_dwi_ for microfacet transmission
+    Float sqrtDenom = Dot(wo, wh) + eta * Dot(wi, wh);
+    Float dwh_dwi =
+        std::abs((eta * eta * Dot(wi, wh)) / (sqrtDenom * sqrtDenom));
+    return distribution->Pdf(wo, wh) * dwh_dwi;
+     */
+    if(sameHemisphere(wo, wi)) return 0.0f;
+    float eta = cosTheta(wo) > 0.0f ? (mt->ior_in / mt->ior_out) : (mt->ior_out / mt->ior_in);
+    vec3 wh, scaled_wi;
+    vec3_scale(scaled_wi, wi, eta);
+    vec3_add(wh, wo, scaled_wi);
+    vec3_normalize(wh, wh);
+    float sqrt_denom = vec3_dot(wo, wh) + eta * vec3_dot(wi, wh);
+    float dwh_dwi = fabs((eta * eta * vec3_dot(wi, wh)) / (sqrt_denom * sqrt_denom));
+    return MicrofacetDistribution_pdf(wo, wh, &(mt->distrib)) * dwh_dwi;
+}
+
 void BxDF_f(vec3 f, const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType type)
 {
     switch(type)

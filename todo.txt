@@ -1,4 +1,4 @@
-figure out how to manage specular vs non-specular brdfs in the same material
+Lucy is broken with env light
 Add microfacet materials: glass, metal, plastic?
 Transparent material might not be working with environment light
 Get Trowbridge-Reitz working

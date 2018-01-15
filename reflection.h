@@ -22,7 +22,8 @@ enum BxDFType
     ORENNAYAR,
     SPECULAR_REFLECTION,
     SPECULAR_TRANSMISSION,
-    MICROFACET_REFLECTION
+    MICROFACET_REFLECTION,
+    MICROFACET_TRANSMISSION
 };
 
 inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
@@ -38,6 +39,8 @@ inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
         return (BxDFFlags)(BSDF_TRANSMISSION | BSDF_SPECULAR);
     case MICROFACET_REFLECTION:
         return (BxDFFlags)(BSDF_REFLECTION | BSDF_GLOSSY);
+    case MICROFACET_TRANSMISSION:
+        return (BxDFFlags)(BSDF_TRANSMISSION | BSDF_GLOSSY);
     default:
         return BSDF_NONE;
     }
@@ -89,9 +92,21 @@ typedef struct MicrofacetReflection_s
     MicrofacetDistribution distrib;
     // TODO: add enum to signify whether to use fresnel dielectric or conductor
 }MicrofacetReflection;
-void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetReflection* mf);
+void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetReflection* mr);
 float MicrofacetReflection_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
                                     const MicrofacetReflection* mr);
+float MicrofacetReflection_pdf(const vec3 wi, const vec3 wo, const MicrofacetReflection* mr);
+
+typedef struct MicrofacetTransmission_s
+{
+    vec3 color;
+    float ior_in, ior_out;
+    MicrofacetDistribution distrib;
+}MicrofacetTransmission;
+void MicrofacetTransmission_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetTransmission * mt);
+float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
+                                      const MicrofacetTransmission mt);
+float MicrofacetTransmission_pdf(const vec3 wi, const vec3 wo, const MicrofacetTransmission* mt);
 
 const int MAX_BXDF = 8;
 typedef struct BSDF_s

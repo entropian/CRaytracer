@@ -240,7 +240,7 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     vec3_cross(binormal, sr->normal, tangent);
     vec3_normalize(sr->dpdv, binormal);
 
-    assert(sr->normal[0] != 0.0f || sr->normal[1] != 0.0f || sr->normal[2] != 0.0f);
+    //assert(sr->normal[0] != 0.0f || sr->normal[1] != 0.0f || sr->normal[2] != 0.0f);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);
     sr->mat = *(tri->mat);
@@ -269,7 +269,7 @@ float getSmoothTriangleShadeRec(ShadeRec* sr, SmoothTriangle* tri, const Ray ray
     vec3_normalize(sr->normal, sr->normal);
     vec3 surface_normal;
     vec3_copy(surface_normal, sr->normal);
-    assert(surface_normal[0] != 0.0f || surface_normal[1] != 0.0f || surface_normal[2] != 0.0f);
+    //assert(surface_normal[0] != 0.0f || surface_normal[1] != 0.0f || surface_normal[2] != 0.0f);
     
     //if(tri->mesh_ptr->num_texcoords > 0 && tri->mat->tex_flags != NO_TEXTURE)
     if(tri->mesh_ptr->num_texcoords > 0)
@@ -299,7 +299,7 @@ float getSmoothTriangleShadeRec(ShadeRec* sr, SmoothTriangle* tri, const Ray ray
     {
         vec3_copy(sr->normal, surface_normal);
     }
-    assert(sr->normal[0] != 0.0f || sr->normal[1] != 0.0f || sr->normal[2] != 0.0f);
+    //assert(sr->normal[0] != 0.0f || sr->normal[1] != 0.0f || sr->normal[2] != 0.0f);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);
     sr->mat = *(tri->mat);
