@@ -322,10 +322,20 @@ void MicrofacetTransmission_f(vec3 f, const vec3 wi, const vec3 wo, const Microf
     float denom = cos_theta_i * cos_theta_o * sqrt_denom * sqrt_denom;
     const MicrofacetDistribution* distrib = &(mt->distrib);
     float factor = 1.0f / eta;
+    /*
+      // Old and wrong
     float numerator = (1.0f - fresnel_reflectance) * fabs(MicrofacetDistribution_D(wh, distrib)) *
+    MicrofacetDistribution_G(wo, wi, distrib) * eta * eta * fabs(vec3_dot(wi, wh)) * fabs(vec3_dot(wo, wh))
+    * factor * factor;
+        vec3_scale(f, mt->color, 1.0f - fresnel_reflectance * fabs(numerator / denom));        
+    */
+    float numerator = MicrofacetDistribution_D(wh, distrib) *
         MicrofacetDistribution_G(wo, wi, distrib) * eta * eta * fabs(vec3_dot(wi, wh)) * fabs(vec3_dot(wo, wh))
         * factor * factor;
-    vec3_scale(f, mt->color, numerator / denom);
+    vec3 tmp;
+    vec3_scale(tmp, mt->color, 1.0f - fresnel_reflectance);
+    vec3_scale(f, tmp, fabs(numerator / denom));
+
 }
 
 float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
@@ -347,6 +357,10 @@ float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2
     if(!refract(wi, wo, wh, eta))
         return 0.0f;
     MicrofacetTransmission_f(f, wi, wo, mt);
+    if(f[0] < 0.0f || f[1] < 0.0f || f[2] < 0.0f)
+    {
+            MicrofacetTransmission_f(f, wi, wo, mt);
+    }
     return MicrofacetTransmission_pdf(wi, wo, mt);
 }
 
