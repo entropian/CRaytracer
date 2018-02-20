@@ -136,5 +136,7 @@ void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float io
                                   const vec3 cf_out);
 void BSDF_addMicrofacetReflection(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
                                   const float alphax, const float alphay, const FacetDistribType type);
+void BSDF_addMicrofacetTransmission(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
+                                    const float alphax, const float alphay, const FacetDistribType type);
 void BSDF_freeBxDFs(BSDF* bsdf);
 

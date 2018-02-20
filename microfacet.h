@@ -20,3 +20,12 @@ void MicrofacetDistribution_sample_wh(vec3 wh, const vec3 wo, const vec2 sample,
 float MicrofacetDistribution_G1(const vec3 w, const MicrofacetDistribution* distrib);
 float MicrofacetDistribution_G(const vec3 wo, const vec3 wi, const MicrofacetDistribution* distrib);
 float MicrofacetDistribution_pdf(const vec3 wo, const vec3 wh, const MicrofacetDistribution* distrib);
+
+
+inline float BeckmannRoughnessToAlpha(float roughness)
+{
+    roughness = max(roughness, 1e-3);
+    float x = logf(roughness);
+    return 1.62142f + 0.819955f * x + 0.1734f * x * x +
+        0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
+}

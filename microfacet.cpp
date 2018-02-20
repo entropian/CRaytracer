@@ -138,3 +138,4 @@ float MicrofacetDistribution_pdf(const vec3 wo, const vec3 wh, const MicrofacetD
 {
     return MicrofacetDistribution_D(wh, distrib) * absCosTheta(wh);
 }
+

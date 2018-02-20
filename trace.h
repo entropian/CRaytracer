@@ -370,8 +370,10 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                     getEnvLightIncRadiance(env_inc_radiance, ray.direction, sl->env_light);
                 vec3_mult(env_inc_radiance, env_inc_radiance, beta);
                 vec3_add(L, L, env_inc_radiance);
+            if(beta[0] < 0.0f || beta[1] < 0.0f || beta[2] < 0.0f)
+                vec3_copy(L, BLUE);                
             }
-        }
+        }        
 
         // Terminate path if ray escaped or maxDepth was reached
         // NOTE: Only do blackbody emission for now
@@ -392,6 +394,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct);
             vec3_mult(contrib, contrib, beta);
             vec3_add(L, L, contrib);
+            if(beta[0] < 0.0f || beta[1] < 0.0f || beta[2] < 0.0f)
+                vec3_copy(L, RED);
         }
 
         // Sample BSDF to get new path direction
@@ -401,6 +405,10 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         Sampler_getSample(sample, sampler);
         bool is_specular;
         float pdf = BSDF_sample_f(f, wi, &sampled_flags, wo, sample, &(sr.bsdf));
+        /*
+        if(f[0] < 0.0f || f[1] < 0.0f || f[2] < 0.0f)
+            pdf = BSDF_sample_f(f, wi, &sampled_flags, wo, sample, &(sr.bsdf));
+        */
         if(vec3_equal(f, BLACK) || pdf == 0.0f)
         {
             BSDF_freeBxDFs(&(sr.bsdf));                    
