@@ -32,7 +32,7 @@
 #include "imagestate.h"
 #include "reflection.h"
 
-#define SHOW_PROGRESS 2
+bool SHOW_PROGRESS = true;
 
 extern double g_traversal_time;
 
@@ -50,6 +50,23 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             break;
         }
     }
+}
+
+void calcProgress(const double start_time, double* end_time, int* prev_percent, const int p, const ConfigParams* params)
+{
+    int cur_percent = (int)((float)p / (float)(params->num_samples) * 100.0f);
+    double new_end_time = glfwGetTime();
+    double single_iteration_time = new_end_time - *end_time;
+    double whole_duration = new_end_time - start_time;
+    *end_time = new_end_time;
+    if(cur_percent > *prev_percent)
+    {
+        *prev_percent = cur_percent;
+        printf("%d%%\t%f sec\t%f sec\n", cur_percent, single_iteration_time, whole_duration);
+    }else
+    {
+        printf("%f sec\t%f sec\n", single_iteration_time, whole_duration);
+    }        
 }
 
 const int MAX_JOBS = 1000;
@@ -92,6 +109,7 @@ int JobQueue_getJob(JobQueue* job_queue, int* start, int* end)
     pthread_mutex_unlock(&(job_queue->mtx));
     return 1;
 }
+
 
 typedef struct ThreadData_s
 {
@@ -191,12 +209,17 @@ int main(int argc, char** argv)
     parseConfigFile(&params);
     MAX_DEPTH = params.max_depth;
 
-    GLFWwindow* window = initWindow(params.window_width, params.window_height);
-    glfwSetKeyCallback(window, keyCallback);
-
     GlViewport viewport;
-    initViewport(&viewport);
-
+    GLFWwindow* window = initWindow(params.window_width, params.window_height);
+    if(window)
+    {
+        glfwSetKeyCallback(window, keyCallback);
+        initViewport(&viewport);
+    }else
+    {
+        SHOW_PROGRESS = false;
+        params.image_save = true;
+    }
     unsigned char *image;
     int num_pixels = params.image_width * params.image_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
@@ -281,10 +304,10 @@ int main(int argc, char** argv)
     thread_data.params = &params;
     thread_data.trace = trace;
 
-    int num_patches = 64;
-    int num_threads = 4;
+    int num_patches = 128;
+    int num_threads = 16;
     int num_pixels_per_patch = num_pixels / num_patches;
-    pthread_t threads[10];
+    pthread_t threads[17];
     int patches[128];
     for(int i = 0; i < num_patches + 1; i++)
     {
@@ -320,23 +343,13 @@ int main(int argc, char** argv)
         {
             pthread_join(threads[i], NULL);
         }
+
         
+
+        calcProgress(start_time, &end_time, &prev_percent, p, &params);
         if(SHOW_PROGRESS)
         {
             displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
-            int cur_percent = (int)((float)p / (float)(params.num_samples) * 100.0f);
-            double new_end_time = glfwGetTime();
-            double single_iteration_time = new_end_time - end_time;
-            double whole_duration = new_end_time - start_time;
-            end_time = new_end_time;
-            if(cur_percent > prev_percent)
-            {
-                prev_percent = cur_percent;
-                printf("%d%%\t%f sec\t%f sec\n", cur_percent, single_iteration_time, whole_duration);
-            }else
-            {
-                printf("%f sec\t%f sec\n", single_iteration_time, whole_duration);
-            }
         }
     }
 #else
@@ -385,22 +398,10 @@ int main(int argc, char** argv)
             image[i*3 + 1] = (char)(color[1] * 255.0f);
             image[i*3 + 2] = (char)(color[2] * 255.0f);
         }
+        calcProgress(start_time, &end_time, &prev_percent, p, &params);
         if(SHOW_PROGRESS)
         {
             displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
-            int cur_percent = (int)((float)p / (float)(params.num_samples) * 100.0f);
-            double new_end_time = glfwGetTime();
-            double single_iteration_time = new_end_time - end_time;
-            double whole_duration = new_end_time - start_time;
-            end_time = new_end_time;
-            if(cur_percent > prev_percent)
-            {
-                prev_percent = cur_percent;
-                printf("%d%%\t%f sec\t%f sec\n", cur_percent, single_iteration_time, whole_duration);
-            }else
-            {
-                printf("%f sec\t%f sec\n", single_iteration_time, whole_duration);
-            }
         }
     }
 #endif

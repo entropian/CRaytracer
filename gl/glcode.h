@@ -111,6 +111,7 @@ GLFWwindow* initWindow(unsigned int width, unsigned int height)
     if(glfwInit() != GL_TRUE)
     {
         fprintf(stderr, "Failed to initialize GLFW\n");
+        return NULL;
         //return -1;
     }
 
