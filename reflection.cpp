@@ -349,6 +349,7 @@ float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2
     *pdf = Pdf(wo, *wi);
     return f(wo, *wi);
      */
+    /*
     if(wo[2] == 0) return 0.0f;
     vec3 wh;
     MicrofacetDistribution_sample_wh(wh, wo, sample, &(mt->distrib));
@@ -362,6 +363,41 @@ float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2
             MicrofacetTransmission_f(f, wi, wo, mt);
     }
     return MicrofacetTransmission_pdf(wi, wo, mt);
+    */
+    if(wo[2] == 0.0f) return 0.0f;
+    vec3 wh;
+    MicrofacetDistribution_sample_wh(wh, wo, sample, &(mt->distrib));
+    float kr = calcFresnelReflectance(wh, wo, mt->ior_in, mt->ior_out);
+    float rand_float = (float)rand() / (float)RAND_MAX;
+    if(rand_float <= kr)
+    {
+        vec3 neg_wo;
+        vec3_negate(neg_wo, wo);
+        calcReflectRayDir(wi, wh, neg_wo);
+        if(!sameHemisphere(wo, wi))
+        {
+            return 0.0f;
+        }
+        MicrofacetReflection mr;
+        vec3_copy(mr.color, mt->color);
+        mr.ior_in = mt->ior_in;
+        mr.ior_out = mt->ior_out;
+        mr.distrib = mt->distrib;
+        MicrofacetReflection_f(f, wi, wo, &mr);        
+        return MicrofacetDistribution_pdf(wo, wh, &(mr.distrib)) / (4.0f * vec3_dot(wo, wh));
+    }else
+    {
+        float eta = cosTheta(wo) > 0.0f ? (mt->ior_out / mt->ior_in) :
+            (mt->ior_in / mt->ior_out);
+        if(!refract(wi, wo, wh, eta))
+            return 0.0f;
+        MicrofacetTransmission_f(f, wi, wo, mt);
+        if(f[0] < 0.0f || f[1] < 0.0f || f[2] < 0.0f)
+        {
+            MicrofacetTransmission_f(f, wi, wo, mt);
+        }
+        return MicrofacetTransmission_pdf(wi, wo, mt);
+    }
 }
 
 float MicrofacetTransmission_pdf(const vec3 wi, const vec3 wo, const MicrofacetTransmission* mt)
@@ -610,7 +646,7 @@ void BSDF_addSpecularReflection(BSDF* bsdf, const vec3 cr)
 void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float ior_out, const vec3 cf_in,
                                   const vec3 cf_out)
 {
-
+    /*
     SpecularTransmission* spec_trans = (SpecularTransmission*)allocateBxDF();
     spec_trans->ior_in = ior_in;
     spec_trans->ior_out = ior_out;
@@ -619,12 +655,12 @@ void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float io
     bsdf->bxdfs[bsdf->num_bxdf] = spec_trans;
     bsdf->types[bsdf->num_bxdf] = SPECULAR_TRANSMISSION;
     bsdf->num_bxdf++;
+    */
 
-    /*
     vec3 color = {1.0f, 1.0f, 1.0f};
     BSDF_addMicrofacetTransmission(bsdf, color, 1.5f, 1.0f,
                                    0.1f, 0.1f, BECKMANN);
-    */
+
 }
 
 void BSDF_addMicrofacetReflection(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
