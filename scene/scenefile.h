@@ -240,6 +240,31 @@ bool parsePlasticEntry(Material* mat, Scene* scene, FILE* fp)
     return true;
 }
 
+bool parseGlassEntry(Material* mat, Scene* scene, FILE* fp)
+{
+    Glass* glass = (Glass*)malloc(sizeof(Glass));
+    glass->ior_in = 1.5f;
+    glass->ior_out = 1.0f;
+    mat->data = glass;
+    char buffer[128];
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
+    if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KR
+    if(!parseColor(glass->kr, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KT
+    if(!parseColor(glass->kt, fp)){return false;}
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip ROUGHNESS
+    if(!getNextTokenInFile(buffer, fp)){return false;}  
+    glass->uroughness = atof(buffer);
+    glass->vroughness = glass->uroughness;
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}      
+    return true;    
+}
+
 bool parseEmissiveEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Emissive* emissive = (Emissive*)malloc(sizeof(Emissive));
@@ -282,11 +307,15 @@ bool parseMatEntry(Material* mat, Scene* scene, FILE* fp)
     case EMISSIVE:
     {
         return parseEmissiveEntry(mat, scene, fp);
-    }
+    } break;
     case PLASTIC:
     {
         return parsePlasticEntry(mat, scene, fp);
-    };
+    } break;
+    case GLASS:
+    {
+        return parseGlassEntry(mat, scene, fp);
+    } break;
     case INVALID_MAT_TYPE:
     {
         fprintf(stderr, "Invalid material type %s.\n", type_name);

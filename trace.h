@@ -388,7 +388,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec2 light_sample, scatter_sample;
         Sampler_getSample(light_sample, sampler);
         Sampler_getSample(scatter_sample, sampler);
-        if(!(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT))
+        if(!(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT || sr.mat.mat_type == GLASS))
         {
             vec3 contrib;        
             uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct);
@@ -405,10 +405,6 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         Sampler_getSample(sample, sampler);
         bool is_specular;
         float pdf = BSDF_sample_f(f, wi, &sampled_flags, wo, sample, &(sr.bsdf));
-        /*
-        if(f[0] < 0.0f || f[1] < 0.0f || f[2] < 0.0f)
-            pdf = BSDF_sample_f(f, wi, &sampled_flags, wo, sample, &(sr.bsdf));
-        */
         if(vec3_equal(f, BLACK) || pdf == 0.0f)
         {
             BSDF_freeBxDFs(&(sr.bsdf));                    

@@ -12,7 +12,8 @@ enum MatType
     MIRROR = 2,
     TRANSPARENT = 4,
     EMISSIVE = 8,
-    PLASTIC = 16
+    PLASTIC = 16,
+    GLASS = 32,
 };
 
 typedef struct Material_s
@@ -55,6 +56,13 @@ typedef struct Platic_s
     vec3 ks;
     float roughness;
 }Plastic;
+
+typedef struct Glass_s
+{
+    vec3 kr, kt;
+    float ior_in, ior_out;
+    float uroughness, vroughness;
+}Glass;
 
 const unsigned int DIFFUSE_MAP_INDEX = 0;
 const unsigned int NORMAL_MAP_INDEX = 1;
