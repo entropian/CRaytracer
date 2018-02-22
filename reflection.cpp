@@ -383,7 +383,8 @@ float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2
         mr.ior_in = mt->ior_in;
         mr.ior_out = mt->ior_out;
         mr.distrib = mt->distrib;
-        MicrofacetReflection_f(f, wi, wo, &mr);        
+        MicrofacetReflection_f(f, wi, wo, &mr);
+        vec3_scale(f, f, 1.0f / (1.0f - kr));
         return MicrofacetDistribution_pdf(wo, wh, &(mr.distrib)) / (4.0f * vec3_dot(wo, wh));
     }else
     {
@@ -396,6 +397,7 @@ float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2
         {
             MicrofacetTransmission_f(f, wi, wo, mt);
         }
+        vec3_scale(f, f, 1.0f / (1.0f - kr));
         return MicrofacetTransmission_pdf(wi, wo, mt);
     }
 }
