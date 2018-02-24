@@ -117,9 +117,20 @@ void calcTangentVec(Mesh* mesh)
         vec3 v0 = {mesh->positions[i0*3], mesh->positions[i0*3 + 1], mesh->positions[i0*3 + 2]};
         vec3 v1 = {mesh->positions[i1*3], mesh->positions[i1*3 + 1], mesh->positions[i1*3 + 2]};
         vec3 v2 = {mesh->positions[i2*3], mesh->positions[i2*3 + 1], mesh->positions[i2*3 + 2]};
-        vec2 uv0 = {mesh->texcoords[i0*2], mesh->texcoords[i0*2 + 1]};
-        vec2 uv1 = {mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]};
-        vec2 uv2 = {mesh->texcoords[i2*2], mesh->texcoords[i2*2 + 1]};                
+        vec2 uv0, uv1, uv2;
+        if(mesh->num_texcoords > 0)
+        {
+            vec2_assign(uv0, mesh->texcoords[i0*2], mesh->texcoords[i0*2 + 1]);
+            vec2_assign(uv1, mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]);
+            vec2_assign(uv2, mesh->texcoords[i2*2], mesh->texcoords[i2*2 + 1]);
+            //vec2 uv1 = {mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]};
+            //vec2 uv2 = {mesh->texcoords[i2*2], mesh->texcoords[i2*2 + 1]};
+        }else
+        {
+            vec2_assign(uv0, 0.0f, 0.0f);
+            vec2_assign(uv1, 1.0f, 0.0f);
+            vec2_assign(uv2, 1.0f, 1.0f);
+        }
         
         vec3 q0, q1;
         vec3_sub(q0, v1, v0);
@@ -381,96 +392,6 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 MeshEntry mesh_entry;
                 parseMesh(&mesh_entry, &shapes, &materials, &num_mesh, &num_mat,
                           mesh_file_names, &num_file_names, fp);
-                /*
-                for(int i = 0; i < num_mat; i++)
-                {
-                    const OBJMaterial *obj_mat = &(materials[i]);
-                    Material material;
-                    initMaterial(&material);
-                    vec3_assign(material.ca, obj_mat->ambient[0], obj_mat->ambient[1], obj_mat->ambient[2]);
-                    vec3_assign(material.cd, obj_mat->diffuse[0], obj_mat->diffuse[1], obj_mat->diffuse[2]);
-                    vec3_assign(material.cs, obj_mat->specular[0], obj_mat->specular[1], obj_mat->specular[2]);
-                    vec3_assign(material.ce, obj_mat->emissive[0], obj_mat->emissive[1], obj_mat->emissive[2]);
-                    vec3_assign(material.cf_in, obj_mat->transmittance[0], obj_mat->transmittance[1],
-                                obj_mat->transmittance[2]);
-                    vec3_copy(material.cf_out, WHITE);
-                    material.ka = material.kd = material.ks = material.ke = 1.0f;
-                    material.exp = obj_mat->shininess;
-                    material.ior_in = obj_mat->ior;
-                    material.ior_out = 1.0f;
-                    material.tex_flags = NO_TEXTURE;
-                    // TODO: fix exponent
-                    stringCopy(material.name, MAX_NAME_LENGTH, obj_mat->name);
-
-                    if(obj_mat->illum == 2)
-                    {
-                        if(material.cs[0] > 0.0f || material.cs[1] > 0.0f || material.cs[1] > 0.0f)
-                        {
-                            //material.mat_type = PHONG;
-                            material.mat_type = MATTE;
-                        }else
-                        {
-                            material.mat_type = MATTE;
-                        }
-                    }else if(obj_mat->illum == 5)
-                    {
-                        material.mat_type = REFLECTIVE;
-                        // TODO: Not sure how to set kr
-                        material.kr = 1.0f;
-                    }else if(obj_mat->illum == 7 || obj_mat->illum == 9)
-                    {
-                        material.mat_type = TRANSPARENT;
-                    }else
-                    {
-                        // Fudge
-                        //material.mat_type = INVALID_MAT_TYPE;
-                        material.mat_type = MATTE;
-                    }
-
-                    // Load textures
-                    if(obj_mat->diffuse_map[0] != '\0')
-                    {
-                        int status = parseTextureFileName(scene, obj_mat->diffuse_map);
-                        if(status)
-                        {
-                            MatTexNamePair pair;
-                            pair.tex_type = DIFFUSE;
-                            stringCopy(pair.tex_name, MAX_NAME_LENGTH, obj_mat->diffuse_map);
-                            stringCopy(pair.mat_name, MAX_NAME_LENGTH, obj_mat->name);
-                            DBuffer_push(mat_tex_pairs, pair);
-                        }
-                    }
-                    if(obj_mat->normal_map[0] != '\0')
-                    {
-                        int status = parseTextureFileName(scene, obj_mat->normal_map);
-                        if(status)
-                        {
-                            MatTexNamePair pair;
-                            pair.tex_type = NORMAL;
-                            stringCopy(pair.tex_name, MAX_NAME_LENGTH, obj_mat->normal_map);
-                            stringCopy(pair.mat_name, MAX_NAME_LENGTH, obj_mat->name);
-                            DBuffer_push(mat_tex_pairs, pair);
-                        }
-                    }
-                    if(obj_mat->specular_map[0] != '\0')
-                    {
-                        int status = parseTextureFileName(scene, obj_mat->specular_map);
-                        if(status)
-                        {
-                            MatTexNamePair pair;
-                            pair.tex_type = SPECULAR;
-                            stringCopy(pair.tex_name, MAX_NAME_LENGTH, obj_mat->specular_map);
-                            stringCopy(pair.mat_name, MAX_NAME_LENGTH, obj_mat->name);
-                            DBuffer_push(mat_tex_pairs, pair);
-                        }
-                    }
-                    Scene_addMaterial(scene, &material, obj_mat->name);
-                }
-                MatTexNamePair *pair_array = (MatTexNamePair*)DBuffer_data_ptr(mat_tex_pairs);
-                const unsigned int num_pair = DBuffer_size(mat_tex_pairs);
-                procMatTexPairs(scene, pair_array, num_pair);
-                DBuffer_erase(&mat_tex_pairs);
-                */
                 if(materials){free(materials);}
 
                 for(int i = 0; i < num_mesh; i++)
@@ -487,7 +408,6 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     {
                         calcTangentVec(&mesh);
                     }
-                    //calcTangentVec(&mesh);
                     Scene_addMesh(scene, &mesh);
                 }
                 if(shapes){free(shapes);}
