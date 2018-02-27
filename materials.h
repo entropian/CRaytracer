@@ -59,7 +59,6 @@ typedef struct Platic_s
 
 typedef struct Glass_s
 {
-    vec3 kr, kt;
     float ior_in, ior_out;
     float uroughness, vroughness;
 }Glass;

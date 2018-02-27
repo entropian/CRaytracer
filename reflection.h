@@ -23,7 +23,7 @@ enum BxDFType
     SPECULAR_REFLECTION,
     SPECULAR_TRANSMISSION,
     MICROFACET_REFLECTION,
-    MICROFACET_TRANSMISSION
+    MICROFACET_FRESNEL
 };
 
 inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
@@ -36,11 +36,11 @@ inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
     case SPECULAR_REFLECTION:
         return (BxDFFlags)(BSDF_REFLECTION | BSDF_SPECULAR);
     case SPECULAR_TRANSMISSION:
-        return (BxDFFlags)(BSDF_TRANSMISSION | BSDF_SPECULAR);
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_SPECULAR);
     case MICROFACET_REFLECTION:
         return (BxDFFlags)(BSDF_REFLECTION | BSDF_GLOSSY);
-    case MICROFACET_TRANSMISSION:
-        return (BxDFFlags)(BSDF_TRANSMISSION | BSDF_GLOSSY);
+    case MICROFACET_FRESNEL:
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_GLOSSY);
     default:
         return BSDF_NONE;
     }
@@ -97,16 +97,16 @@ float MicrofacetReflection_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 s
                                     const MicrofacetReflection* mr);
 float MicrofacetReflection_pdf(const vec3 wi, const vec3 wo, const MicrofacetReflection* mr);
 
-typedef struct MicrofacetTransmission_s
+typedef struct MicrofacetFresnel_s
 {
     vec3 color;
     float ior_in, ior_out;
     MicrofacetDistribution distrib;
-}MicrofacetTransmission;
-void MicrofacetTransmission_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetTransmission * mt);
-float MicrofacetTransmission_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
-                                      const MicrofacetTransmission mt);
-float MicrofacetTransmission_pdf(const vec3 wi, const vec3 wo, const MicrofacetTransmission* mt);
+}MicrofacetFresnel;
+void MicrofacetFresnel_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetFresnel * mt);
+float MicrofacetFresnel_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
+                                      const MicrofacetFresnel mt);
+float MicrofacetFresnel_pdf(const vec3 wi, const vec3 wo, const MicrofacetFresnel* mt);
 
 const int MAX_BXDF = 8;
 typedef struct BSDF_s
@@ -136,7 +136,7 @@ void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float io
                                   const vec3 cf_out);
 void BSDF_addMicrofacetReflection(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
                                   const float alphax, const float alphay, const FacetDistribType type);
-void BSDF_addMicrofacetTransmission(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
+void BSDF_addMicrofacetFresnel(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
                                     const float alphax, const float alphay, const FacetDistribType type);
 void BSDF_freeBxDFs(BSDF* bsdf);
 

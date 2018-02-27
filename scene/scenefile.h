@@ -250,12 +250,6 @@ bool parseGlassEntry(Material* mat, Scene* scene, FILE* fp)
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
     if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KR
-    if(!parseColor(glass->kr, fp)){return false;}
-
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KT
-    if(!parseColor(glass->kt, fp)){return false;}
-
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip ROUGHNESS
     if(!getNextTokenInFile(buffer, fp)){return false;}  
     glass->uroughness = atof(buffer);

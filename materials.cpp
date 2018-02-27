@@ -103,41 +103,10 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
     } break;
     case GLASS:
     {
-        /*
-          typedef struct Glass_s
-          {
-          vec3 kr, kt;
-          float ior_in, ior_out;
-          float uroughness, vroughness;
-          }Glass;
-         */
         Glass* glass = (Glass*)mat->data;
-        bool is_perfect_specular = glass->uroughness == 0.0f && glass->vroughness == 0.0f;
-        float remapped_uroughness = BeckmannRoughnessToAlpha(glass->uroughness);
-        float remapped_vroughness = BeckmannRoughnessToAlpha(glass->vroughness);
-        if(!vec3_equal(glass->kr, BLACK))
-        {
-            if(is_perfect_specular)
-            {
-                BSDF_addSpecularReflection(bsdf, glass->kr);
-            }else
-            {
-                BSDF_addMicrofacetReflection(bsdf, glass->kr, glass->ior_in, glass->ior_out,
-                                             remapped_uroughness, remapped_vroughness, BECKMANN);
-            }
-        }
-        if(!vec3_equal(glass->kt, BLACK))
-        {
-            if(is_perfect_specular)
-            {
-                // TODO resolve transmission color issue
-                BSDF_addSpecularTransmission(bsdf, glass->ior_in, glass->ior_out, glass->kr, glass->kr);
-            }else
-            {
-                BSDF_addMicrofacetTransmission(bsdf, glass->kt, glass->ior_in, glass->ior_out,
-                                               remapped_uroughness, remapped_vroughness, BECKMANN);
-            }
-        }
+        vec3 color = {1.0f, 1.0f, 1.0f};
+        BSDF_addMicrofacetFresnel(bsdf, color, glass->ior_in, glass->ior_out, glass->uroughness,
+                                  glass->vroughness, BECKMANN);
     } break;
     }
 }
