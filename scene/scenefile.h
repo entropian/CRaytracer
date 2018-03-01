@@ -259,6 +259,27 @@ bool parseGlassEntry(Material* mat, Scene* scene, FILE* fp)
     return true;    
 }
 
+bool parseMetalEntry(Material* mat, Scene* scene, FILE* fp)
+{
+    Metal* metal = (Metal*)malloc(sizeof(Metal));
+    mat->data = metal;
+    char buffer[128];    
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
+    if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip TYPE
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // get type
+    procMetalType(metal, buffer);
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip ROUGHNESS
+    if(!getNextTokenInFile(buffer, fp)){return false;}  
+    metal->uroughness = atof(buffer);
+    metal->vroughness = metal->uroughness;
+
+    if(!getNextTokenInFile(buffer, fp)){return false;}      
+    return true;        
+}
+
 bool parseEmissiveEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Emissive* emissive = (Emissive*)malloc(sizeof(Emissive));
@@ -309,6 +330,10 @@ bool parseMatEntry(Material* mat, Scene* scene, FILE* fp)
     case GLASS:
     {
         return parseGlassEntry(mat, scene, fp);
+    } break;
+    case METAL:
+    {
+        return parseMetalEntry(mat, scene, fp);
     } break;
     case INVALID_MAT_TYPE:
     {

@@ -75,9 +75,85 @@ float calcFresnelDielectric(const vec3 normal, const vec3 wo, float etaT, float 
     return (r_parl * r_parl + r_perp * r_perp) / 2;
 }
 
-void calcFresnelConductor(vec3 fresnel)
+void calcFresnelConductor(vec3 fresnel, const vec3 normal, const vec3 wo,
+                          const vec3 etaT, const vec3 etaI, const vec3 k)
 {
+/*
+    cosThetaI = Clamp(cosThetaI, -1, 1);
+    Spectrum eta = etat / etai;
+    Spectrum etak = k / etai;
 
+    Float cosThetaI2 = cosThetaI * cosThetaI;
+    Float sinThetaI2 = 1. - cosThetaI2;
+    Spectrum eta2 = eta * eta;
+    Spectrum etak2 = etak * etak;
+
+    Spectrum t0 = eta2 - etak2 - sinThetaI2;
+    Spectrum a2plusb2 = Sqrt(t0 * t0 + 4 * eta2 * etak2);
+    Spectrum t1 = a2plusb2 + cosThetaI2;
+    Spectrum a = Sqrt(0.5f * (a2plusb2 + t0));
+    Spectrum t2 = (Float)2 * cosThetaI * a;
+    Spectrum Rs = (t1 - t2) / (t1 + t2);
+
+    Spectrum t3 = cosThetaI2 * a2plusb2 + sinThetaI2 * sinThetaI2;
+    Spectrum t4 = t2 * sinThetaI2;
+    Spectrum Rp = Rs * (t3 - t4) / (t3 + t4);
+
+    return 0.5 * (Rp + Rs);
+ */
+    float cos_theta_i = vec3_dot(wo, normal);
+    // TEMP
+    /*
+    cos_theta_i = 0.845039606f;
+    vec3 etaI = {1.0f, 1.0f, 1.0f};
+    vec3 etaT = {0.14282006, 0.37414363, 1.43944442};
+    vec3 k = {3.97471833, 2.38065982, 1.59981036};
+    */
+    vec3 eta;
+    vec3_div(eta, etaT, etaI);
+    vec3 etaK;
+    vec3_div(etaK, k, etaI);
+
+    float cos_theta_i_2 = cos_theta_i * cos_theta_i;
+    float sin_theta_i_2 = 1.0f - cos_theta_i_2;
+    vec3 eta2;
+    vec3_mult(eta2, eta, eta);
+    vec3 etaK2;
+    vec3_mult(etaK2, etaK, etaK);
+
+    vec3 t0;
+    vec3_sub(t0, eta2, etaK2);
+    vec3_sub_c(t0, t0, sin_theta_i_2);
+    vec3 a2plusb2, t0_2, eta2_2;
+    vec3_mult(t0_2, t0, t0);
+    vec3_mult(eta2_2, eta2, etaK2);
+    vec3_scale(eta2_2, eta2_2, 4.0f);
+    vec3_add(a2plusb2, t0_2, eta2_2);
+    vec3_sqrt(a2plusb2, a2plusb2);
+    vec3 t1;
+    vec3_add_c(t1, a2plusb2, cos_theta_i_2);
+    vec3 a;
+    vec3_add(a, a2plusb2, t0);
+    vec3_scale(a, a, 0.5f);
+    vec3_sqrt(a, a);
+    vec3 t2;
+    vec3_scale(t2, a, 2.0f * cos_theta_i);
+    vec3 rs, t1_minus_t2, t1_plus_t2;
+    vec3_sub(t1_minus_t2, t1, t2);
+    vec3_add(t1_plus_t2, t1, t2);
+    vec3_div(rs, t1_minus_t2, t1_plus_t2);
+    vec3 t3;
+    vec3_scale(t3, a2plusb2, cos_theta_i_2);
+    vec3_add_c(t3, t3, sin_theta_i_2 * sin_theta_i_2);
+    vec3 t4;
+    vec3_scale(t4, t2, sin_theta_i_2);
+    vec3 rp, t3_minus_t4, t3_plus_t4;
+    vec3_sub(t3_minus_t4, t3, t4);
+    vec3_add(t3_plus_t4, t3, t4);
+    vec3_div(rp, t3_minus_t4, t3_plus_t4);
+    vec3_mult(rp, rp, rs);
+    vec3_add(fresnel, rp, rs);
+    vec3_scale(fresnel, fresnel, 0.5f);
 }
 
 void Lambertian_f(vec3 f, const vec3 wi, const vec3 wo, const Lambertian* l)
@@ -97,7 +173,6 @@ float Lambertian_pdf(const vec3 wi, const vec3 wo)
     //float dot_product = fabs(vec3_dot(wi, normal)) * INV_PI;
     return cosHemispherePdf(wi, wo);
 }
-
 
 float Lambertian_sample_f(vec3 f, vec3 wi,
                          const vec3 wo, const vec2 sample, const Lambertian* l)
@@ -193,44 +268,39 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
 
 void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetReflection* mf)
 {
-    /*
-    Float cosThetaO = AbsCosTheta(wo), cosThetaI = AbsCosTheta(wi);
-    Vector3f wh = wi + wo;
-    // Handle degenerate cases for microfacet reflection
-    if (cosThetaI == 0 || cosThetaO == 0) return Spectrum(0.);
-    if (wh.x == 0 && wh.y == 0 && wh.z == 0) return Spectrum(0.);
-    wh = Normalize(wh);
-    Spectrum F = fresnel->Evaluate(Dot(wi, wh));
-    return R * distribution->D(wh) * distribution->G(wo, wi) * F /
-           (4 * cosThetaI * cosThetaO);
-     */
     float cos_theta_o = absCosTheta(wo), cos_theta_i = absCosTheta(wi);
     vec3 wh;
     vec3_add(wh, wi, wo);
     if(cos_theta_i == 0.0f || cos_theta_o == 0.0f) return;
     if(wh[0] == 0.0f && wh[1] == 0.0f && wh[2] == 0.0f) return;
     vec3_normalize(wh, wh);
-    float fresnel_reflectance = calcFresnelDielectric(wh, wi, mf->ior_in, mf->ior_out);
+    vec3 fresnel_reflectance;
+    if(!mf->is_metal)
+    {
+        // NOTE not sure why it's 1-kr and not just kr
+        float kr = 1.0f - calcFresnelDielectric(wh, wi, mf->ior_in, mf->ior_out);
+        vec3_assign(fresnel_reflectance, kr, kr, kr);
+    }else
+    {
+        calcFresnelConductor(fresnel_reflectance, wh, wi, mf->etaT, mf->etaI, mf->k);
+    }
+    /*
+      // Old
     float scale_factor = MicrofacetDistribution_D(wh, &(mf->distrib)) *
         MicrofacetDistribution_G(wo, wi, &(mf->distrib)) * (1.0f - fresnel_reflectance) /
         (4.0f * cos_theta_i * cos_theta_o);
+        vec3_scale(f, mf->color, scale_factor);
+    */
+    float scale_factor = MicrofacetDistribution_D(wh, &(mf->distrib)) *
+        MicrofacetDistribution_G(wo, wi, &(mf->distrib)) /
+        (4.0f * cos_theta_i * cos_theta_o);    
     vec3_scale(f, mf->color, scale_factor);
+    vec3_mult(f, f, fresnel_reflectance);
 }
 
 float MicrofacetReflection_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
                                     const MicrofacetReflection* mr)
 {
-    /*
-    // Sample microfacet orientation $\wh$ and reflected direction $\wi$
-    if (wo.z == 0) return 0.;
-    Vector3f wh = distribution->Sample_wh(wo, u);
-    *wi = Reflect(wo, wh);
-    if (!SameHemisphere(wo, *wi)) return Spectrum(0.f);
-
-    // Compute PDF of _wi_ for microfacet reflection
-    *pdf = distribution->Pdf(wo, wh) / (4 * Dot(wo, wh));
-    return f(wo, *wi);
-     */
     if(wo[2] == 0.0f) return 0.0f;
     vec3 wh;
     MicrofacetDistribution_sample_wh(wh, wo, sample, &(mr->distrib));
@@ -240,8 +310,7 @@ float MicrofacetReflection_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 s
     if(!sameHemisphere(wo, wi))
     {
         return 0.0f;
-    }
-    
+    }    
     MicrofacetReflection_f(f, wi, wo, mr);
     return MicrofacetDistribution_pdf(wo, wh, &(mr->distrib)) / (4.0f * vec3_dot(wo, wh));
 }
@@ -255,30 +324,9 @@ float MicrofacetReflection_pdf(const vec3 wi, const vec3 wo, const MicrofacetRef
     return MicrofacetDistribution_pdf(wo, wh, &(mr->distrib)) / (4.0f * vec3_dot(wo, wh));    
 }
 
+// TODO name doesn't quite make sense
 void MicrofacetFresnel_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetFresnel * mt)
 {
-    /*
-    if (SameHemisphere(wo, wi)) return 0;  // transmission only
-
-    Float cosThetaO = CosTheta(wo);
-    Float cosThetaI = CosTheta(wi);
-    if (cosThetaI == 0 || cosThetaO == 0) return Spectrum(0);
-
-    // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-    Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB);
-    Vector3f wh = Normalize(wo + wi * eta);
-    if (wh.z < 0) wh = -wh;
-
-    Spectrum F = fresnel.Evaluate(Dot(wo, wh));
-
-    Float sqrtDenom = Dot(wo, wh) + eta * Dot(wi, wh);
-    Float factor = (mode == TransportMode::Radiance) ? (1 / eta) : 1;
-
-    return (Spectrum(1.f) - F) * T *
-           std::abs(distribution->D(wh) * distribution->G(wo, wi) * eta * eta *
-                    AbsDot(wi, wh) * AbsDot(wo, wh) * factor * factor /
-                    (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom));
-     */
     if(sameHemisphere(wo, wi)) return;
 
     float cos_theta_o = cosTheta(wo);
@@ -301,13 +349,6 @@ void MicrofacetFresnel_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetF
     float denom = cos_theta_i * cos_theta_o * sqrt_denom * sqrt_denom;
     const MicrofacetDistribution* distrib = &(mt->distrib);
     float factor = 1.0f / eta;
-    /*
-      // Old and wrong
-    float numerator = (1.0f - fresnel_reflectance) * fabs(MicrofacetDistribution_D(wh, distrib)) *
-    MicrofacetDistribution_G(wo, wi, distrib) * eta * eta * fabs(vec3_dot(wi, wh)) * fabs(vec3_dot(wo, wh))
-    * factor * factor;
-        vec3_scale(f, mt->color, 1.0f - fresnel_reflectance * fabs(numerator / denom));        
-    */
     float numerator = MicrofacetDistribution_D(wh, distrib) *
         MicrofacetDistribution_G(wo, wi, distrib) * eta * eta * fabs(vec3_dot(wi, wh)) * fabs(vec3_dot(wo, wh))
         * factor * factor;
@@ -636,12 +677,6 @@ void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float io
     bsdf->bxdfs[bsdf->num_bxdf] = spec_trans;
     bsdf->types[bsdf->num_bxdf] = SPECULAR_TRANSMISSION;
     bsdf->num_bxdf++;
-
-    /*
-    vec3 color = {1.0f, 1.0f, 1.0f};
-    BSDF_addMicrofacetFresnel(bsdf, color, 1.5f, 1.0f,
-                                   0.1f, 0.1f, BECKMANN);
-    */
 }
 
 void BSDF_addMicrofacetReflection(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
@@ -654,6 +689,25 @@ void BSDF_addMicrofacetReflection(BSDF* bsdf, const vec3 color, const float ior_
     mr->ior_in = ior_in;
     mr->ior_out = ior_out;
     mr->distrib.type = type;
+    mr->is_metal = false;
+    bsdf->bxdfs[bsdf->num_bxdf] = mr;
+    bsdf->types[bsdf->num_bxdf] = MICROFACET_REFLECTION;
+    bsdf->num_bxdf++;
+}
+
+void BSDF_addMicrofacetReflectionMetal(BSDF* bsdf, const vec3 color, const vec3 etaT, const vec3 etaI,
+                                       const vec3 k, const float alphax, const float alphay,
+                                       const FacetDistribType type)
+{
+    MicrofacetReflection* mr = (MicrofacetReflection*)allocateBxDF();
+    vec3_copy(mr->color, color);
+    mr->distrib.alphax = alphax;
+    mr->distrib.alphay = alphay;
+    vec3_copy(mr->etaT, etaT);
+    vec3_copy(mr->etaI, etaI);
+    vec3_copy(mr->k, k);
+    mr->distrib.type = type;
+    mr->is_metal = true;
     bsdf->bxdfs[bsdf->num_bxdf] = mr;
     bsdf->types[bsdf->num_bxdf] = MICROFACET_REFLECTION;
     bsdf->num_bxdf++;

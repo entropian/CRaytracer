@@ -14,6 +14,7 @@ enum MatType
     EMISSIVE = 8,
     PLASTIC = 16,
     GLASS = 32,
+    METAL = 64,
 };
 
 typedef struct Material_s
@@ -62,6 +63,15 @@ typedef struct Glass_s
     float ior_in, ior_out;
     float uroughness, vroughness;
 }Glass;
+
+typedef struct Metal_s
+{
+    vec3 eta;
+    vec3 k;
+    float uroughness, vroughness;
+}Metal;
+
+void procMetalType(Metal* metal, const char* type);
 
 const unsigned int DIFFUSE_MAP_INDEX = 0;
 const unsigned int NORMAL_MAP_INDEX = 1;

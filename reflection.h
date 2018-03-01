@@ -89,6 +89,10 @@ typedef struct MicrofacetReflection_s
 {
     vec3 color;
     float ior_in, ior_out;
+
+    bool is_metal;
+    vec3 k, etaI, etaT; // Used for fresnel if material is metallic
+    
     MicrofacetDistribution distrib;
     // TODO: add enum to signify whether to use fresnel dielectric or conductor
 }MicrofacetReflection;
@@ -136,6 +140,8 @@ void BSDF_addSpecularTransmission(BSDF* bsdf, const float ior_in, const float io
                                   const vec3 cf_out);
 void BSDF_addMicrofacetReflection(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
                                   const float alphax, const float alphay, const FacetDistribType type);
+void BSDF_addMicrofacetReflectionMetal(BSDF* bsdf, const vec3 color, const vec3 etaT, const vec3 etaI, const vec3 k,
+                                       const float alphax, const float alphay, const FacetDistribType type);
 void BSDF_addMicrofacetFresnel(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
                                     const float alphax, const float alphay, const FacetDistribType type);
 void BSDF_freeBxDFs(BSDF* bsdf);

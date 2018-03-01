@@ -41,6 +41,13 @@ inline void vec3FromVec4(vec3 r, const vec4 a)
     r[2] = a[2];
 }
 
+inline void vec3_add_c(vec3 r, const vec3 a, const float c)
+{
+    r[0] = a[0] + c;
+    r[1] = a[1] + c;
+    r[2] = a[2] + c;
+}
+
 inline void vec2_add(vec2 r, vec2 a, vec2 b)
 {
     r[0] = a[0] + b[0];    
@@ -60,6 +67,13 @@ inline void vec4_add(vec4 r, const vec4 a, const vec4 b)
     r[1] = a[1] + b[1];    
     r[2] = a[2] + b[2];
     r[3] = a[3] + b[3];        
+}
+
+inline void vec3_sub_c(vec3 r, const vec3 a, const float c)
+{
+    r[0] = a[0] - c;
+    r[1] = a[1] - c;
+    r[2] = a[2] - c;
 }
 
 inline void vec2_sub(vec2 r, const vec2 a, const vec2 b)
@@ -123,6 +137,13 @@ inline void vec4_mult(vec4 r, const vec4 a, const vec4 b)
     r[1] = a[1] * b[1];
     r[2] = a[2] * b[2];
     r[3] = a[3] * b[3];    
+}
+
+inline void vec3_div(vec3 r, const vec3 a, const vec3 b)
+{
+    r[0] = a[0] / b[0];
+    r[1] = a[1] / b[1];
+    r[2] = a[2] / b[2];
 }
 
 inline float vec2_dot(const vec2 a, const vec2 b)
@@ -341,4 +362,11 @@ inline bool vec3_less(const vec3 a, const vec3 b)
         return true;
     }
     return false;
+}
+
+inline void vec3_sqrt(vec3 r, const vec3 a)
+{
+    r[0] = sqrtf(a[0]);
+    r[1] = sqrtf(a[1]);
+    r[2] = sqrtf(a[2]);
 }

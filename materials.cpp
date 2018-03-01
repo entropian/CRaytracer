@@ -2,6 +2,11 @@
 #include "util/constants.h"
 #include <string.h>
 
+// TODO not sure if really copper
+const vec3 COPPER_N = {0.19999069, 0.92208463, 1.09987593}; 
+const vec3 GOLD_K = {3.90463543, 2.44763327, 2.13765264};
+const vec3 GOLD_ETA = {0.14282006, 0.37414363, 1.43944442};
+
 MatType getMatTypeFromString(const char* str)
 {
     if(strcmp(str, "MATTE") == 0)
@@ -22,12 +27,14 @@ MatType getMatTypeFromString(const char* str)
     }else if(strcmp(str, "GLASS") == 0)
     {
         return GLASS;
+    }else if(strcmp(str, "METAL") == 0)
+    {
+        return METAL;
     }else
     {
         return INVALID_MAT_TYPE;
     }
 }
-
 
 void Matte_getDiffuseColor(vec3 color, const Matte* matte, const vec2 uv)
 {
@@ -50,6 +57,18 @@ void Matte_getNormalMapColor(vec3 color, const Matte* matte, const vec2 uv)
 void Mirror_getColor(vec3 color, const Mirror* mirror)
 {
     vec3_copy(color, mirror->color);
+}
+
+void procMetalType(Metal* metal, const char* type)
+{
+    if(strcmp(type, "GOLD") == 0)
+    {
+        vec3_copy(metal->eta, GOLD_ETA);
+        vec3_copy(metal->k, GOLD_K);
+    }else
+    {
+        fprintf(stderr, "Invalid metal type.\n");
+    }
 }
 
 void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
@@ -107,6 +126,14 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
         vec3 color = {1.0f, 1.0f, 1.0f};
         BSDF_addMicrofacetFresnel(bsdf, color, glass->ior_in, glass->ior_out, glass->uroughness,
                                   glass->vroughness, BECKMANN);
+    } break;
+    case METAL:
+    {
+        Metal* metal = (Metal*)mat->data;
+        vec3 color = {1.0f, 1.0f, 1.0f};
+        vec3 etaI = {1.0f, 1.0f, 1.0f};
+        BSDF_addMicrofacetReflectionMetal(bsdf, color, metal->eta, etaI, metal->k, metal->uroughness,
+                                          metal->vroughness, BECKMANN);
     } break;
     }
 }
