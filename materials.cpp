@@ -2,10 +2,22 @@
 #include "util/constants.h"
 #include <string.h>
 
-// TODO not sure if really copper
-const vec3 COPPER_N = {0.19999069, 0.92208463, 1.09987593}; 
-const vec3 GOLD_K = {3.90463543, 2.44763327, 2.13765264};
+// Metal properties
+const vec3 COPPER_N = {0.19999069, 0.92208463, 1.09987593};
 const vec3 GOLD_ETA = {0.14282006, 0.37414363, 1.43944442};
+const vec3 GOLD_K = {3.90463543, 2.44763327, 2.13765264};
+const vec3 SILVER_ETA = {0.154935181, 0.116475478, 0.138087392};
+const vec3 SILVER_K = {4.81810093, 3.11561656, 2.1424017};
+const vec3 BERYLLIUM_ETA = {4.17617416, 3.1783011, 2.77819276};
+const vec3 BERYLLIUM_K = {3.82729554, 3.00373626, 2.86292768};
+const vec3 CHROMIUM_ETA = {4.36040831, 2.9105196, 1.65118635};
+const vec3 CHROMIUM_K = {5.19538164, 4.22238398, 3.74699736};
+const vec3 CESIUM_ETA = {2.14034843, 1.69870293, 1.65889668};
+const vec3 CESIUM_K = {0.0f, 0.0f, 0.0f};
+const vec3 COPPER_ETA = {0.19999069, 0.92208463, 1.09987593};
+const vec3 COPPER_K = {3.90463543, 2.44763327, 2.13765264};
+const vec3 MERCURY_ETA = {2.39383841, 1.43696785, 0.907622635};
+const vec3 MERCURY_K = {6.31419611, 4.36266136, 3.41453838};
 
 MatType getMatTypeFromString(const char* str)
 {
@@ -65,6 +77,31 @@ void procMetalType(Metal* metal, const char* type)
     {
         vec3_copy(metal->eta, GOLD_ETA);
         vec3_copy(metal->k, GOLD_K);
+    }else if(strcmp(type, "SILVER") == 0)
+    {
+        vec3_copy(metal->eta, SILVER_ETA);
+        vec3_copy(metal->k, SILVER_K);
+    }else if(strcmp(type, "BERYLLIUM") == 0)
+    {
+        vec3_copy(metal->eta, BERYLLIUM_ETA);
+        vec3_copy(metal->k, BERYLLIUM_K);
+    }else if(strcmp(type, "CHROMIUM") == 0)
+    {
+        vec3_copy(metal->eta, CHROMIUM_ETA);
+        vec3_copy(metal->k, CHROMIUM_K);
+    }else if(strcmp(type, "CESIUM") == 0)
+    {
+        vec3_copy(metal->eta, CESIUM_ETA);
+        vec3_copy(metal->k, CESIUM_K);
+    }else if(strcmp(type, "COPPER") == 0)
+    {
+        vec3_copy(metal->eta, COPPER_ETA);
+        vec3_copy(metal->k, COPPER_K);
+
+    }else if(strcmp(type, "MERCURY") == 0)
+    {
+        vec3_copy(metal->eta, MERCURY_ETA);
+        vec3_copy(metal->k, MERCURY_K);                
     }else
     {
         fprintf(stderr, "Invalid metal type.\n");
