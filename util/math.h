@@ -89,8 +89,21 @@ inline float lerp(const float x, const float a, const float b)
 }
 
 inline void sphericalDirection(vec3 out, float sin_theta, float cos_theta, float phi) {
-    vec3_assign(out, sin_theta * cosf(phi), sin_theta * sinf(phi),
-                cos_theta);
+    vec3_assign(out, sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta);
+}
+
+inline void cartesianToSpherical(vec2 out, const vec3 in)
+{
+    out[0] = atanf(in[2] / in[0]);
+    if(out[0] < 0.0f)
+        out[0] += PI;
+    out[1] = acosf(in[1]);
+}
+
+inline void sphericalToUV(vec2 uv, const vec2 spherical)
+{
+    uv[0] = spherical[0] / (2.0f * PI);
+    uv[1] = 1.0f - spherical[1] / PI;
 }
 
 __m128 fourKnotSplineSSE(__m128* x, __m128* k0, __m128* k1, __m128* k2, __m128* k3);
