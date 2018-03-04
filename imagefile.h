@@ -2,6 +2,36 @@
 #include <stdio.h>
 #include "util/util.h"
 
+// EXR
+#include "/usr/include/OpenEXR/ImfRgba.h"
+#include "/usr/include/OpenEXR/ImfRgbaFile.h"
+#include "/usr/include/OpenEXR/ImfArray.h"
+#include "/usr/include/OpenEXR/ImathBox.h"
+
+void readRgba1(const char file_name[], float** data, int* width, int* height)
+{
+    Imf::RgbaInputFile file(file_name);
+    Imath_2_2::Box2i dw = file.dataWindow();
+
+    *width = dw.max.x - dw.min.x + 1;
+    *height = dw.max.y - dw.min.y + 1;
+    Imf::Rgba* pixels;
+    pixels = (Imf::Rgba*)malloc(sizeof(Imf::Rgba) * *width * *height);
+
+    file.setFrameBuffer(&pixels[0] - dw.min.x - dw.min.y * *width, 1, *width);
+    file.readPixels(dw.min.y, dw.max.y);
+
+    int num_pixels = *width * *height;
+    float* floats = (float*)malloc(sizeof(float) * num_pixels * 3);
+    for(int i = 0; i < num_pixels; i++)
+    {
+        floats[i*3] = pixels[i].r;
+        floats[i*3 + 1] = pixels[i].g;
+        floats[i*3 + 2] = pixels[i].b;
+    }
+    *data = floats;
+}
+
 int PPM_write(const char *file_name, const unsigned char *image, const int image_size, 
 			   const int width, const int height)
 {
