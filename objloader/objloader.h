@@ -213,6 +213,8 @@ static VertexIndex OBJParseFaceTriple(const char** str)
 
     if((*str)[0] != '/') // Only positions
     {
+        vi.vn_idx = 0;
+        vi.vt_idx = 0;
         return vi;
     }
     (*str)++;
@@ -221,6 +223,7 @@ static VertexIndex OBJParseFaceTriple(const char** str)
     {
         (*str)++;
         vi.vn_idx = atoi(*str);
+        vi.vt_idx = 0;
         *str += strcspn(*str, "/ \t");        
         return vi;
     }
@@ -229,6 +232,7 @@ static VertexIndex OBJParseFaceTriple(const char** str)
     *str += strcspn(*str, "/ \t");
     if((*str)[0] != '/')    // No normal -- v/vt 
     {
+        vi.vn_idx = 0;
         return vi;
     }
     (*str)++;

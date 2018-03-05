@@ -69,8 +69,17 @@ bool getTexColor(vec3 color_out, const Texture* texture, const vec2 texcoord)
     }
     v = v % texture->height;
 
-    int row_len = texture->width * 3; // NOTE: is 3 gonna be okay?
-    unsigned char* texel_ptr = texture->data + v * row_len + u * 3;
-    vec3_assign(color_out, texel_ptr[0]/255.0f, texel_ptr[1]/255.0f, texel_ptr[2]/255.0f);
+
+    if(texture->is_float)
+    {
+        int row_len = texture->width * texture->comp * sizeof(float); // NOTE: is 3 gonna be okay?
+        float* texel_ptr = (float*)(texture->data + v * row_len + u * texture->comp * sizeof(float));
+        vec3_assign(color_out, texel_ptr[0]/255.0f, texel_ptr[1]/255.0f, texel_ptr[2]/255.0f);        
+    }else
+    {
+        int row_len = texture->width * texture->comp; // NOTE: is 3 gonna be okay?
+        unsigned char* texel_ptr = texture->data + v * row_len + u * texture->comp;
+        vec3_assign(color_out, texel_ptr[0]/255.0f, texel_ptr[1]/255.0f, texel_ptr[2]/255.0f);
+    }
     return true;
 }

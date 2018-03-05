@@ -8,6 +8,7 @@ typedef struct Texture_s
     int height;
     int comp;
     unsigned char* data;
+    bool is_float;
     //char name[MAX_NAME_LENGTH];
 }Texture;
 

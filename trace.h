@@ -240,7 +240,8 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
         vec3_negate(sample_normal, h_sample);
         vec3_copy(wi, h_sample);
         light_pdf = fabs(vec3_dot(h_sample, sr->normal)) * INV_PI;
-        vec3_scale(Li, env_light->color, env_light->intensity);
+        //vec3_scale(Li, env_light->color, env_light->intensity);
+        getEnvLightIncRadiance(Li, wi, env_light);
     } break;
     default:        
         printf("Invalid light type.\n");

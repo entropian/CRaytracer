@@ -49,7 +49,7 @@ typedef struct AreaLight_s
 enum EnvLightType
 {
     CONSTANT,
-    CUBEMAP
+    TEXTURE
 };
 
 typedef struct EnvLight_s
@@ -58,15 +58,7 @@ typedef struct EnvLight_s
     float world_radius;
     Samples3D* samples3D;
     vec3 color;
-    /*
-      0 -z
-      1 z
-      2 -x
-      3 x
-      4 -y
-      5 y
-     */
-    Texture cubemap[6];
+    Texture env_map;
     EnvLightType type;
 }EnvLight;
 

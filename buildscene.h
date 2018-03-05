@@ -20,6 +20,7 @@
 #include "shading.h"
 #include "objloader/objloader.h"
 #include "mesh.h"
+#include "imagefile.h"
 
 //#define CORNELL_BOX
 
@@ -438,9 +439,32 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 getNextTokenInFile(buffer, fp); // Skip INTENSITY
                 getNextTokenInFile(buffer, fp);
                 env_light->intensity = atof(buffer);                
-            }else if(strcmp(buffer, "CUBEMAP") == 0)
+            }else if(strcmp(buffer, "TEXTURE") == 0)
             {
-                env_light->type = CUBEMAP;
+                getNextTokenInFile(buffer, fp); // Skip COLOR
+                getNextTokenInFile(buffer, fp);
+                // check extension
+                char extension[MAX_NAME_LENGTH];
+                int end_index, start_index;
+                for(end_index = 0; buffer[end_index] != '\0'; end_index++){}
+                for(start_index = end_index; buffer[start_index] != '.'; start_index--){}
+                start_index++;
+                strncpy(extension, buffer+start_index, end_index - start_index);
+                if(strcmp(extension, "exr") == 0)
+                {
+                    env_light->type = TEXTURE;
+                    Texture* env_map = &(env_light->env_map);
+                    env_map->is_float = true;
+                    readRgba1(buffer, (float**)&(env_map->data), &(env_map->width), &(env_map->height));
+                    env_map->comp = 3;
+                }else
+                {
+                    env_light->type = CONSTANT;
+                    vec3_copy(env_light->color, WHITE);
+                }
+                getNextTokenInFile(buffer, fp); // Skip INTENSITY
+                getNextTokenInFile(buffer, fp);
+                env_light->intensity = atof(buffer);
             }
             if(scene->lights.env_light)
             {

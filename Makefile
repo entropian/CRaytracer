@@ -1,5 +1,5 @@
 CC=g++
-LFLAGS = -lGL -lGLEW -lglfw -lGLU -lpthread
+LFLAGS = -lGL -lGLEW -lglfw -lGLU -lpthread -lprofiler -lIlmImf -lHalf
 CFLAGS = -std=c++11 -c 
 
 OS = $(shell uname)

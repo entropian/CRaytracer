@@ -8,7 +8,7 @@
 #include "/usr/include/OpenEXR/ImfArray.h"
 #include "/usr/include/OpenEXR/ImathBox.h"
 
-void readRgba1(const char file_name[], float** data, int* width, int* height)
+static void readRgba1(const char file_name[], float** data, int* width, int* height)
 {
     Imf::RgbaInputFile file(file_name);
     Imath_2_2::Box2i dw = file.dataWindow();
@@ -32,7 +32,7 @@ void readRgba1(const char file_name[], float** data, int* width, int* height)
     *data = floats;
 }
 
-int PPM_write(const char *file_name, const unsigned char *image, const int image_size, 
+static int PPM_write(const char *file_name, const unsigned char *image, const int image_size, 
 			   const int width, const int height)
 {
 	int num_pixel = width * height;	
@@ -55,7 +55,7 @@ int PPM_write(const char *file_name, const unsigned char *image, const int image
 	return 1;
 }
 
-int PPM_read(unsigned char** image, int* image_size, int* width, int* height, const char* file_name)
+static int PPM_read(unsigned char** image, int* image_size, int* width, int* height, const char* file_name)
 {
 	FILE *fp;
     openFile(&fp, file_name, "r");
