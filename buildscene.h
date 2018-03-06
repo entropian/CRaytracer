@@ -124,13 +124,18 @@ void calcTangentVec(Mesh* mesh)
             vec2_assign(uv0, mesh->texcoords[i0*2], mesh->texcoords[i0*2 + 1]);
             vec2_assign(uv1, mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]);
             vec2_assign(uv2, mesh->texcoords[i2*2], mesh->texcoords[i2*2 + 1]);
-            //vec2 uv1 = {mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]};
-            //vec2 uv2 = {mesh->texcoords[i2*2], mesh->texcoords[i2*2 + 1]};
         }else
         {
+            /*
+            vec2_assign(uv0, mesh->texcoords[i0*2], mesh->texcoords[i0*2 + 1]);
+            vec2_assign(uv1, mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]);
+            vec2_assign(uv2, mesh->texcoords[i2*2], mesh->texcoords[i2*2 + 1]);
+            */
+
             vec2_assign(uv0, 0.0f, 0.0f);
             vec2_assign(uv1, 1.0f, 0.0f);
             vec2_assign(uv2, 1.0f, 1.0f);
+
         }
         
         vec3 q0, q1;

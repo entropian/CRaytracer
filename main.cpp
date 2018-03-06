@@ -309,7 +309,7 @@ int main(int argc, char** argv)
     int num_threads = 4;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
-    int patches[128];
+    int patches[129];
     for(int i = 0; i < num_patches + 1; i++)
     {
         patches[i] = i * num_pixels_per_patch;
@@ -322,7 +322,7 @@ int main(int argc, char** argv)
     end_time = start_time;
     int prev_percent = 0;
 
-//#define MULTITHREAD
+#define MULTITHREAD
 #ifdef MULTITHREAD
     JobQueue job_queue;
     JobQueue_init(&job_queue);
@@ -354,33 +354,6 @@ int main(int argc, char** argv)
         }
     }
 #else
-    // EXR test
-    const char* exr_file_name = "pisa_latlong.exr";
-    int exr_width, exr_height;
-    float* data;
-    readRgba1(exr_file_name, &data, &exr_width, &exr_height);
-
-    int max = 0;
-    for(int i = 0; i < exr_width * exr_height * 3; i++)
-    {
-        if(data[i] > max)
-            max = data[i];
-    }
-    
-    int size = exr_width * exr_height * 3;
-    unsigned char* exr_image = (unsigned char*)malloc(size);
-    for(int i = 0; i < size; i++)
-    {
-        exr_image[i] = (unsigned char)(data[i] / max * 255);
-    }
-    Texture exr_tex;
-    exr_tex.comp = 3;
-    exr_tex.width = exr_width;
-    exr_tex.height = exr_height;
-    //exr_tex.data = exr_image;
-    exr_tex.data = (unsigned char*)data;
-    exr_tex.is_float = true;
-    
     Sampler sampler;
     Sampler_create(&sampler);
     for(unsigned int p = 0; p < params.num_samples; p++)
@@ -399,13 +372,6 @@ int main(int argc, char** argv)
             Sampler_getSample(sample, &sampler);
             calcCameraRay(&ray, imageplane_coord, camera, sample);
 
-            // EXR test
-            vec2 spherical;
-            cartesianToSpherical(spherical, ray.direction);
-            vec2 uv;
-            sphericalToUV(uv, spherical);
-            vec3 tex_color;
-            getTexColor(tex_color, &exr_tex, uv);
 
             TraceArgs trace_args;
             trace_args.objects = &(scene.objects);
@@ -422,8 +388,6 @@ int main(int argc, char** argv)
             {
                 trace(radiance, params.max_depth, ray, &trace_args);
             }
-
-            //vec3_copy(radiance, tex_color);
             vec3_add(color, color, radiance);
             
             color_buffer[i*3] += color[0];

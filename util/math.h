@@ -95,8 +95,7 @@ inline void sphericalDirection(vec3 out, float sin_theta, float cos_theta, float
 inline void cartesianToSpherical(vec2 out, const vec3 in)
 {
     out[0] = atan2f(in[2], in[0]);
-    if(out[0] < 0.0f)
-        out[0] += PI;
+    out[0] += PI;
     out[1] = acosf(in[1]);
 }
 

@@ -3,9 +3,9 @@ window_width  960
 window_height  960
 image_width  480
 image_height 480
-num_samples  36
+num_samples  196
 num_sample_sets 83
-max_depth  8
+max_depth  10
 trace_type PATHTRACE
 accel_struct BVH
 num_photons 1000000

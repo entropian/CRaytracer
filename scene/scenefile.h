@@ -243,7 +243,7 @@ bool parsePlasticEntry(Material* mat, Scene* scene, FILE* fp)
 bool parseGlassEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Glass* glass = (Glass*)malloc(sizeof(Glass));
-    glass->ior_in = 1.5f;
+    glass->ior_in = 1.3f;
     glass->ior_out = 1.0f;
     mat->data = glass;
     char buffer[128];
