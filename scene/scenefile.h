@@ -230,7 +230,7 @@ bool parsePlasticEntry(Material* mat, Scene* scene, FILE* fp)
     if(!parseColor(plastic->kd, fp)){return false;}
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KS
-    if(!parseColor(plastic->ks, fp)){return false;}    
+    if(!parseColor(plastic->ks, fp)){return false;}
 
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip ROUGHNESS
     if(!getNextTokenInFile(buffer, fp)){return false;}  
@@ -243,7 +243,7 @@ bool parsePlasticEntry(Material* mat, Scene* scene, FILE* fp)
 bool parseGlassEntry(Material* mat, Scene* scene, FILE* fp)
 {
     Glass* glass = (Glass*)malloc(sizeof(Glass));
-    glass->ior_in = 1.3f;
+    glass->ior_in = 1.5f;
     glass->ior_out = 1.0f;
     mat->data = glass;
     char buffer[128];

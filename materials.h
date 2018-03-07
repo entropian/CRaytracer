@@ -56,6 +56,7 @@ typedef struct Platic_s
     vec3 kd;
     vec3 ks;
     float roughness;
+    
 }Plastic;
 
 typedef struct Glass_s

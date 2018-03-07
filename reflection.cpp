@@ -236,8 +236,9 @@ float SpecularReflection_sample_f(vec3 f, vec3 wi,
 {
     // Assume in tangent space
     vec3_assign(wi, -wo[0], -wo[1], wo[2]);
-    vec3_copy(f, spec_ref->cr);
-    return fabs(cosTheta(wi));
+    vec3_scale(f, spec_ref->cr, 1.0f / fabs(cosTheta(wi)));
+    //return fabs(cosTheta(wi));
+    return 1.0f;
 }
 
 float SpecularTransmission_sample_f(vec3 f, vec3 wi,
@@ -249,7 +250,10 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
     if(rand_float <= kr)
     {
         vec3_assign(wi, -wo[0], -wo[1], wo[2]);
-        vec3_copy(f, WHITE);
+        //vec3_copy(f, WHITE);
+        vec3_scale(f, WHITE, kr / fabs(cosTheta(wi)));
+        //vec3_scale(f, WHITE, 1.0f / fabs(cosTheta(wi)));
+        return kr;
     }else
     {
         vec3 old_wi, new_wi;
@@ -261,9 +265,13 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
         //printVec3WithText("old_wi", old_wi);
         //printVec3WithText("new_wi", new_wi);
         //exit(0);
-        vec3_scale(f, WHITE, (eta*eta));
+        //vec3_scale(f, WHITE, (eta*eta));
+        vec3_scale(f, WHITE, 1.0f - kr);
+        //vec3_scale(f, WHITE, 1.0f);
+        vec3_scale(f, f, (eta*eta) / fabs(cosTheta(wi)));
+        return 1.0f - kr;
     }
-    return fabs(cosTheta(wi));
+    //return 1.0f / fabs(cosTheta(wi));
 }
 
 void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetReflection* mf)
@@ -684,8 +692,10 @@ void BSDF_addMicrofacetReflection(BSDF* bsdf, const vec3 color, const float ior_
 {
     MicrofacetReflection* mr = (MicrofacetReflection*)allocateBxDF();
     vec3_copy(mr->color, color);
-    mr->distrib.alphax = alphax;
-    mr->distrib.alphay = alphay;
+    //mr->distrib.alphax = alphax;
+    //mr->distrib.alphay = alphay;
+    mr->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
+    mr->distrib.alphay = BeckmannRoughnessToAlpha(alphay);
     mr->ior_in = ior_in;
     mr->ior_out = ior_out;
     mr->distrib.type = type;
@@ -701,8 +711,8 @@ void BSDF_addMicrofacetReflectionMetal(BSDF* bsdf, const vec3 color, const vec3 
 {
     MicrofacetReflection* mr = (MicrofacetReflection*)allocateBxDF();
     vec3_copy(mr->color, color);
-    mr->distrib.alphax = alphax;
-    mr->distrib.alphay = alphay;
+    mr->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
+    mr->distrib.alphay = BeckmannRoughnessToAlpha(alphay);
     vec3_copy(mr->etaT, etaT);
     vec3_copy(mr->etaI, etaI);
     vec3_copy(mr->k, k);

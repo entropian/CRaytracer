@@ -142,7 +142,6 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
     case PLASTIC:
     {
         Plastic* plastic = (Plastic*)mat->data;
-        // TODO: add texture for matte
         if(!vec3_equal(plastic->kd, BLACK))
             BSDF_addLambertian(bsdf, plastic->kd);
         if(!vec3_equal(plastic->ks, BLACK))
@@ -152,6 +151,7 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
                 BSDF_addSpecularReflection(bsdf, plastic->ks);
             }else
             {
+                //printf("roughness %f\n", plastic->roughness);
                 BSDF_addMicrofacetReflection(bsdf, plastic->ks, 1.5f, 1.0f,
                                              plastic->roughness, plastic->roughness, BECKMANN);
             }
