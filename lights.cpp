@@ -337,7 +337,8 @@ void getEnvLightIncRadiance(vec3 r, const vec3 dir, EnvLight* env_light)
 
 void EnvLight_destroy(EnvLight* env_light)
 {
-    env_light->intensity = 0.0f;
+    if(env_light)
+        env_light->intensity = 0.0f;
 }
 
 float AreaLight_sample_Li(vec3 Li, vec3 wi, float* t,

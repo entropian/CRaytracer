@@ -305,11 +305,12 @@ int main(int argc, char** argv)
     thread_data.params = &params;
     thread_data.trace = trace;
 
-    int num_patches = 128;
+    //int num_patches = 128;
+    int num_patches = 256;
     int num_threads = 4;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
-    int patches[129];
+    int patches[257];
     for(int i = 0; i < num_patches + 1; i++)
     {
         patches[i] = i * num_pixels_per_patch;

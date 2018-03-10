@@ -237,7 +237,6 @@ float SpecularReflection_sample_f(vec3 f, vec3 wi,
     // Assume in tangent space
     vec3_assign(wi, -wo[0], -wo[1], wo[2]);
     vec3_scale(f, spec_ref->cr, 1.0f / fabs(cosTheta(wi)));
-    //return fabs(cosTheta(wi));
     return 1.0f;
 }
 
@@ -250,28 +249,24 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
     if(rand_float <= kr)
     {
         vec3_assign(wi, -wo[0], -wo[1], wo[2]);
-        //vec3_copy(f, WHITE);
         vec3_scale(f, WHITE, kr / fabs(cosTheta(wi)));
         //vec3_scale(f, WHITE, 1.0f / fabs(cosTheta(wi)));
         return kr;
     }else
     {
-        vec3 old_wi, new_wi;
-        //float eta = calcTransmitDir(wi, normal, wo, spec_trans->ior_in, spec_trans->ior_out);
-        //float ndotwi = fabs(cosTheta(wi));
-        float eta = vec3_dot(normal, wo) > 0.0f ? (spec_trans->ior_out / spec_trans->ior_in) :
-            (spec_trans->ior_in / spec_trans->ior_out);
-        refract(wi, normal, wo, eta);
-        //printVec3WithText("old_wi", old_wi);
-        //printVec3WithText("new_wi", new_wi);
-        //exit(0);
-        //vec3_scale(f, WHITE, (eta*eta));
+        float eta = spec_trans->ior_out / spec_trans->ior_in;
+        if(vec3_dot(normal, wo) < 0.0f)
+        {
+            vec3_negate(normal, normal);
+            eta = 1.0f / eta;
+        }
+        if(!refract(wi, wo, normal, eta))
+            return 0.0f;
         vec3_scale(f, WHITE, 1.0f - kr);
         //vec3_scale(f, WHITE, 1.0f);
         vec3_scale(f, f, (eta*eta) / fabs(cosTheta(wi)));
         return 1.0f - kr;
     }
-    //return 1.0f / fabs(cosTheta(wi));
 }
 
 void MicrofacetReflection_f(vec3 f, const vec3 wi, const vec3 wo, const MicrofacetReflection* mf)
@@ -395,6 +390,7 @@ float MicrofacetFresnel_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 samp
     if(wo[2] == 0.0f) return 0.0f;
     vec3 wh;
     MicrofacetDistribution_sample_wh(wh, wo, sample, &(mt->distrib));
+    printVec3WithText("wh", wh);
     float kr = calcFresnelDielectric(wh, wo, mt->ior_in, mt->ior_out);
     float rand_float = (float)rand() / (float)RAND_MAX;
     if(rand_float <= kr)
@@ -403,16 +399,14 @@ float MicrofacetFresnel_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 samp
         vec3_negate(neg_wo, wo);
         calcReflectRayDir(wi, wh, neg_wo);
         if(!sameHemisphere(wo, wi))
-        {
             return 0.0f;
-        }
         MicrofacetReflection mr;
         vec3_copy(mr.color, mt->color);
         mr.ior_in = mt->ior_in;
         mr.ior_out = mt->ior_out;
         mr.distrib = mt->distrib;
         MicrofacetReflection_f(f, wi, wo, &mr);
-        vec3_scale(f, f, 1.0f / (1.0f - kr));
+        //vec3_scale(f, f, 1.0f / (1.0f - kr));
         return MicrofacetDistribution_pdf(wo, wh, &(mr.distrib)) / (4.0f * vec3_dot(wo, wh));
     }else
     {
@@ -421,11 +415,7 @@ float MicrofacetFresnel_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 samp
         if(!refract(wi, wo, wh, eta))
             return 0.0f;
         MicrofacetFresnel_f(f, wi, wo, mt);
-        if(f[0] < 0.0f || f[1] < 0.0f || f[2] < 0.0f)
-        {
-            MicrofacetFresnel_f(f, wi, wo, mt);
-        }
-        vec3_scale(f, f, 1.0f / (1.0f - kr));
+        //vec3_scale(f, f, 1.0f / (1.0f - kr));
         return MicrofacetFresnel_pdf(wi, wo, mt);
     }
 }
@@ -602,6 +592,7 @@ float BSDF_sample_f(vec3 f, vec3 wi, BxDFFlags* sampled_flags,
         printf("wo parallel\n");
         return 0.0f;
     }
+    
     // Sample BxDF
     vec3_copy(f, BLACK);
     float pdf = BxDF_sample_f(f, wi_local, wo_local, remapped_sample,
