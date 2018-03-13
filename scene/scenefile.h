@@ -138,28 +138,24 @@ bool parseMatteEntry(Material* mat, Scene* scene, FILE* fp)
     if(!getNextTokenInFile(mat->name, fp)){return false;} // get material name
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over COLOR
-    if(!parseColor(matte->color, fp)){return false;} // get material color
+    if(strcmp(buffer, "TEXTURE") == 0)
+    {
+        Texture tex;
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Get file name
+        loadTexture(&tex, buffer);
+        Scene_addTexture(scene, &tex, buffer);
+        strcpy(matte->diffuse_file_name, buffer);        
+    }else
+    {
+        matte->diffuse = NULL;
+        if(!parseColor(matte->color, fp)){return false;}
+    }
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over SIGMA
     if(!getNextTokenInFile(buffer, fp)){return false;}    // get sigma
     matte->sigma = atof(buffer);
 
     if(!getNextTokenInFile(buffer, fp)){return false;}
-    if(strcmp(buffer, "END") == 0)
-        return true;
-    if(strcmp(buffer, "DIFFUSE_MAP") == 0)
-    {
-        char tex_file_name[MAX_NAME_LENGTH];
-        if(parseTexture(scene, fp, tex_file_name))
-        {
-            stringCopy(matte->diffuse_file_name, MAX_NAME_LENGTH, tex_file_name);
-        }else
-        {
-            matte->diffuse = NULL;
-            matte->diffuse_file_name[0] = '\0';
-        }
-        if(!getNextTokenInFile(buffer, fp)){return false;}
-    }
     if(strcmp(buffer, "END") == 0)
         return true;
     if(strcmp(buffer, "NORMAL_MAP") == 0)
@@ -226,8 +222,19 @@ bool parsePlasticEntry(Material* mat, Scene* scene, FILE* fp)
     if(!getNextTokenInFile(buffer, fp)){return false;}  // Skip NAME
     if(!getNextTokenInFile(mat->name, fp)){return false;}  // get name
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KD
-    if(!parseColor(plastic->kd, fp)){return false;}
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Get KD or KD_TEXTURE
+    if(strcmp(buffer, "KD_TEXTURE") == 0)
+    {
+        Texture tex;
+        if(!getNextTokenInFile(buffer, fp)){return false;}    // Get file name
+        loadTexture(&tex, buffer);
+        Scene_addTexture(scene, &tex, buffer);
+        strcpy(plastic->diffuse_file_name, buffer);        
+    }else
+    {
+        plastic->diffuse = NULL;
+        if(!parseColor(plastic->kd, fp)){return false;}
+    }
 
     if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over KS
     if(!parseColor(plastic->ks, fp)){return false;}

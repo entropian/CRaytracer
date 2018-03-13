@@ -142,8 +142,14 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
     case PLASTIC:
     {
         Plastic* plastic = (Plastic*)mat->data;
-        if(!vec3_equal(plastic->kd, BLACK))
-            BSDF_addLambertian(bsdf, plastic->kd);
+        vec3 kd;
+        if(plastic->diffuse)
+            getTexColor(kd, plastic->diffuse, uv);
+        else
+            vec3_copy(kd, plastic->kd);
+            
+        if(!vec3_equal(kd, BLACK))
+            BSDF_addLambertian(bsdf, kd);
         if(!vec3_equal(plastic->ks, BLACK))
         {
             if(plastic->roughness == 0.0f)

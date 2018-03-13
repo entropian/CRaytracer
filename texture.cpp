@@ -6,6 +6,7 @@
 bool loadTexture(Texture* tex, const char* file_name)
 {
     tex->data = stbi_load(file_name, &(tex->width), &(tex->height), &(tex->comp), STBI_rgb);
+    tex->is_float = false;
     if(!tex->data)
     {
         fprintf(stderr, "Failed to load %s.\n", file_name);

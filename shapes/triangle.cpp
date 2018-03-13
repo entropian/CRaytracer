@@ -235,6 +235,12 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
     vec3_normalize(sr->normal, sr->normal);
 
     interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
+    // TEMP?
+    while(sr->uv[0] > 1.0f) { sr->uv[0] -= 1.0f; }
+    while(sr->uv[0] < 0.0f) { sr->uv[0] += 1.0f; }
+    while(sr->uv[1] > 1.0f) { sr->uv[1] -= 1.0f; }
+    while(sr->uv[1] < 0.0f) { sr->uv[1] += 1.0f; }    
+    //if(tri->mat->tex_flags & NORMAL)
     vec3 tangent, binormal, tex_normal, normal, tmp;
     interpTriangleVec3(tmp, beta, gamma,
                        mesh->tangents[tri->i0], mesh->tangents[tri->i1], mesh->tangents[tri->i2]);
@@ -279,7 +285,6 @@ float getSmoothTriangleShadeRec(ShadeRec* sr, SmoothTriangle* tri, const Ray ray
     if(tri->mesh_ptr->num_texcoords > 0)
     {
         interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
-        //if(tri->mat->tex_flags & NORMAL)
         if(Material_hasNormalMap(tri->mat))
         {
             vec3 tangent, binormal, tex_normal, normal, tmp;
