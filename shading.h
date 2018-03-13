@@ -24,6 +24,10 @@ float AOTest(const vec3 h_sample, const SceneObjects *so, const ShadeRec* sr)
 }
 
 //extern void maxToOne(vec3, const vec3);
+inline float GammaCorrect(float value) {
+    if (value <= 0.0031308f) return 12.92f * value;
+    return 1.055f * powf(value, (1.f / 2.4f)) - 0.055f;
+}
 
 // divide vec3 a by its max component if max component > 1
 void toneMap(vec3 r, const vec3 a)
@@ -49,7 +53,13 @@ void toneMap(vec3 r, const vec3 a)
     denom[1] = 1.0f / (a[1] + 1.0f);
     denom[2] = 1.0f / (a[2] + 1.0f);    
     vec3_mult(r, a, denom);
-    vec3_pow(r, r, 1.0f / 2.20f);
+    vec3_pow(r, r, 1.0f / 2.2f);
+
+    /*
+    r[0] = clamp(GammaCorrect(a[0]) + 0.5f, 0.f, 1.f);
+    r[1] = clamp(GammaCorrect(a[1]) + 0.5f, 0.f, 1.f);
+    r[2] = clamp(GammaCorrect(a[2]) + 0.5f, 0.f, 1.f);
+    */
 }
 bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects* so,
                 const vec3 light_dir, const ShadeRec* sr)

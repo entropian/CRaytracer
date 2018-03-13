@@ -191,7 +191,11 @@ float rayIntersectFlatTriangle(ShadeRec* sr, FlatTriangle* tri, const Ray ray)
     if(tri->mesh_ptr->num_texcoords > 0)
     {
         interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
-    }    
+    }
+    while(sr->uv[0] > 1.0f) { sr->uv[0] -= 1.0f; }
+    while(sr->uv[0] < 0.0f) { sr->uv[0] += 1.0f; }
+    while(sr->uv[1] > 1.0f) { sr->uv[1] -= 1.0f; }
+    while(sr->uv[1] < 0.0f) { sr->uv[1] += 1.0f; }    
     vec3_copy(sr->normal, tri->normal);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);    

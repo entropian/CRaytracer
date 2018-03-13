@@ -342,6 +342,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
     
     vec3 L = {0.0f, 0.0f, 0.0f};
     vec3 beta = {1.0f, 1.0f, 1.0f};
+    float eta_scale = 1.0f;
     Ray ray = primary_ray;
     BxDFFlags sampled_flags = BSDF_NONE;
     BxDFFlags excluded_from_direct = (BxDFFlags)(BSDF_SPECULAR | BSDF_GLOSSY);
@@ -414,12 +415,23 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
         vec3_mult(beta, beta, f);
         resetRay(&ray, sr.hit_point, wi);
+
+        if((sampled_flags & BSDF_SPECULAR) && (sampled_flags & BSDF_TRANSMISSION))
+        {
+            Transparent* trans = (Transparent*)(sr.mat.data);
+            float eta = vec3_dot(wo, sr.normal) > 0.0f ? trans->ior_out / trans->ior_in :
+                trans->ior_in / trans->ior_out;
+            eta_scale *= (vec3_dot(wo, sr.normal) > 0.0f) ? (eta * eta) : 1 / (eta * eta);
+        }
         
         // Possibly terminate the path with Russian roulette
-        /*
+
+        vec3 rr_beta;
+        vec3_scale(rr_beta, beta, eta_scale);
+        float max_comp = max(rr_beta[0], max(rr_beta[1], rr_beta[2]));
         if(bounces > 3)
         {
-            float q = max(0.05, 1.0f - beta[1]);
+            float q = max(0.05, 1.0f - max_comp);
             float rand_float = (float)rand() / (float)RAND_MAX;
             if(rand_float < q)
             {
@@ -430,7 +442,6 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             // TODO Different from PBRT source
             //vec3_scale(beta, beta, (1.0f - q));
         }
-        */
         BSDF_freeBxDFs(&(sr.bsdf));
     }
     if(bounces > 0)
@@ -438,3 +449,5 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
     vec3_copy(radiance, L);
     return 0.0f;
 }
+
+

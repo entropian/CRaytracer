@@ -244,26 +244,23 @@ float SpecularTransmission_sample_f(vec3 f, vec3 wi,
                                     const vec3 wo, const vec2 sample, const SpecularTransmission* spec_trans)
 {
     vec3 normal = {0.0f, 0.0f, 1.0f};
+    float cos_theta_o = vec3_dot(normal, wo);
+    if(cos_theta_o < 0.0f)
+        vec3_negate(normal, normal);
     float kr = calcFresnelDielectric(normal, wo, spec_trans->ior_in, spec_trans->ior_out);
     float rand_float = (float)rand() / (float)RAND_MAX;
     if(rand_float <= kr)
     {
         vec3_assign(wi, -wo[0], -wo[1], wo[2]);
         vec3_scale(f, WHITE, kr / fabs(cosTheta(wi)));
-        //vec3_scale(f, WHITE, 1.0f / fabs(cosTheta(wi)));
         return kr;
     }else
     {
-        float eta = spec_trans->ior_out / spec_trans->ior_in;
-        if(vec3_dot(normal, wo) < 0.0f)
-        {
-            vec3_negate(normal, normal);
-            eta = 1.0f / eta;
-        }
+        float eta = cos_theta_o > 0.0f ? spec_trans->ior_out / spec_trans->ior_in :
+            spec_trans->ior_in / spec_trans->ior_out;
         if(!refract(wi, wo, normal, eta))
             return 0.0f;
         vec3_scale(f, WHITE, 1.0f - kr);
-        //vec3_scale(f, WHITE, 1.0f);
         vec3_scale(f, f, (eta*eta) / fabs(cosTheta(wi)));
         return 1.0f - kr;
     }
@@ -390,7 +387,6 @@ float MicrofacetFresnel_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 samp
     if(wo[2] == 0.0f) return 0.0f;
     vec3 wh;
     MicrofacetDistribution_sample_wh(wh, wo, sample, &(mt->distrib));
-    printVec3WithText("wh", wh);
     float kr = calcFresnelDielectric(wh, wo, mt->ior_in, mt->ior_out);
     float rand_float = (float)rand() / (float)RAND_MAX;
     if(rand_float <= kr)

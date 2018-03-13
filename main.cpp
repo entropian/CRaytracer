@@ -287,7 +287,7 @@ int main(int argc, char** argv)
     film.frame_res_height = params.image_height;
     film.num_pixels = num_pixels;
     //film.fov = 70.0f / 180.0f * PI; // TODO
-    film.fov = 25.0f / 180.0f * PI; // TODO
+    film.fov = 70.0f / 180.0f * PI; // TODO
     Camera *camera = &(scene.camera);
     calcFilmDimension(&film, camera);
 
@@ -305,8 +305,7 @@ int main(int argc, char** argv)
     thread_data.params = &params;
     thread_data.trace = trace;
 
-    //int num_patches = 128;
-    int num_patches = 256;
+    int num_patches = 128;
     int num_threads = 4;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
@@ -381,9 +380,9 @@ int main(int argc, char** argv)
             
             vec3 radiance = {0.0f, 0.0f, 0.0f};
 
-            if(i == 17200)
+            if(i == 200 * 100 + 150)
             {
-                trace(radiance, params.max_depth, ray, &trace_args);
+                pathTraceSp(radiance, params.max_depth, ray, &trace_args);
                 vec3_copy(radiance, RED);
             }else
             {
