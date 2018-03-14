@@ -214,6 +214,22 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
             vec3_add(sample_point, sample_point, v);
             vec3_copy(sample_normal, rect->normal);
             light_pdf = 1.0f / (vec3_length(rect->width) * vec3_length(rect->height));
+        }else if(area_light->obj_type == DISK)
+        {
+            Disk* disk = (Disk*)(area_light->obj_ptr);
+            vec2 disk_sample;
+            mapSampleToDisk(disk_sample, light_sample);
+            vec3 x_axis, y_axis;
+            vec3_cross(x_axis, JITTERED_UP, disk->normal);
+            vec3_normalize(x_axis, x_axis);
+            vec3_cross(y_axis, x_axis, disk->normal);
+            vec3 x_disp, y_disp;
+            vec3_scale(x_disp, x_axis, disk_sample[0] * disk->radius);
+            vec3_scale(y_disp, y_axis, disk_sample[1] * disk->radius);
+            vec3_add(sample_point, x_disp, y_disp);
+            vec3_add(sample_point, sample_point, disk->center);
+            vec3_copy(sample_normal, disk->normal);
+            light_pdf = 1.0f / (PI * disk->radius * disk->radius);
         }
         // Calculate wi
         vec3 sample_to_hit_point;

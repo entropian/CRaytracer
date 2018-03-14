@@ -611,10 +611,10 @@ bool parseDiskEntry(Object_t* obj,  FILE* fp, Scene* scene)
 {
     char buffer[128];
     Disk* disk_ptr = (Disk*)malloc(sizeof(Disk));
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MIN
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word CENTER
     if(!parseVec3(disk_ptr->center, fp)){return false;}
 
-    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word MAX
+    if(!getNextTokenInFile(buffer, fp)){return false;}    // Skip over the word NORMAL
     if(!parseVec3(disk_ptr->normal, fp)){return false;}
     printVec3WithText("disk->normal", disk_ptr->normal);
     vec3_normalize(disk_ptr->normal, disk_ptr->normal);

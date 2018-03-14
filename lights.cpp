@@ -360,6 +360,20 @@ float AreaLight_sample_Li(vec3 Li, vec3 wi, float* t,
         getVec3InLocalBasis(sample_point, h_sample, sr->normal);
         vec3_add(sample_point, sample_point,
                  ((Sphere*)(area_light->obj_ptr))->center);
+    }else if(area_light->obj_type == DISK)
+    {
+        Disk* disk = (Disk*)(area_light->obj_ptr);
+        vec2 disk_sample;
+        mapSampleToDisk(disk_sample, sample);
+        vec3 x_axis, y_axis;
+        vec3_cross(x_axis, JITTERED_UP, disk->normal);
+        vec3_normalize(x_axis, x_axis);
+        vec3_cross(y_axis, x_axis, disk->normal);
+        vec3 x_disp, y_disp;
+        vec3_scale(x_disp, x_axis, disk_sample[0] * disk->radius);
+        vec3_scale(y_disp, y_axis, disk_sample[1] * disk->radius);
+        vec3_add(sample_point, x_disp, y_disp);
+        vec3_add(sample_point, sample_point, disk->center);
     }
     vec3 sample_to_hit_point;    
     vec3_sub(sample_to_hit_point, sample_point, sr->hit_point);

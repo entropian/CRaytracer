@@ -124,9 +124,13 @@ void calcTangentVec(Mesh* mesh)
             vec2_assign(uv0, mesh->texcoords[i0*2], mesh->texcoords[i0*2 + 1]);
             vec2_assign(uv1, mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]);
             vec2_assign(uv2, mesh->texcoords[i2*2], mesh->texcoords[i2*2 + 1]);
-            //vec2_assign(uv0, 0.0f, 0.0f);
-            //vec2_assign(uv1, 1.0f, 0.0f);
-            //vec2_assign(uv2, 1.0f, 1.0f);
+            vec2 zeroes = {0.0f, 0.0f};
+            if(vec2_equal(uv0, zeroes) && vec2_equal(uv1, zeroes) && vec2_equal(uv2, zeroes))
+            {
+                vec2_assign(uv0, 0.0f, 0.0f);
+                vec2_assign(uv1, 1.0f, 0.0f);
+                vec2_assign(uv2, 1.0f, 1.0f);
+            }
         }else
         {
             /*
@@ -543,7 +547,8 @@ int initAreaLights(Scene* scene)
     {
         Object_t obj = so->objects[i];
         Material* mat = getObjectMatPtr(obj);
-        if((obj.type == RECTANGLE || obj.type == SPHERE) && mat->mat_type == EMISSIVE)
+        if((obj.type == RECTANGLE || obj.type == SPHERE || obj.type == DISK)
+           && mat->mat_type == EMISSIVE)
         {
             AreaLight* area_light_ptr = (AreaLight*)malloc(sizeof(AreaLight));
             Emissive* emissive = (Emissive*)mat->data;
@@ -552,12 +557,12 @@ int initAreaLights(Scene* scene)
             if(obj.type == RECTANGLE)
             {
                 Rectangle* rect = (Rectangle*)(obj.ptr);
-                //rect->shadow = true;
                 float width = sqrt(vec3_dot(rect->width, rect->width));
                 float height = sqrt(vec3_dot(rect->height, rect->height));
                 area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
                 vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
+                // TODO
                 Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
                 unit_square_samples->samples = NULL;
                 genMultijitteredSamples(unit_square_samples);
@@ -570,8 +575,7 @@ int initAreaLights(Scene* scene)
             }else if(obj.type == SPHERE)
             {
                 Sphere* sphere = (Sphere*)(obj.ptr);
-                //sphere->shadow = true;
-
+                // TODO
                 Samples3D* h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
 
                 area_light_ptr->pdf = 1.0f / (4.0f * (float)PI * sphere->radius * sphere->radius);
@@ -579,6 +583,15 @@ int initAreaLights(Scene* scene)
                 area_light_ptr->samples3D = h_samples;
                 area_light_ptr->obj_ptr = sphere;
                 area_light_ptr->obj_type = SPHERE;                
+            }else if(obj.type == DISK)
+            {
+                Disk* disk = (Disk*)(obj.ptr);
+                //area_light_ptr->pdf = 1.0f / (PI * disk->radius * disk->radius);
+                area_light_ptr->pdf = 1.0f / (1.0f);
+                area_light_ptr->samples2D = NULL;
+                area_light_ptr->samples3D = NULL;
+                area_light_ptr->obj_ptr = disk;
+                area_light_ptr->obj_type = DISK;
             }
             SceneLights_addLight(area_light_ptr, AREALIGHT, sl);
         }

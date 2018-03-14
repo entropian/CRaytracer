@@ -266,7 +266,12 @@ bool getObjectAABB(AABB* aabb, const Object_t obj)
 
         aabb->max[0] = disk->center[0] + disk->radius;
         aabb->max[1] = disk->center[1] + disk->radius;
-        aabb->max[2] = disk->center[2] + disk->radius;        
+        aabb->max[2] = disk->center[2] + disk->radius;
+        for(int i = 0; i < 3; i++)
+        {
+            aabb->min[i] -= K_FLAT_AABB;
+            aabb->max[i] += K_FLAT_AABB;
+        }
     } break;
     case GENERICTORUS:
     {

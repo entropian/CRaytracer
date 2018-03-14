@@ -382,7 +382,7 @@ int main(int argc, char** argv)
 
             if(i == 200 * 100 + 150)
             {
-                pathTraceSp(radiance, params.max_depth, ray, &trace_args);
+                pathTrace(radiance, params.max_depth, ray, &trace_args);
                 vec3_copy(radiance, RED);
             }else
             {

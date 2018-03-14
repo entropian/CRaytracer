@@ -42,7 +42,7 @@ void toneMap(vec3 r, const vec3 a)
     }
     */
     /*
-    float exposure = -2.0f;
+    float exposure = -6.0f;
     r[0] = 1.0f - expf(a[0] * exposure);
     r[1] = 1.0f - expf(a[1] * exposure);
     r[2] = 1.0f - expf(a[2] * exposure);
