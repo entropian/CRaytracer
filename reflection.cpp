@@ -418,18 +418,6 @@ float MicrofacetFresnel_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 samp
 
 float MicrofacetFresnel_pdf(const vec3 wi, const vec3 wo, const MicrofacetFresnel* mt)
 {
-    /*
-    if (SameHemisphere(wo, wi)) return 0;
-    // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-    Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB);
-    Vector3f wh = Normalize(wo + wi * eta);
-
-    // Compute change of variables _dwh\_dwi_ for microfacet transmission
-    Float sqrtDenom = Dot(wo, wh) + eta * Dot(wi, wh);
-    Float dwh_dwi =
-        std::abs((eta * eta * Dot(wi, wh)) / (sqrtDenom * sqrtDenom));
-    return distribution->Pdf(wo, wh) * dwh_dwi;
-     */
     if(sameHemisphere(wo, wi)) return 0.0f;
     float eta = cosTheta(wo) > 0.0f ? (mt->ior_in / mt->ior_out) : (mt->ior_out / mt->ior_in);    
     vec3 wh, scaled_wi;
@@ -441,29 +429,136 @@ float MicrofacetFresnel_pdf(const vec3 wi, const vec3 wo, const MicrofacetFresne
     return MicrofacetDistribution_pdf(wo, wh, &(mt->distrib)) * dwh_dwi;
 }
 
+float pow5(float v)
+{
+    return (v * v) * (v * v) * v;
+}
+
+void schlickFresnel(vec3 ret, const float cos_theta, const vec3 Rs)
+{
+/*
+  Spectrum SchlickFresnel(Float cosTheta) const {
+     auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
+     return Rs + pow5(1 - cosTheta) * (Spectrum(1.) - Rs);
+  }
+ */
+    vec3 ones = {1.0f, 1.0f, 1.0f};
+    vec3_sub(ret, ones, Rs);
+    vec3_scale(ret, ret, pow5(1.0f - cos_theta));
+    vec3_add(ret, ret, Rs);
+}
+
+void FresnelBlend_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlend * fb)
+{
+/*
+  auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
+  Spectrum diffuse = (28.f / (23.f * Pi)) * Rd * (Spectrum(1.f) - Rs) *
+  (1 - pow5(1 - .5f * AbsCosTheta(wi))) *
+  (1 - pow5(1 - .5f * AbsCosTheta(wo)));
+  Vector3f wh = wi + wo;
+  if (wh.x == 0 && wh.y == 0 && wh.z == 0) return Spectrum(0);
+  wh = Normalize(wh);
+  Spectrum specular =
+  distribution->D(wh) /
+  (4 * AbsDot(wi, wh) * std::max(AbsCosTheta(wi), AbsCosTheta(wo))) *
+  SchlickFresnel(Dot(wi, wh));
+  return diffuse + specular;
+*/
+    vec3 diffuse;
+    vec3_scale(diffuse, fb->kd, 28.0f / (23.0f * PI));
+    vec3 ones = {1.0f, 1.0f, 1.0f};
+    vec3 one_minus_ks;
+    vec3_sub(one_minus_ks, ones, fb->ks);
+    vec3_mult(diffuse, diffuse, one_minus_ks);
+    vec3_scale(diffuse, diffuse, 1.0f - pow5(1.0f - 0.5f * absCosTheta(wi)));
+    vec3_scale(diffuse, diffuse, 1.0f - pow5(1.0f - 0.5f * absCosTheta(wo)));
+
+    vec3 wh;
+    vec3_add(wh, wi, wo);
+    if(vec3_equal(wh, BLACK))
+        return ;
+    vec3_normalize(wh, wh);
+
+    vec3 specular;
+    vec3 fresnel;
+    schlickFresnel(fresnel, vec3_dot(wi, wh), fb->ks);
+    float cos_theta = vec3_dot(wi, wh);
+    vec3_scale(specular, fresnel, MicrofacetDistribution_D(wh, &fb->distrib) / (4.0f * fabs(cos_theta) *
+                                                                  max(absCosTheta(wi), absCosTheta(wo))));
+    vec3_add(f, diffuse, specular);
+}
+float FresnelBlend_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample_orig,
+                                      const FresnelBlend* fb)
+{
+    /*
+    Point2f u = uOrig;
+    if (u[0] < .5) {
+        u[0] = std::min(2 * u[0], OneMinusEpsilon);
+        // Cosine-sample the hemisphere, flipping the direction if necessary
+        *wi = CosineSampleHemisphere(u);
+        if (wo.z < 0) wi->z *= -1;
+    } else {
+        u[0] = std::min(2 * (u[0] - .5f), OneMinusEpsilon);
+        // Sample microfacet orientation $\wh$ and reflected direction $\wi$
+        Vector3f wh = distribution->Sample_wh(wo, u);
+        *wi = Reflect(wo, wh);
+        if (!SameHemisphere(wo, *wi)) return Spectrum(0.f);
+    }
+    *pdf = Pdf(wo, *wi);
+    return f(wo, *wi);
+     */
+    vec2 sample = {sample_orig[0], sample_orig[1]};
+    if(sample[0] < 0.5f)
+    {
+        sample[0] = min(2.0f * sample[0], 1.0f - K_EPSILON);
+        cosHemisphereSample(wi, wo, sample);
+        if(wo[2] < 0.0f) wi[2] = -wi[2];
+    }else
+    {
+        sample[0] = min(2.0f * (sample[0] - 0.5f), 1.0f - K_EPSILON);
+        vec3 wh;
+        MicrofacetDistribution_sample_wh(wh, wo, sample, &fb->distrib);
+        vec3 neg_wo;
+        vec3_negate(neg_wo, wo);
+        calcReflectRayDir(wi, wh, neg_wo);
+        if(!sameHemisphere(wo, wi)) return 0.0f;
+    }
+    FresnelBlend_f(f, wi, wo, fb);
+    return FresnelBlend_pdf(wi, wo, fb);
+}
+float FresnelBlend_pdf(const vec3 wi, const vec3 wo, const FresnelBlend* fb)
+{
+    /*
+    if (!SameHemisphere(wo, wi)) return 0;
+    Vector3f wh = Normalize(wo + wi);
+    Float pdf_wh = distribution->Pdf(wo, wh);
+    return .5f * (AbsCosTheta(wi) * InvPi + pdf_wh / (4 * Dot(wo, wh)));
+     */
+    if(!sameHemisphere(wo, wi)) return 0.0f;
+    vec3 wh;
+    vec3_add(wh, wo, wi);
+    vec3_normalize(wh, wh);
+    float pdf_wh = MicrofacetDistribution_D(wh, &fb->distrib);
+    return 0.5f * (absCosTheta(wi) * INV_PI + pdf_wh / (4.0f * vec3_dot(wo, wh)));
+}
+
 void BxDF_f(vec3 f, const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType type)
 {
     switch(type)
     {
     case LAMBERTIAN:
-    {
         return Lambertian_f(f, wi, wo, (Lambertian*)bxdf);
-    } break;
     case ORENNAYAR:
-    {
         return OrenNayar_f(f, wi, wo, (OrenNayar*)bxdf);
-    } break;
     case SPECULAR_REFLECTION:
     case SPECULAR_TRANSMISSION:
         break;
     case MICROFACET_REFLECTION:
-    {
         return MicrofacetReflection_f(f, wi, wo, (MicrofacetReflection*)bxdf);
-    } break;
     case MICROFACET_FRESNEL:
-    {
         return MicrofacetFresnel_f(f, wi, wo, (MicrofacetFresnel*)bxdf);
-    } break;
+    case FRESNEL_BLEND:
+        return FresnelBlend_f(f, wi, wo, (FresnelBlend*)bxdf);
     }    
 }
 
@@ -472,29 +567,19 @@ float BxDF_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const voi
     switch(type)
     {
     case LAMBERTIAN:
-    {
         return Lambertian_sample_f(f, wi, wo, sample, (Lambertian*)bxdf);
-    } break;
     case ORENNAYAR:
-    {
         return OrenNayar_sample_f(f, wi, wo, sample, (OrenNayar*)bxdf);
-    } break;
     case SPECULAR_REFLECTION:
-    {
         return SpecularReflection_sample_f(f, wi, wo, sample, (SpecularReflection*)bxdf);
-    } break;
     case SPECULAR_TRANSMISSION:
-    {
         return SpecularTransmission_sample_f(f, wi, wo, sample, (SpecularTransmission*)bxdf);
-    } break;
     case MICROFACET_REFLECTION:
-    {
         return MicrofacetReflection_sample_f(f, wi, wo, sample, (MicrofacetReflection*)bxdf);
-    } break;
     case MICROFACET_FRESNEL:
-    {
         return MicrofacetFresnel_sample_f(f, wi, wo, sample, (MicrofacetFresnel*)bxdf);
-    } break;
+    case FRESNEL_BLEND:
+        return FresnelBlend_sample_f(f, wi, wo, sample, (FresnelBlend*)bxdf);
     }
     return 0.0f;
 }
@@ -504,31 +589,19 @@ float BxDF_pdf(const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType ty
     switch(type)
     {
     case LAMBERTIAN:
-    {
         return Lambertian_pdf(wi, wo);
-    } break;
     case ORENNAYAR:
-    {
         return OrenNayar_pdf(wi, wo);
-    }
     case SPECULAR_REFLECTION:
-    {
         return 0.0f;
-    } break;
     case SPECULAR_TRANSMISSION:
-    {
         return 0.0f;
-    } break;
     case MICROFACET_REFLECTION:
-    {
-        MicrofacetReflection* mr = (MicrofacetReflection*)bxdf;
-        return MicrofacetReflection_pdf(wi, wo, mr);
-    }
+        return MicrofacetReflection_pdf(wi, wo, (MicrofacetReflection*)bxdf);
     case MICROFACET_FRESNEL:
-    {
-        MicrofacetFresnel* mt = (MicrofacetFresnel*)bxdf;
-        return MicrofacetFresnel_pdf(wi, wo, mt);
-    }
+        return MicrofacetFresnel_pdf(wi, wo, (MicrofacetFresnel*)bxdf);
+    case FRESNEL_BLEND:
+        return FresnelBlend_pdf(wi, wo, (FresnelBlend*)bxdf);
     }
     return 0.0f;
 }
@@ -577,6 +650,7 @@ float BSDF_sample_f(vec3 f, vec3 wi, BxDFFlags* sampled_flags,
     // Choose BxDF
     int bxdf_index = (int)(sample[0] * bsdf->num_bxdf);
     BxDFType bxdf_type = bsdf->types[bxdf_index];
+    // TODO
     *sampled_flags = getBxDFFlagsFromType(bxdf_type);
     vec2 remapped_sample = {sample[0] * bsdf->num_bxdf - bxdf_index, sample[1]};
 
@@ -715,14 +789,30 @@ void BSDF_addMicrofacetFresnel(BSDF* bsdf, const vec3 color, const float ior_in,
 {
     MicrofacetFresnel* mt = (MicrofacetFresnel*)allocateBxDF();
     vec3_copy(mt->color, color);
-    mt->distrib.alphax = alphax;
-    mt->distrib.alphay = alphay;
+    mt->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
+    mt->distrib.alphay = BeckmannRoughnessToAlpha(alphay);
     mt->ior_in = ior_in;
     mt->ior_out = ior_out;
     mt->distrib.type = type;
     bsdf->bxdfs[bsdf->num_bxdf] = mt;
     bsdf->types[bsdf->num_bxdf] = MICROFACET_FRESNEL;
     bsdf->num_bxdf++;    
+}
+
+void BSDF_addFresnelBlend(BSDF* bsdf, const vec3 kd, const vec3 ks, const float ior_in, const float ior_out,
+                          const float alphax, const float alphay, const FacetDistribType type)
+{
+    FresnelBlend* fb = (FresnelBlend*)allocateBxDF();
+    vec3_copy(fb->kd, kd);
+    vec3_copy(fb->ks, ks);
+    fb->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
+    fb->distrib.alphay = BeckmannRoughnessToAlpha(alphay);    
+    fb->ior_in = ior_in;
+    fb->ior_out = ior_out;
+    fb->distrib.type = type;
+    bsdf->bxdfs[bsdf->num_bxdf] = fb;
+    bsdf->types[bsdf->num_bxdf] = FRESNEL_BLEND;
+    bsdf->num_bxdf++;        
 }
 
 void BSDF_freeBxDFs(BSDF* bsdf)

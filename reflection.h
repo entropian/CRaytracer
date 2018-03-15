@@ -23,7 +23,8 @@ enum BxDFType
     SPECULAR_REFLECTION,
     SPECULAR_TRANSMISSION,
     MICROFACET_REFLECTION,
-    MICROFACET_FRESNEL
+    MICROFACET_FRESNEL,
+    FRESNEL_BLEND
 };
 
 inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
@@ -41,6 +42,9 @@ inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
         return (BxDFFlags)(BSDF_REFLECTION | BSDF_GLOSSY);
     case MICROFACET_FRESNEL:
         return (BxDFFlags)(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_GLOSSY);
+    case FRESNEL_BLEND:
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE | BSDF_GLOSSY);
+        //return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE);
     default:
         return BSDF_NONE;
     }
@@ -112,6 +116,17 @@ float MicrofacetFresnel_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 samp
                                       const MicrofacetFresnel mt);
 float MicrofacetFresnel_pdf(const vec3 wi, const vec3 wo, const MicrofacetFresnel* mt);
 
+typedef struct FresnelBlend_s
+{
+    vec3 kd, ks;
+    float ior_in, ior_out;
+    MicrofacetDistribution distrib;
+}FresnelBlend;
+void FresnelBlend_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlend * fb);
+float FresnelBlend_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
+                                      const FresnelBlend mt);
+float FresnelBlend_pdf(const vec3 wi, const vec3 wo, const FresnelBlend* mt);
+
 const int MAX_BXDF = 8;
 typedef struct BSDF_s
 {
@@ -144,5 +159,7 @@ void BSDF_addMicrofacetReflectionMetal(BSDF* bsdf, const vec3 color, const vec3 
                                        const float alphax, const float alphay, const FacetDistribType type);
 void BSDF_addMicrofacetFresnel(BSDF* bsdf, const vec3 color, const float ior_in, const float ior_out,
                                     const float alphax, const float alphay, const FacetDistribType type);
+void BSDF_addFresnelBlend(BSDF* bsdf, const vec3 kd, const vec3 ks, const float ior_in, const float ior_out,
+                          const float alphax, const float alphay, const FacetDistribType type);
 void BSDF_freeBxDFs(BSDF* bsdf);
 

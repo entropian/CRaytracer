@@ -191,7 +191,8 @@ void ppmToImageState()
     saveImageState(buffer, num_samples, width, height, "savestate.is");
     free(buffer);
 }
-    
+
+extern int g_intersect_count;
 int main(int argc, char** argv)
 {
     bool using_image_state = false;
@@ -247,7 +248,6 @@ int main(int argc, char** argv)
     float* color_buffer = NULL;
     if(using_image_state)
     {
-        printf("here\n");
         int width, height, size;
         readImageState(&color_buffer, &prev_num_samples, &size, &width, &height, image_state_file);
         if(width != params.image_width || height != params.image_height)
@@ -348,6 +348,7 @@ int main(int argc, char** argv)
         
 
         calcProgress(start_time, &end_time, &prev_percent, p, &params);
+        printf("Number of object intersection tests: %d\n", g_intersect_count);
         if(SHOW_PROGRESS)
         {
             displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
