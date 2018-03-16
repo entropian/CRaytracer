@@ -348,7 +348,7 @@ int main(int argc, char** argv)
         
 
         calcProgress(start_time, &end_time, &prev_percent, p, &params);
-        printf("Number of object intersection tests: %d\n", g_intersect_count);
+        printf("Number of object intersection tests: %lld\n", g_intersect_count);
         if(SHOW_PROGRESS)
         {
             displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);

@@ -43,8 +43,8 @@ inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
     case MICROFACET_FRESNEL:
         return (BxDFFlags)(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_GLOSSY);
     case FRESNEL_BLEND:
-        return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE | BSDF_GLOSSY);
-        //return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE);
+        //return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE | BSDF_GLOSSY);
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE);
     default:
         return BSDF_NONE;
     }

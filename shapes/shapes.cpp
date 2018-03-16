@@ -1,6 +1,6 @@
 #include "shapes.h"
 
-unsigned int g_intersect_count = 0;
+unsigned long long g_intersect_count = 0;
 float rayIntersectObject(ShadeRec* sr, const Object_t obj, const Ray ray)
 {
     g_intersect_count++;
