@@ -448,6 +448,75 @@ void schlickFresnel(vec3 ret, const float cos_theta, const vec3 Rs)
     vec3_add(ret, ret, Rs);
 }
 
+void FresnelBlendDiffuse_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlendDiffuse * fbd)
+{
+    vec3 diffuse;
+    vec3_scale(diffuse, fbd->kd, 28.0f / (23.0f * PI));
+    vec3 ones = {1.0f, 1.0f, 1.0f};
+    vec3 one_minus_ks;
+    vec3_sub(one_minus_ks, ones, fbd->ks);
+    vec3_mult(diffuse, diffuse, one_minus_ks);
+    vec3_scale(diffuse, diffuse, 1.0f - pow5(1.0f - 0.5f * absCosTheta(wi)));
+    vec3_scale(diffuse, diffuse, 1.0f - pow5(1.0f - 0.5f * absCosTheta(wo)));
+    vec3_copy(f, diffuse);
+}
+
+float FresnelBlendDiffuse_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
+                                      const FresnelBlendDiffuse* fbd)
+{
+    cosHemisphereSample(wi, wo, sample);
+    if(wo[2] < 0.0f) wi[2] = -wi[2];
+    FresnelBlendDiffuse_f(f, wi, wo, fbd);
+    return cosHemispherePdf(wi, wo);
+}
+
+float FresnelBlendDiffuse_pdf(const vec3 wi, const vec3 wo, const FresnelBlendDiffuse* fbd)
+{
+    return 0.5f * cosHemispherePdf(wi, wo);
+}
+
+void FresnelBlendSpecular_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlendSpecular * fbs)
+{
+    vec3 wh;
+    vec3_add(wh, wi, wo);
+    if(vec3_equal(wh, BLACK))
+        return ;
+    vec3_normalize(wh, wh);
+
+    vec3 specular;
+    vec3 fresnel;
+    schlickFresnel(fresnel, vec3_dot(wi, wh), fbs->ks);
+    float cos_theta = vec3_dot(wi, wh);
+    vec3_scale(specular, fresnel, MicrofacetDistribution_D(wh, &fbs->distrib) /
+               (4.0f * fabs(cos_theta) * max(absCosTheta(wi), absCosTheta(wo))));
+    vec3_copy(f, specular);
+}
+
+float FresnelBlendSpecular_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
+                                      const FresnelBlendSpecular* fbs)
+{
+    vec3 wh;
+    MicrofacetDistribution_sample_wh(wh, wo, sample, &fbs->distrib);
+    vec3 neg_wo;
+    vec3_negate(neg_wo, wo);
+    calcReflectRayDir(wi, wh, neg_wo);
+    if(!sameHemisphere(wo, wi)) return 0.0f;
+    FresnelBlendSpecular_f(f, wi, wo, fbs);
+    return FresnelBlendSpecular_pdf(wi, wo, fbs);
+}
+
+float FresnelBlendSpecular_pdf(const vec3 wi, const vec3 wo, const FresnelBlendSpecular* fbs)
+{
+    if(!sameHemisphere(wo, wi)) return 0.0f;
+    vec3 wh;
+    vec3_add(wh, wo, wi);
+    vec3_normalize(wh, wh);
+    float pdf_wh = MicrofacetDistribution_D(wh, &fbs->distrib);
+    //return 0.5f * (absCosTheta(wi) * INV_PI + pdf_wh / (4.0f * vec3_dot(wo, wh)));
+    //return pdf_wh / (2.0f * vec3_dot(wo, wh));
+    return pdf_wh / (4.0f * vec3_dot(wo, wh));
+}
+
 void FresnelBlend_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlend * fb)
 {
 /*
@@ -559,6 +628,10 @@ void BxDF_f(vec3 f, const vec3 wi, const vec3 wo, const void* bxdf, const BxDFTy
         return MicrofacetFresnel_f(f, wi, wo, (MicrofacetFresnel*)bxdf);
     case FRESNEL_BLEND:
         return FresnelBlend_f(f, wi, wo, (FresnelBlend*)bxdf);
+    case FRESNEL_BLEND_DIFFUSE:
+        return FresnelBlendDiffuse_f(f, wi, wo, (FresnelBlendDiffuse*)bxdf);
+    case FRESNEL_BLEND_SPECULAR:
+        return FresnelBlendSpecular_f(f, wi, wo, (FresnelBlendSpecular*)bxdf);        
     }    
 }
 
@@ -580,6 +653,10 @@ float BxDF_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample, const voi
         return MicrofacetFresnel_sample_f(f, wi, wo, sample, (MicrofacetFresnel*)bxdf);
     case FRESNEL_BLEND:
         return FresnelBlend_sample_f(f, wi, wo, sample, (FresnelBlend*)bxdf);
+    case FRESNEL_BLEND_DIFFUSE:
+        return FresnelBlendDiffuse_sample_f(f, wi, wo, sample, (FresnelBlendDiffuse*)bxdf);
+    case FRESNEL_BLEND_SPECULAR:
+        return FresnelBlendSpecular_sample_f(f, wi, wo, sample, (FresnelBlendSpecular*)bxdf);        
     }
     return 0.0f;
 }
@@ -602,6 +679,10 @@ float BxDF_pdf(const vec3 wi, const vec3 wo, const void* bxdf, const BxDFType ty
         return MicrofacetFresnel_pdf(wi, wo, (MicrofacetFresnel*)bxdf);
     case FRESNEL_BLEND:
         return FresnelBlend_pdf(wi, wo, (FresnelBlend*)bxdf);
+    case FRESNEL_BLEND_DIFFUSE:
+        return FresnelBlendDiffuse_pdf(wi, wo, (FresnelBlendDiffuse*)bxdf);
+    case FRESNEL_BLEND_SPECULAR:
+        return FresnelBlendSpecular_pdf(wi, wo, (FresnelBlendSpecular*)bxdf);        
     }
     return 0.0f;
 }
@@ -812,6 +893,31 @@ void BSDF_addFresnelBlend(BSDF* bsdf, const vec3 kd, const vec3 ks, const float 
     fb->distrib.type = type;
     bsdf->bxdfs[bsdf->num_bxdf] = fb;
     bsdf->types[bsdf->num_bxdf] = FRESNEL_BLEND;
+    bsdf->num_bxdf++;        
+}
+
+void BSDF_addFresnelBlendDiffuse(BSDF* bsdf, const vec3 kd, const vec3 ks)
+{
+    FresnelBlendDiffuse* fbd = (FresnelBlendDiffuse*)allocateBxDF();
+    vec3_copy(fbd->kd, kd);
+    vec3_copy(fbd->ks, ks);
+    bsdf->bxdfs[bsdf->num_bxdf] = fbd;
+    bsdf->types[bsdf->num_bxdf] = FRESNEL_BLEND_DIFFUSE;
+    bsdf->num_bxdf++;            
+}
+
+void BSDF_addFresnelBlendSpecular(BSDF* bsdf, const vec3 ks, const float ior_in, const float ior_out,
+                          const float alphax, const float alphay, const FacetDistribType type)
+{
+    FresnelBlendSpecular* fbs = (FresnelBlendSpecular*)allocateBxDF();
+    vec3_copy(fbs->ks, ks);
+    fbs->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
+    fbs->distrib.alphay = BeckmannRoughnessToAlpha(alphay);    
+    fbs->ior_in = ior_in;
+    fbs->ior_out = ior_out;
+    fbs->distrib.type = type;
+    bsdf->bxdfs[bsdf->num_bxdf] = fbs;
+    bsdf->types[bsdf->num_bxdf] = FRESNEL_BLEND_SPECULAR;
     bsdf->num_bxdf++;        
 }
 

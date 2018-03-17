@@ -274,6 +274,9 @@ bool getObjectAABB(AABB* aabb, const Object_t obj)
             aabb->min[i] -= K_FLAT_AABB;
             aabb->max[i] += K_FLAT_AABB;
         }
+        printf("disk\n");
+        printVec3WithText("min", aabb->min);
+        printVec3WithText("max", aabb->max);
     } break;
     case GENERICTORUS:
     {

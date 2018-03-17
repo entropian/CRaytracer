@@ -24,7 +24,9 @@ enum BxDFType
     SPECULAR_TRANSMISSION,
     MICROFACET_REFLECTION,
     MICROFACET_FRESNEL,
-    FRESNEL_BLEND
+    FRESNEL_BLEND,
+    FRESNEL_BLEND_DIFFUSE,
+    FRESNEL_BLEND_SPECULAR
 };
 
 inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
@@ -45,6 +47,10 @@ inline BxDFFlags getBxDFFlagsFromType(const BxDFType type)
     case FRESNEL_BLEND:
         //return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE | BSDF_GLOSSY);
         return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE);
+    case FRESNEL_BLEND_DIFFUSE:
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_DIFFUSE);
+    case FRESNEL_BLEND_SPECULAR:
+        return (BxDFFlags)(BSDF_REFLECTION | BSDF_GLOSSY);        
     default:
         return BSDF_NONE;
     }
@@ -127,6 +133,26 @@ float FresnelBlend_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
                                       const FresnelBlend mt);
 float FresnelBlend_pdf(const vec3 wi, const vec3 wo, const FresnelBlend* mt);
 
+typedef struct FresnelBlendDiffuse_s
+{
+    vec3 kd, ks;
+}FresnelBlendDiffuse;
+void FresnelBlendDiffuse_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlendDiffuse * fbd);
+float FresnelBlendDiffuse_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
+                                   const FresnelBlendDiffuse* fbd);
+float FresnelBlendDiffuse_pdf(const vec3 wi, const vec3 wo, const FresnelBlendDiffuse* fbd);
+
+typedef struct FresnelBlendSpecular_s
+{
+    vec3 ks;
+    float ior_in, ior_out;
+    MicrofacetDistribution distrib;
+}FresnelBlendSpecular;
+void FresnelBlendSpecular_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlendSpecular * fbs);
+float FresnelBlendSpecular_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sample,
+                                    const FresnelBlendSpecular* fbs);
+float FresnelBlendSpecular_pdf(const vec3 wi, const vec3 wo, const FresnelBlendSpecular* fbs);
+
 const int MAX_BXDF = 8;
 typedef struct BSDF_s
 {
@@ -161,5 +187,8 @@ void BSDF_addMicrofacetFresnel(BSDF* bsdf, const vec3 color, const float ior_in,
                                     const float alphax, const float alphay, const FacetDistribType type);
 void BSDF_addFresnelBlend(BSDF* bsdf, const vec3 kd, const vec3 ks, const float ior_in, const float ior_out,
                           const float alphax, const float alphay, const FacetDistribType type);
+void BSDF_addFresnelBlendDiffuse(BSDF* bsdf, const vec3 kd, const vec3 ks);
+void BSDF_addFresnelBlendSpecular(BSDF* bsdf, const vec3 ks, const float ior_in, const float ior_out,
+                                  const float alphax, const float alphay, const FacetDistribType type);
 void BSDF_freeBxDFs(BSDF* bsdf);
 

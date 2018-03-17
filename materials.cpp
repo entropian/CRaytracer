@@ -147,7 +147,6 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
             getTexColor(kd, plastic->diffuse, uv);
         else
             vec3_copy(kd, plastic->kd);
-
         /*
         if(!vec3_equal(kd, BLACK))
             BSDF_addLambertian(bsdf, kd);
@@ -164,7 +163,11 @@ void computeScatteringFunc(BSDF* bsdf, const vec2 uv, const Material* mat)
             }
         }
         */
-        BSDF_addFresnelBlend(bsdf, kd, plastic->ks, 1.5f, 1.0f, plastic->roughness, plastic->roughness, BECKMANN);
+        //BSDF_addFresnelBlend(bsdf, kd, plastic->ks, 1.5f, 1.0f, plastic->roughness, plastic->roughness, BECKMANN);
+        BSDF_addFresnelBlendDiffuse(bsdf, kd, plastic->ks);
+        BSDF_addFresnelBlendSpecular(bsdf, plastic->ks, 1.5f, 1.0f,
+                                     plastic->roughness, plastic->roughness, BECKMANN);
+
     } break;
     case GLASS:
     {

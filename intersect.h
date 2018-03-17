@@ -147,7 +147,6 @@ float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
                         obj_t = tmp_t;
                         obj_sr = tmp_sr;
                     }
-
                 }
             }
             if(min(obj_t, min(tx_next, min(ty_next, tz_next))) == obj_t)                
