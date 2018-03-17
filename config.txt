@@ -1,8 +1,8 @@
 scene_file staircase.txt
 window_width  1024
 window_height  1024
-image_width  256
-image_height 256
+image_width  512
+image_height 512
 num_samples  196
 num_sample_sets 83
 max_depth  17

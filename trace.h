@@ -362,6 +362,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
     Ray ray = primary_ray;
     BxDFFlags sampled_flags = BSDF_NONE;
     BxDFFlags excluded_from_direct = (BxDFFlags)(BSDF_SPECULAR | BSDF_GLOSSY);
+    int good_paths = 0;
     int bounces;
     for(bounces = 0; ; bounces++)
     {
@@ -380,6 +381,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                     vec3_scale(inc_radiance, emissive->color, emissive->intensity);
                     vec3_mult(inc_radiance, inc_radiance, beta);
                     vec3_add(L, L, inc_radiance);
+                    good_paths++;
                 }
             }else
             {
@@ -388,6 +390,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                     getEnvLightIncRadiance(env_inc_radiance, ray.direction, sl->env_light);
                 vec3_mult(env_inc_radiance, env_inc_radiance, beta);
                 vec3_add(L, L, env_inc_radiance);
+                good_paths++;
             if(beta[0] < 0.0f || beta[1] < 0.0f || beta[2] < 0.0f)
                 vec3_copy(L, BLUE);                
             }
@@ -412,6 +415,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct);
             vec3_mult(contrib, contrib, beta);
             vec3_add(L, L, contrib);
+            if(!vec3_equal(contrib, BLACK))
+                good_paths++;
             if(beta[0] < 0.0f || beta[1] < 0.0f || beta[2] < 0.0f)
                 vec3_copy(L, RED);
         }
@@ -460,8 +465,13 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         }
         BSDF_freeBxDFs(&(sr.bsdf));
     }
+    /*
     if(bounces > 0)
         vec3_scale(L, L, 1.0f / bounces);
+    */
+    if(good_paths > 0)
+        vec3_scale(L, L, 1.0f / good_paths);
+    //printf("good pathes %d\n", good_paths);
     vec3_copy(radiance, L);
     return 0.0f;
 }

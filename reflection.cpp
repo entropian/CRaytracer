@@ -472,7 +472,8 @@ float FresnelBlendDiffuse_sample_f(vec3 f, vec3 wi, const vec3 wo, const vec2 sa
 
 float FresnelBlendDiffuse_pdf(const vec3 wi, const vec3 wo, const FresnelBlendDiffuse* fbd)
 {
-    return 0.5f * cosHemispherePdf(wi, wo);
+    return cosHemispherePdf(wi, wo);
+    //return 0.5f * cosHemispherePdf(wi, wo);
 }
 
 void FresnelBlendSpecular_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlendSpecular * fbs)
@@ -513,8 +514,8 @@ float FresnelBlendSpecular_pdf(const vec3 wi, const vec3 wo, const FresnelBlendS
     vec3_normalize(wh, wh);
     float pdf_wh = MicrofacetDistribution_D(wh, &fbs->distrib);
     //return 0.5f * (absCosTheta(wi) * INV_PI + pdf_wh / (4.0f * vec3_dot(wo, wh)));
-    //return pdf_wh / (2.0f * vec3_dot(wo, wh));
-    return pdf_wh / (4.0f * vec3_dot(wo, wh));
+    return pdf_wh / (2.0f * vec3_dot(wo, wh));
+    //return pdf_wh / (4.0f * vec3_dot(wo, wh));
 }
 
 void FresnelBlend_f(vec3 f, const vec3 wi, const vec3 wo, const FresnelBlend * fb)
@@ -911,8 +912,10 @@ void BSDF_addFresnelBlendSpecular(BSDF* bsdf, const vec3 ks, const float ior_in,
 {
     FresnelBlendSpecular* fbs = (FresnelBlendSpecular*)allocateBxDF();
     vec3_copy(fbs->ks, ks);
-    fbs->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
-    fbs->distrib.alphay = BeckmannRoughnessToAlpha(alphay);    
+    //fbs->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
+    //fbs->distrib.alphay = BeckmannRoughnessToAlpha(alphay);
+    fbs->distrib.alphax = alphax;
+    fbs->distrib.alphay = alphay;    
     fbs->ior_in = ior_in;
     fbs->ior_out = ior_out;
     fbs->distrib.type = type;

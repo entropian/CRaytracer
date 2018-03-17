@@ -86,7 +86,8 @@ void calcRayPinhole(Ray *ray, const vec2 viewplane_coord, const Camera *camera)
     vec3_scale(focal_point, camera->z_axis, camera->focal_pt_dist);    // focal_point is rotated but not translated
     vec3_sub(ray->direction, sample_loc_cam, focal_point);
     vec3_normalize(ray->direction, ray->direction);
-    vec3_add(ray->origin, focal_point, camera->position);
+    //vec3_add(ray->origin, focal_point, camera->position);
+    vec3_add(ray->origin, sample_loc_cam, camera->position);
 }
 
 // Compute a ray for thin lens camera
