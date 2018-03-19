@@ -41,20 +41,20 @@ void toneMap(vec3 r, const vec3 a)
         vec3_scale(r, a, 1.0f/max);
     }
     */
-    /*
-    float exposure = -6.0f;
+
+    float exposure = -2.0f;
     r[0] = 1.0f - expf(a[0] * exposure);
     r[1] = 1.0f - expf(a[1] * exposure);
     r[2] = 1.0f - expf(a[2] * exposure);
-    */
-
+    vec3_pow(r, r, 1.0f / 2.2f);
+    /*
     vec3 denom;
     denom[0] = 1.0f / (a[0] + 1.0f);
     denom[1] = 1.0f / (a[1] + 1.0f);
     denom[2] = 1.0f / (a[2] + 1.0f);    
     vec3_mult(r, a, denom);
     vec3_pow(r, r, 1.0f / 2.2f);
-
+    */
     /*
     r[0] = clamp(GammaCorrect(a[0]) + 0.5f, 0.f, 1.f);
     r[1] = clamp(GammaCorrect(a[1]) + 0.5f, 0.f, 1.f);

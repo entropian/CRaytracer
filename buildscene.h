@@ -823,6 +823,72 @@ void initMeshLights(Scene* scene)
     }
 }
 
+void preprocessLights(Scene* scene)    
+{
+    SceneLights* sl = &(scene->lights);
+    const SceneObjects* so = &(scene->objects);
+    if(sl->env_light)
+    {
+        if(so->accel == BVH)
+        {
+            BVHNode* node = (BVHNode*)(so->accel_ptr);
+            vec3 dist;
+            vec3_sub(dist, node->aabb.max, node->aabb.min);
+            //sl->env_light->world_radius = vec3_length(dist) * 0.5f;
+            sl->env_light->world_radius = vec3_length(dist) * 2.0f;
+        }else if(so->accel == GRID)
+        {
+            UniformGrid* grid = (UniformGrid*)(so->accel_ptr);
+            vec3 dist;
+            vec3_sub(dist, grid->aabb.max, grid->aabb.min);
+            //sl->env_light->world_radius = vec3_length(dist) * 0.5f;
+            sl->env_light->world_radius = vec3_length(dist) * 2.0f;
+        }else if(so->accel == BVH4)
+        {
+            // TODO
+        }
+    }
+    
+    float total_power = 0.0f;
+    for(int i = 0; i < sl->num_lights; i++)
+    {
+        float power = 0.0f;
+        switch(sl->light_types[i])
+        {
+        case ENVLIGHT:
+        {
+            EnvLight* env_light = (EnvLight*)sl->light_ptrs[i];
+            power = (env_light->color[0] * env_light->color[1] * env_light->color[3]) / 3.0f;
+            power *= env_light->intensity * env_light->world_radius;
+        } break;
+        case AREALIGHT:
+        {
+            AreaLight* area_light = (AreaLight*)sl->light_ptrs[i];
+            float area = 0.0f;
+            if(area_light->obj_type == SPHERE)
+            {
+                Sphere* sphere = (Sphere*)area_light->obj_ptr;
+                area = 4.0f * PI * sphere->radius * sphere->radius;
+            }else if(area_light->obj_type == RECTANGLE)
+            {
+                Rectangle* rect = (Rectangle*)area_light->obj_ptr;
+                area = vec3_length(rect->width) * vec3_length(rect->height);
+            }else if(area_light->obj_type == DISK)
+            {
+                Disk* disk = (Disk*)area_light->obj_ptr;
+                area = PI * disk->radius * disk->radius;
+            }            
+            power = (area_light->color[0] * area_light->color[1] * area_light->color[2]) / 3.0f
+                * area_light->intensity * area;
+        } break;
+        }
+        sl->power[i] = power;
+        total_power += power;
+    }
+    for(int i = 0; i < sl->num_lights; i++)
+        sl->power[i] /= total_power;
+}
+
 void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
 {
     // NOTE: initSceneObjects must be called after after initSceneLights if there are area lights

@@ -286,8 +286,8 @@ int main(int argc, char** argv)
     film.frame_res_width = params.image_width;
     film.frame_res_height = params.image_height;
     film.num_pixels = num_pixels;
-    //film.fov = 70.0f / 180.0f * PI; // TODO
     film.fov = 70.0f / 180.0f * PI; // TODO
+    //film.fov = 25.0f / 180.0f * PI; // TODO
     Camera *camera = &(scene.camera);
     calcFilmDimension(&film, camera);
 
@@ -316,6 +316,8 @@ int main(int argc, char** argv)
     }
 
     initBSDFMem(num_threads, params.max_depth+1);
+    
+    preprocessLights(&scene);
 
     double start_time, end_time;
     start_time = glfwGetTime();
@@ -381,7 +383,7 @@ int main(int argc, char** argv)
             
             vec3 radiance = {0.0f, 0.0f, 0.0f};
 
-            if(i == 200 * 256 + 60)
+            if(i == 70 * 256 + 50)
             {
                 pathTrace(radiance, params.max_depth, ray, &trace_args);
                 vec3_copy(radiance, RED);

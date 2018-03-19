@@ -318,9 +318,23 @@ void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_s
         return;
     }
     int light_index;
-    float light_pdf = 1.0f / num_lights;
-    float rand_float = (float)rand() / (float)RAND_MAX;
-    light_index = (int)min(rand_float * num_lights, num_lights - 1);
+    float light_pdf;
+    float rand_float = (float)rand() / (float)RAND_MAX;    
+    // Uniform distribution    
+    //light_pdf = 1.0f / num_lights;
+    //light_index = (int)min(rand_float * num_lights, num_lights - 1);    
+
+    float cdf = 0.0f;
+    for(int i = 0; i < sl->num_lights; i++)
+    {
+        if(cdf <= rand_float && cdf + sl->power[i] > rand_float)
+        {
+            light_index = i;
+            light_pdf = sl->power[i];
+            break;
+        }
+        cdf += sl->power[i];
+    }
     vec3 Ld;
     estimateDirect(Ld, light_sample, scatter_sample, sr, light_index, sl, so, excluded_bxdf);
     vec3_scale(L, Ld, 1.0f / light_pdf);
@@ -329,33 +343,9 @@ void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_s
 float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trace_args)
 {
     const SceneObjects *so = trace_args->objects;
-    const SceneLights *sl = trace_args->lights;
+    SceneLights *sl = trace_args->lights;
     Sampler* sampler = trace_args->sampler;
 
-    // TODO: calculate world radius for env light
-    if(sl->env_light)
-    {
-        if(so->accel == BVH)
-        {
-            BVHNode* node = (BVHNode*)(so->accel_ptr);
-            vec3 dist;
-            vec3_sub(dist, node->aabb.max, node->aabb.min);
-            //sl->env_light->world_radius = vec3_length(dist) * 0.5f;
-            sl->env_light->world_radius = vec3_length(dist) * 2.0f;
-        }else if(so->accel == GRID)
-        {
-            UniformGrid* grid = (UniformGrid*)(so->accel_ptr);
-            vec3 dist;
-            vec3_sub(dist, grid->aabb.max, grid->aabb.min);
-            //sl->env_light->world_radius = vec3_length(dist) * 0.5f;
-            sl->env_light->world_radius = vec3_length(dist) * 2.0f;
-        }else if(so->accel == BVH4)
-        {
-            // TODO
-        }
-    }
-    
-    
     vec3 L = {0.0f, 0.0f, 0.0f};
     vec3 beta = {1.0f, 1.0f, 1.0f};
     float eta_scale = 1.0f;
