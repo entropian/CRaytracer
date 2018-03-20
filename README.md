@@ -12,5 +12,6 @@ This is an unbiased path tracer written in mostly C inspired by Handmade Hero.
 - Wavefront .obj files
 
 ![Buddha metal](https://i.imgur.com/qzeBEz7.jpg)
-![San Miguel](https://i.imgur.com/YBOplxA.jpg)
+![Coffee](https://i.imgur.com/jaZ2CH1.jpg)
 ![Red Rose](https://i.imgur.com/0vRFDyW.png)
+![San Miguel](https://i.imgur.com/YBOplxA.jpg)
