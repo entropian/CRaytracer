@@ -1,5 +1,5 @@
 # craytracer: a physically-based path tracer in (mostly) C.
-![Dragon Render](https://i.imgur.com/QeFEkum.jpg)
+![Buddha Render](https://i.imgur.com/QeFEkum.jpg)
 
 This is an unbiased path tracer written in mostly C inspired by Handmade Hero.
 
@@ -11,3 +11,6 @@ This is an unbiased path tracer written in mostly C inspired by Handmade Hero.
 - Multithreaded
 - Wavefront .obj files
 
+![Buddha metal](https://i.imgur.com/qzeBEz7.jpg)
+![San Miguel](https://i.imgur.com/YBOplxA.jpg)
+![Red Rose](https://i.imgur.com/0vRFDyW.png)
