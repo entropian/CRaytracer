@@ -109,6 +109,14 @@ void calcTangentVec(Mesh* mesh)
         vec3_copy(tangents[i], BLACK);
         vec3_copy(binormals[i], BLACK);
     }
+    bool mesh_has_no_texcoord = false;
+    if(mesh->num_texcoords == 0)
+    {
+        mesh_has_no_texcoord = true;
+        mesh->texcoords = (float*)malloc(sizeof(float) * 2 *vert_count);
+        mesh->num_texcoords = 2 * vert_count;
+    }
+    
     for(int i = 0; i < mesh->num_indices; i+=3)
     {
         int i0 = mesh->indices[i];
@@ -119,7 +127,7 @@ void calcTangentVec(Mesh* mesh)
         vec3 v1 = {mesh->positions[i1*3], mesh->positions[i1*3 + 1], mesh->positions[i1*3 + 2]};
         vec3 v2 = {mesh->positions[i2*3], mesh->positions[i2*3 + 1], mesh->positions[i2*3 + 2]};
         vec2 uv0, uv1, uv2;
-        if(mesh->num_texcoords > 0)
+        if(mesh_has_no_texcoord)
         {
             vec2_assign(uv0, mesh->texcoords[i0*2], mesh->texcoords[i0*2 + 1]);
             vec2_assign(uv1, mesh->texcoords[i1*2], mesh->texcoords[i1*2 + 1]);
@@ -130,6 +138,12 @@ void calcTangentVec(Mesh* mesh)
                 vec2_assign(uv0, 0.0f, 0.0f);
                 vec2_assign(uv1, 1.0f, 0.0f);
                 vec2_assign(uv2, 1.0f, 1.0f);
+                mesh->texcoords[i0*2] = uv0[0];
+                mesh->texcoords[i0*2 + 1] = uv0[1];
+                mesh->texcoords[i1*2] = uv1[0];
+                mesh->texcoords[i1*2 + 1] = uv1[1];
+                mesh->texcoords[i2*2] = uv2[0];
+                mesh->texcoords[i2*2 + 1] = uv2[1];                
             }
         }else
         {
@@ -141,6 +155,12 @@ void calcTangentVec(Mesh* mesh)
             vec2_assign(uv0, 0.0f, 0.0f);
             vec2_assign(uv1, 1.0f, 0.0f);
             vec2_assign(uv2, 1.0f, 1.0f);
+            mesh->texcoords[i0*2] = uv0[0];
+            mesh->texcoords[i0*2 + 1] = uv0[1];
+            mesh->texcoords[i1*2] = uv1[0];
+            mesh->texcoords[i1*2 + 1] = uv1[1];
+            mesh->texcoords[i2*2] = uv2[0];
+            mesh->texcoords[i2*2 + 1] = uv2[1];                            
         }
         
         vec3 q0, q1;
@@ -858,7 +878,17 @@ void preprocessLights(Scene* scene)
         case ENVLIGHT:
         {
             EnvLight* env_light = (EnvLight*)sl->light_ptrs[i];
-            power = (env_light->color[0] * env_light->color[1] * env_light->color[3]) / 3.0f;
+            vec3 color;
+            if(env_light->type == CONSTANT)
+            {
+                vec3_copy(color, env_light->color);
+            }else if(env_light->type == TEXTURE)
+            {
+                // TODO
+                vec3_copy(color, WHITE);
+            }
+
+            power = (color[0] * color[1] * color[3]) / 3.0f;
             power *= env_light->intensity * env_light->world_radius;
         } break;
         case AREALIGHT:
