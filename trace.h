@@ -429,7 +429,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec3_scale(f, f, fabs(vec3_dot(wi, sr.normal)) / pdf);
         vec3_mult(beta, beta, f);
         resetRay(&ray, sr.hit_point, wi);
-
+        /*
         if((sampled_flags & BSDF_SPECULAR) && (sampled_flags & BSDF_TRANSMISSION))
         {
             Transparent* trans = (Transparent*)(sr.mat.data);
@@ -437,12 +437,14 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                 trans->ior_in / trans->ior_out;
             eta_scale *= (vec3_dot(wo, sr.normal) > 0.0f) ? (eta * eta) : 1 / (eta * eta);
         }
-        
+        */        
         // Possibly terminate the path with Russian roulette
-
+        /*
         vec3 rr_beta;
         vec3_scale(rr_beta, beta, eta_scale);
         float max_comp = max(rr_beta[0], max(rr_beta[1], rr_beta[2]));
+        */
+        float max_comp = max(beta[0], max(beta[1], beta[2]));
         if(bounces > 3)
         {
             float q = max(0.05, 1.0f - max_comp);
@@ -456,6 +458,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             // TODO Different from PBRT source
             //vec3_scale(beta, beta, (1.0f - q));
         }
+
         BSDF_freeBxDFs(&(sr.bsdf));
     }
     /*
@@ -464,6 +467,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
     */
     if(good_paths > 0)
         vec3_scale(L, L, 1.0f / good_paths);
+
     //printf("good pathes %d\n", good_paths);
     vec3_copy(radiance, L);
     return 0.0f;

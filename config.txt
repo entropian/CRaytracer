@@ -1,8 +1,8 @@
-scene_file new_scene.txt
-window_width  900
-window_height  900
-image_width  900
-image_height 900
+scene_file coffee.txt
+window_width  800
+window_height  1000
+image_width  400
+image_height 500
 num_samples  256
 num_sample_sets 83
 max_depth  17

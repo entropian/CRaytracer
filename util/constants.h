@@ -42,7 +42,7 @@ const vec3 MED_ORCHID = {0.729, 0.333, 0.827};
 const float DEFAULT_FOCAL_LENGTH = 3.0f;
 const float DEFAULT_LENS_RADIUS = 0.2f;
 
-const float K_EPSILON = 0.000005f;
+const float K_EPSILON = 0.0000005f;
 //const float K_EPSILON = 0.005f;
 const float K_SMALLVALUE = 0.0000001f;
 const float TMAX = FLT_MAX;
