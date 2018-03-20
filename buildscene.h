@@ -337,14 +337,10 @@ void linkMaterialTextures(Scene *scene)
     }    
 }
 
-
-void loadSceneFile(Scene* scene, const char* scenefile)
+void setupFilmAndCamera(Scene* scene, FILE* fp)
 {
-    FILE* fp;
-    openFile(&fp, scenefile, "r");
-    char buffer[128];
-
     // Setup film
+    char buffer[128];
     Film* film = &(scene->film);    
     while(strcmp(buffer, "WINDOW_WIDTH") != 0)
     {
@@ -382,7 +378,16 @@ void loadSceneFile(Scene* scene, const char* scenefile)
     cameraLookAt(&(scene->camera), cam_pos, look_point, up_vec);
 
     calcFilmDimension(film, &(scene->camera));
-    
+}
+
+void loadSceneFile(Scene* scene, const char* scenefile)
+{
+    FILE* fp;
+    openFile(&fp, scenefile, "r");
+    char buffer[128];
+
+    setupFilmAndCamera(scene, fp);
+        
     /*
       Load textures as we parse materials, but defer storing texture pointers in materials
       until all texture loadings are done.
@@ -390,10 +395,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
       Once all texture loadings are done, iterate through the aux struct, get corresponding texture
       pointers and store it in the material.
      */
-    //DBuffer mat_tex_pairs = DBuffer_create(MatTexNamePair);
     int num_mat = parseMaterials(scene, fp);
-
-    //char buffer[128];
     while(getNextTokenInFile(buffer, fp))
     {
         if(buffer[0] == '#')
@@ -506,59 +508,6 @@ void loadSceneFile(Scene* scene, const char* scenefile)
         }
     }
     linkMaterialTextures(scene);
-
-    //DBuffer_destroy(&mat_tex_pairs);
-}
-
-void initEnvLight(SceneLights* sl)
-{
-
-    if(sl->num_lights == MAX_LIGHTS){return;}
-    EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
-    env_light->type = CONSTANT;
-    env_light->intensity = 1.0f;
-    vec3_copy(env_light->color, WHITE);
-
-    Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-
-    env_light->samples3D = samples;
-    sl->shadow[sl->num_lights] = true;
-    sl->light_ptrs[sl->num_lights] = env_light;
-    sl->light_types[sl->num_lights] = ENVLIGHT;
-    (sl->num_lights)++;
-    sl->env_light = env_light;
-
-    /*
-    if(sl->num_lights == MAX_LIGHTS){return;}
-    EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
-    env_light->type = CUBEMAP;
-    env_light->intensity = 1.0f;
-
-    Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-    char paths[6][256];
-    stringCopy(paths[0], 256, "models/cubemap/sanMiguel-NZ.png");
-    stringCopy(paths[1], 256, "models/cubemap/sanMiguel-PZ.png");
-    stringCopy(paths[2], 256, "models/cubemap/sanMiguel-NX.png");
-    stringCopy(paths[3], 256, "models/cubemap/sanMiguel-PX.png");
-    stringCopy(paths[4], 256, "models/cubemap/sanMiguel-NY.png");
-    stringCopy(paths[5], 256, "models/cubemap/sanMiguel-PY.png");
-    EnvLight_init_cubemap(env_light, paths);
-
-    env_light->samples3D = samples;    
-    sl->shadow[sl->num_lights] = true;
-    sl->light_ptrs[sl->num_lights] = env_light;
-    sl->light_types[sl->num_lights] = ENVLIGHT;
-    (sl->num_lights)++;
-    sl->env_light = env_light;
-    */
-}
-
-void initAmbLight(SceneLights *sl)
-{
-    sl->amb_light = (AmbientLight*)malloc(sizeof(AmbientLight));
-    vec3_copy(sl->amb_light->color, WHITE);
-    sl->amb_light->intensity = 1.0f;
-    sl->amb_light->amb_occlusion = false;
 }
 
 void initBackgroundColor(SceneLights* sl)
@@ -580,10 +529,7 @@ void initSceneLights(SceneLights* sl)
     {
         sl->light_ptrs[i] = NULL;
     }
-
     //initAreaLights(sl);
-    //initEnvLight(sl);
-    initAmbLight(sl);
     initBackgroundColor(sl);
 }
 
@@ -610,34 +556,19 @@ int initAreaLights(Scene* scene)
                 area_light_ptr->flux = area_light_ptr->intensity * width * height * PI;
                 vec3_assign(area_light_ptr->sample_point, 0.0f, 0.0f, 0.0f);
 
-                // TODO
-                Samples2D* unit_square_samples = (Samples2D*)malloc(sizeof(Samples2D));
-                unit_square_samples->samples = NULL;
-                genMultijitteredSamples(unit_square_samples);
-
                 area_light_ptr->pdf = 1.0f/(width * height);
-                area_light_ptr->samples2D = unit_square_samples;
-                area_light_ptr->samples3D = NULL;
                 area_light_ptr->obj_ptr = rect;
                 area_light_ptr->obj_type = RECTANGLE;
             }else if(obj.type == SPHERE)
             {
                 Sphere* sphere = (Sphere*)(obj.ptr);
-                // TODO
-                Samples3D* h_samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-
                 area_light_ptr->pdf = 1.0f / (4.0f * (float)PI * sphere->radius * sphere->radius);
-                area_light_ptr->samples2D = NULL;
-                area_light_ptr->samples3D = h_samples;
                 area_light_ptr->obj_ptr = sphere;
                 area_light_ptr->obj_type = SPHERE;                
             }else if(obj.type == DISK)
             {
                 Disk* disk = (Disk*)(obj.ptr);
-                //area_light_ptr->pdf = 1.0f / (PI * disk->radius * disk->radius);
-                area_light_ptr->pdf = 1.0f / (1.0f);
-                area_light_ptr->samples2D = NULL;
-                area_light_ptr->samples3D = NULL;
+                area_light_ptr->pdf = 1.0f / (PI * disk->radius * disk->radius);
                 area_light_ptr->obj_ptr = disk;
                 area_light_ptr->obj_type = DISK;
             }
