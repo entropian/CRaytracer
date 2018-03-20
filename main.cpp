@@ -288,6 +288,7 @@ int main(int argc, char** argv)
     film.num_pixels = num_pixels;
     film.fov = 70.0f / 180.0f * PI; // TODO
     //film.fov = 25.0f / 180.0f * PI; // TODO
+    //film.fov = 35.0f / 180.0f * PI; // TODO
     Camera *camera = &(scene.camera);
     calcFilmDimension(&film, camera);
 
@@ -306,7 +307,7 @@ int main(int argc, char** argv)
     thread_data.trace = trace;
 
     int num_patches = 256;
-    int num_threads = 4;
+    int num_threads = 3;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
     int patches[257];
