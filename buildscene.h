@@ -888,7 +888,7 @@ void preprocessLights(Scene* scene)
                 vec3_copy(color, WHITE);
             }
 
-            power = (color[0] * color[1] * color[3]) / 3.0f;
+            power = (color[0] + color[1] + color[2]) / 3.0f;
             power *= env_light->intensity * env_light->world_radius;
         } break;
         case AREALIGHT:
