@@ -335,6 +335,9 @@ void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_s
         }
         cdf += sl->power[i];
     }
+    if(rand_float == 1.0f)
+        light_index = sl->num_lights - 1;
+
     vec3 Ld;
     estimateDirect(Ld, light_sample, scatter_sample, sr, light_index, sl, so, excluded_bxdf);
     vec3_scale(L, Ld, 1.0f / light_pdf);
