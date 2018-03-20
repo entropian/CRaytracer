@@ -28,6 +28,7 @@
 #include "projmap.h"
 #include "imagestate.h"
 #include "reflection.h"
+#include "parallel.h"
 
 bool SHOW_PROGRESS = true;
 
@@ -66,64 +67,6 @@ void calcProgress(const double start_time, double* end_time, int* prev_percent,
     }        
 }
 
-const int MAX_JOBS = 1000;
-typedef struct JobQueue_s
-{
-    int indices[MAX_JOBS *2];
-    int num_jobs;
-    int head;
-    pthread_mutex_t mtx;
-}JobQueue;
-
-void JobQueue_init(JobQueue* job_queue)
-{
-    job_queue->num_jobs = 0;
-    job_queue->head = 0;
-    job_queue->mtx = PTHREAD_MUTEX_INITIALIZER;
-}
-
-void JobQueue_addJob(JobQueue* job_queue, int start, int end)
-{
-    pthread_mutex_lock(&(job_queue->mtx));
-    int queue_end = job_queue->num_jobs * 2;
-    job_queue->indices[queue_end] = start;
-    job_queue->indices[queue_end+1] = end;
-    job_queue->num_jobs += 1;
-    pthread_mutex_unlock(&(job_queue->mtx));
-}
-
-int JobQueue_getJob(JobQueue* job_queue, int* start, int* end)
-{
-    pthread_mutex_lock(&(job_queue->mtx));
-    if(job_queue->head == job_queue->num_jobs * 2)
-    {
-        pthread_mutex_unlock(&(job_queue->mtx));
-        return 0;
-    }
-    *start = job_queue->indices[job_queue->head];
-    *end = job_queue->indices[job_queue->head + 1];
-    job_queue->head += 2;
-    pthread_mutex_unlock(&(job_queue->mtx));
-    return 1;
-}
-
-
-typedef struct ThreadData_s
-{
-    int p;
-    int prev_num_samples;
-    unsigned char* set_buffer;
-    Film* film;
-    Camera* camera;
-    Scene* scene;
-    Samples3D* h_samples;
-    float* color_buffer;
-    unsigned char* image;
-    ConfigParams* params;
-    float (*trace)(vec3, int, const Ray, TraceArgs*);
-    JobQueue* job_queue;
-}ThreadData;
-
 void* threadFunc(void* vargp)
 {
     ThreadData* thread_data = (ThreadData*)vargp;
@@ -140,11 +83,11 @@ void* threadFunc(void* vargp)
             vec2 imageplane_coord;
             vec2 sample;
             Sampler_getSample(sample, &sampler);
-            calcImageCoord(imageplane_coord, thread_data->film, sample, i);
+            calcImageCoord(imageplane_coord, &(thread_data->scene->film), sample, i);
 
             Ray ray;
             Sampler_getSample(sample, &sampler);
-            calcCameraRay(&ray, imageplane_coord, thread_data->camera, sample);
+            calcCameraRay(&ray, imageplane_coord, &(thread_data->scene->camera), sample);
 
             TraceArgs trace_args;
             trace_args.objects = &(thread_data->scene->objects);
@@ -152,7 +95,7 @@ void* threadFunc(void* vargp)
             trace_args.sampler = &sampler;
 
             vec3 radiance = {0.0f, 0.0f, 0.0f};
-            thread_data->trace(radiance, thread_data->params->max_depth, ray, &trace_args);
+            thread_data->trace(radiance, thread_data->max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
 
             thread_data->color_buffer[i*3] += color[0];
@@ -168,29 +111,18 @@ void* threadFunc(void* vargp)
             thread_data->image[i*3 + 2] = (char)(color[2] * 255.0f);
         }
     }
-
-}
-
-void ppmToImageState()
-{
-    unsigned char* image;
-    int width, height, size;
-    PPM_read(&image, &size, &width, &height, "output.ppm");
-    float* buffer = (float*)malloc(size * sizeof(float));
-    int num_samples = 10000;
-    int i;
-    for(i = 0; i < size; i++)
-    {
-        buffer[i] = (float)(image[i]) / 255.0f * num_samples;
-    }
-    free(image);
-    saveImageState(buffer, num_samples, width, height, "savestate.is");
-    free(buffer);
 }
 
 extern int g_intersect_count;
 int main(int argc, char** argv)
 {
+    if(glfwInit() != GL_TRUE)
+    {
+        fprintf(stderr, "Failed to initialize GLFW\n");
+        //return NULL;
+        return -1;
+    }
+    
     bool using_image_state = false;
     char image_state_file[256];
     if(argc > 2)
@@ -219,6 +151,7 @@ int main(int argc, char** argv)
 
     GlViewport viewport;
     GLFWwindow* window = initWindow(scene.film.window_width, scene.film.window_height);
+    glfwSetWindowSize(window, scene.film.window_width, scene.film.window_height);
     if(window)
     {
         glfwSetKeyCallback(window, keyCallback);
@@ -257,16 +190,14 @@ int main(int argc, char** argv)
     
     ThreadData thread_data;
     thread_data.prev_num_samples = prev_num_samples;
-    thread_data.film = &(scene.film);
-    thread_data.camera = &(scene.camera);
     thread_data.scene = &scene;
     thread_data.color_buffer = color_buffer;
     thread_data.image = image;
-    thread_data.params = &params;
+    thread_data.max_depth = params.max_depth;
     thread_data.trace = trace;
 
     int num_patches = 256;
-    int num_threads = 3;
+    int num_threads = 1;
     int num_pixels_per_patch = scene.film.num_pixels / num_patches;
     pthread_t threads[17];
     int patches[257];
@@ -282,8 +213,6 @@ int main(int argc, char** argv)
     end_time = start_time;
     int prev_percent = 0;
 
-#define MULTITHREAD
-#ifdef MULTITHREAD
     JobQueue job_queue;
     JobQueue_init(&job_queue);
     thread_data.job_queue = &job_queue;
@@ -312,61 +241,7 @@ int main(int argc, char** argv)
             displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
         }
     }
-#else
-    Sampler sampler;
-    Sampler_create(&sampler);
-    for(unsigned int p = 0; p < params.num_samples; p++)
-    {
-        sampler.cur_sample_index = p;
-        for(int i = 0; i < scene.film.num_pixels; i++)
-        {
-            Sampler_setPixel(&sampler, i);
-            vec3 color = {0.0f, 0.0f, 0.0f};
-            vec2 sample;
-            Sampler_getSample(sample, &sampler);
-            vec2 imageplane_coord;
-            calcImageCoord(imageplane_coord, &(scene.film), sample, i);
 
-            Ray ray;
-            Sampler_getSample(sample, &sampler);
-            calcCameraRay(&ray, imageplane_coord, camera, sample);
-
-
-            TraceArgs trace_args;
-            trace_args.objects = &(scene.objects);
-            trace_args.lights = &(scene.lights);
-            trace_args.sampler = &sampler;
-            
-            vec3 radiance = {0.0f, 0.0f, 0.0f};
-
-            if(i == 70 * 256 + 50)
-            {
-                pathTrace(radiance, params.max_depth, ray, &trace_args);
-                vec3_copy(radiance, RED);
-            }else
-            {
-                trace(radiance, params.max_depth, ray, &trace_args);
-            }
-            vec3_add(color, color, radiance);
-            
-            color_buffer[i*3] += color[0];
-            color_buffer[i*3 + 1] += color[1];
-            color_buffer[i*3 + 2] += color[2];
-            vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
-            vec3_scale(color, color, 1/(float)(p+1 + prev_num_samples));
-            toneMap(color, color);
-
-            image[i*3] = (char)(color[0] * 255.0f);
-            image[i*3 + 1] = (char)(color[1] * 255.0f);
-            image[i*3 + 2] = (char)(color[2] * 255.0f);
-        }
-        calcProgress(start_time, &end_time, &prev_percent, p, &params);
-        if(SHOW_PROGRESS)
-        {
-            displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
-        }
-    }
-#endif
     end_time = glfwGetTime();
     double sec = end_time - start_time;
     printf("%f seconds.\n", sec);

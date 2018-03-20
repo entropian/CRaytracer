@@ -107,14 +107,6 @@ void initViewport(GlViewport *viewport)
 
 GLFWwindow* initWindow(unsigned int width, unsigned int height)
 {
-    // Init GLFW
-    if(glfwInit() != GL_TRUE)
-    {
-        fprintf(stderr, "Failed to initialize GLFW\n");
-        return NULL;
-        //return -1;
-    }
-
     // Create a rendering window with OpenGL 3.2 context
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
