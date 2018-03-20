@@ -12,6 +12,7 @@ typedef struct Scene_s
     SceneTransforms transforms;
     SceneLights lights;
     Camera camera;
+    Film film;
 }Scene;
 
 Scene Scene_create()

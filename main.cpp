@@ -18,16 +18,13 @@
 #include "lights.h"
 #include "scene/scene.h"
 #include "shading.h"
-//#define CORNELL_BOX
 #include "buildscene.h"
 #include "intersect.h"
-//#include "trace.h"
-//#include "raymarch.h"
+#include "trace.h"
 #include "config.h"
 #include "texture.h"
 #include "noise.h"
 #include "imagefile.h"
-//#include "photonmap.h"
 #include "projmap.h"
 #include "imagestate.h"
 #include "reflection.h"
@@ -37,7 +34,6 @@ bool SHOW_PROGRESS = true;
 extern double g_traversal_time;
 
 bool EXIT = false;
-int MAX_DEPTH = 0;
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -209,10 +205,20 @@ int main(int argc, char** argv)
     
     ConfigParams params;
     parseConfigFile(&params);
-    MAX_DEPTH = params.max_depth;
+
+    //LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
+    
+    // Scene data structure
+    Scene scene = Scene_create();
+    initScene(&scene, params.file_name, params.accel_type);
+    AABB aabbs[MAX_CAUSTIC_OBJECTS];
+    // NOTE: calc aabb before building accel
+    // TODO fix calcCausticObjectsAABB
+    int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
+    buildSceneAccel(&scene);
 
     GlViewport viewport;
-    GLFWwindow* window = initWindow(params.window_width, params.window_height);
+    GLFWwindow* window = initWindow(scene.film.window_width, scene.film.window_height);
     if(window)
     {
         glfwSetKeyCallback(window, keyCallback);
@@ -222,75 +228,28 @@ int main(int argc, char** argv)
         SHOW_PROGRESS = false;
         params.image_save = true;
     }
+    // TODO: image buffer could be part of film.
     unsigned char *image;
-    int num_pixels = params.image_width * params.image_height;
-    image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
-    /*
-    {
-        float* buffer;
-        int num_samples, width, height, size;
-        readImageState(&buffer, &num_samples, &size, &width, &height, "savestate.is");
-        if(size != num_pixels*3)
-        {
-            printf("wrong size\n");
-        }
-        for(int i = 0; i < size; i++)
-        {
-            image[i] = (unsigned char)(buffer[i] * 255.0f / num_samples);
-        }
-        while(1)
-        {
-            displayImage(window, viewport, image, width, height);
-        }
-    }
-    */
+    image = (unsigned char*)calloc(scene.film.num_pixels * 3, sizeof(char));
     int prev_num_samples = 0;
+    
     float* color_buffer = NULL;
     if(using_image_state)
     {
         int width, height, size;
         readImageState(&color_buffer, &prev_num_samples, &size, &width, &height, image_state_file);
-        if(width != params.image_width || height != params.image_height)
+        if(width != scene.film.frame_res_width || height != scene.film.frame_res_height)
         {
             fprintf(stderr, "Wrong dimensions on image state.\n");
             free(color_buffer);
             prev_num_samples = 0;
-            color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+            color_buffer = (float*)calloc(scene.film.num_pixels * 3, sizeof(float));
         }
     }else
     {
-        color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
+        color_buffer = (float*)calloc(scene.film.num_pixels * 3, sizeof(float));
     }
-    //LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
-
-    createGlobalSampleObject(params.num_samples, params.num_sample_sets, num_pixels);
-    
-    // Scene data structures
-    Scene scene = Scene_create();
-    initScene(&scene, params.file_name, params.accel_type);
-    AABB aabbs[MAX_CAUSTIC_OBJECTS];
-    // NOTE: calc aabb before building accel
-    // TODO fix calcCausticObjectsAABB
-    int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
-    buildSceneAccel(&scene);
-
-    // Reminder
-    //destroySceneAccel(&scene);
-    //scene.objects.accel = GRID;
-    //buildSceneAccel(&scene);
-
-    //Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
-
-    // TODO: the image buffer could be part of film
-    Film film;
-    film.frame_res_width = params.image_width;
-    film.frame_res_height = params.image_height;
-    film.num_pixels = num_pixels;
-    //film.fov = 70.0f / 180.0f * PI; // TODO
-    film.fov = 25.0f / 180.0f * PI; // TODO
-    //film.fov = 35.0f / 180.0f * PI; // TODO
-    Camera *camera = &(scene.camera);
-    calcFilmDimension(&film, camera);
+    createGlobalSampleObject(params.num_samples, params.num_sample_sets, scene.film.num_pixels);
 
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs*);
@@ -298,8 +257,8 @@ int main(int argc, char** argv)
     
     ThreadData thread_data;
     thread_data.prev_num_samples = prev_num_samples;
-    thread_data.film = &film;
-    thread_data.camera = camera;
+    thread_data.film = &(scene.film);
+    thread_data.camera = &(scene.camera);
     thread_data.scene = &scene;
     thread_data.color_buffer = color_buffer;
     thread_data.image = image;
@@ -308,7 +267,7 @@ int main(int argc, char** argv)
 
     int num_patches = 256;
     int num_threads = 3;
-    int num_pixels_per_patch = num_pixels / num_patches;
+    int num_pixels_per_patch = scene.film.num_pixels / num_patches;
     pthread_t threads[17];
     int patches[257];
     for(int i = 0; i < num_patches + 1; i++)
@@ -316,9 +275,7 @@ int main(int argc, char** argv)
         patches[i] = i * num_pixels_per_patch;
     }
 
-    initBSDFMem(num_threads, params.max_depth+1);
-    
-    preprocessLights(&scene);
+    initBSDFMem(num_threads, params.max_depth+1);   
 
     double start_time, end_time;
     start_time = glfwGetTime();
@@ -347,14 +304,12 @@ int main(int argc, char** argv)
         {
             pthread_join(threads[i], NULL);
         }
-
-        
-
+      
         calcProgress(start_time, &end_time, &prev_percent, p, &params);
         printf("Number of object intersection tests: %lld\n", g_intersect_count);
         if(SHOW_PROGRESS)
         {
-            displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
+            displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
         }
     }
 #else
@@ -363,14 +318,14 @@ int main(int argc, char** argv)
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
         sampler.cur_sample_index = p;
-        for(int i = 0; i < num_pixels; i++)
+        for(int i = 0; i < scene.film.num_pixels; i++)
         {
             Sampler_setPixel(&sampler, i);
             vec3 color = {0.0f, 0.0f, 0.0f};
             vec2 sample;
             Sampler_getSample(sample, &sampler);
             vec2 imageplane_coord;
-            calcImageCoord(imageplane_coord, &film, sample, i);
+            calcImageCoord(imageplane_coord, &(scene.film), sample, i);
 
             Ray ray;
             Sampler_getSample(sample, &sampler);
@@ -408,7 +363,7 @@ int main(int argc, char** argv)
         calcProgress(start_time, &end_time, &prev_percent, p, &params);
         if(SHOW_PROGRESS)
         {
-            displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
+            displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
         }
     }
 #endif
@@ -416,24 +371,22 @@ int main(int argc, char** argv)
     double sec = end_time - start_time;
     printf("%f seconds.\n", sec);
 
-    displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
+    displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
     printf("Traversal time = %f\n", g_traversal_time);
 
     if(params.image_save)
     {
-        PPM_write("output.ppm", image, num_pixels * 3, params.image_width, params.image_height);
+        PPM_write("output.ppm", image, scene.film.num_pixels * 3, scene.film.frame_res_width,
+                  scene.film.frame_res_height);
         EXIT = true;
     }
 
     // Save image state
-    saveImageState(color_buffer, params.num_samples + prev_num_samples, params.image_width,
-                   params.image_height, "savestate.is");
+    saveImageState(color_buffer, params.num_samples + prev_num_samples, scene.film.frame_res_width,
+                   scene.film.frame_res_height, "savestate.is");
 
-    // Clean up
     freeBSDFMem();
-    Scene_destroy(&scene);
     free(color_buffer);
-
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;
     double current_time, last_draw_time = 0.0;
@@ -442,11 +395,12 @@ int main(int argc, char** argv)
         current_time = glfwGetTime();
         if((current_time - last_draw_time) >= time_between_frames)
         {
-            displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
+            displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
             last_draw_time = current_time;
         }
         glfwPollEvents();
     }
+    Scene_destroy(&scene);
     free(image);
     return 0;
 }
