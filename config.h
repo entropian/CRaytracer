@@ -19,6 +19,10 @@ typedef struct PhotonmapConfig_s
 */
 typedef struct ConfigParams_s
 {    
+    unsigned int window_width;
+    unsigned int window_height;
+    unsigned int image_width;
+    unsigned int image_height;
     unsigned int num_samples;
     unsigned int num_sample_sets;
     unsigned int max_depth;
@@ -51,6 +55,22 @@ void parseConfigFile(ConfigParams* cp)
             getNextTokenInFile(buffer, fp);
             //strcpy_s(cp->file_name, NAME_LENGTH, buffer);
             stringCopy(cp->file_name, NAME_LENGTH, buffer);
+        }else if(strcmp(buffer, "window_width") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->window_width = atoi(buffer);
+        }else if(strcmp(buffer, "window_height") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->window_height = atoi(buffer);
+        }else if(strcmp(buffer, "image_width") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->image_width = atoi(buffer);
+        }else if(strcmp(buffer, "image_height") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->image_height = atoi(buffer);
         }else if(strcmp(buffer, "num_samples") == 0)
         {
             getNextTokenInFile(buffer, fp);
@@ -75,7 +95,11 @@ void parseConfigFile(ConfigParams* cp)
             }else if(strcmp(buffer, "PATHTRACE") == 0)
             {
                 cp->trace_type = PATHTRACE;
+            }/*else if(strcmp(buffer, "PHOTONMAP") == 0)
+            {
+                cp->trace_type = PHOTONMAP;
             }
+             */
         }else if(strcmp(buffer, "accel_struct") == 0)
         {
             getNextTokenInFile(buffer, fp);
@@ -108,7 +132,32 @@ void parseConfigFile(ConfigParams* cp)
             {
                 cp->caustic_map = true;
             }
+        }/*else if(strcmp(buffer, "num_photons") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.num_photons = atoi(buffer);
+        }else if(strcmp(buffer, "num_caustic_photons") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.num_caustic_photons = atoi(buffer);
+        }else if(strcmp(buffer, "photon_depth") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.photon_depth = atoi(buffer);
+        }else if(strcmp(buffer, "photon_radius") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.photon_radius = atof(buffer);
+        }else if(strcmp(buffer, "caustic_radius") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.caustic_radius = atof(buffer);
+        }else if(strcmp(buffer, "num_estimate") == 0)
+        {
+            getNextTokenInFile(buffer, fp);
+            cp->pm_config.num_estimate = atoi(buffer);
         }
+         */
     }
     fclose(fp);
 }

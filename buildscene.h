@@ -54,10 +54,10 @@ void calcTriangleNormals(Mesh* mesh)
         mesh->face_normals[num_face_normals++] = face_normal[2];
     }
     mesh->num_face_normals = num_face_normals;
+
     if(mesh->num_normals > 0)
     {
-        free(mesh->normals);
-        //return;
+        return;
     }
     mesh->normals = (float*)malloc(sizeof(float) * mesh->num_positions);
     mesh->num_normals = mesh->num_positions;
@@ -138,14 +138,12 @@ void calcTangentVec(Mesh* mesh)
                 vec2_assign(uv0, 0.0f, 0.0f);
                 vec2_assign(uv1, 1.0f, 0.0f);
                 vec2_assign(uv2, 1.0f, 1.0f);
-
                 mesh->texcoords[i0*2] = uv0[0];
                 mesh->texcoords[i0*2 + 1] = uv0[1];
                 mesh->texcoords[i1*2] = uv1[0];
                 mesh->texcoords[i1*2 + 1] = uv1[1];
                 mesh->texcoords[i2*2] = uv2[0];
-                mesh->texcoords[i2*2 + 1] = uv2[1];
-
+                mesh->texcoords[i2*2 + 1] = uv2[1];                
             }
         }else
         {
@@ -157,14 +155,12 @@ void calcTangentVec(Mesh* mesh)
             vec2_assign(uv0, 0.0f, 0.0f);
             vec2_assign(uv1, 1.0f, 0.0f);
             vec2_assign(uv2, 1.0f, 1.0f);
-
             mesh->texcoords[i0*2] = uv0[0];
             mesh->texcoords[i0*2 + 1] = uv0[1];
             mesh->texcoords[i1*2] = uv1[0];
             mesh->texcoords[i1*2 + 1] = uv1[1];
             mesh->texcoords[i2*2] = uv2[0];
-            mesh->texcoords[i2*2 + 1] = uv2[1];
-
+            mesh->texcoords[i2*2 + 1] = uv2[1];                            
         }
         
         vec3 q0, q1;
@@ -343,28 +339,6 @@ void loadSceneFile(Scene* scene, const char* scenefile)
     FILE* fp;
     openFile(&fp, scenefile, "r");
     char buffer[128];
-
-    // Setup film
-    Film* film = &(scene->film);    
-    while(strcmp(buffer, "WINDOW_WIDTH") != 0)
-    {
-        getNextTokenInFile(buffer, fp);
-    }        
-    getNextTokenInFile(buffer, fp);
-    film->window_width = atoi(buffer);
-    getNextTokenInFile(buffer, fp); // Skip WINDOW_HEIGHT
-    getNextTokenInFile(buffer, fp);
-    film->window_height = atoi(buffer);
-    getNextTokenInFile(buffer, fp); // Skip IMAGE_WIDTH
-    getNextTokenInFile(buffer, fp);
-    film->frame_res_width = atoi(buffer);
-    getNextTokenInFile(buffer, fp); // Skip IMAGE_HEIGHT
-    getNextTokenInFile(buffer, fp);
-    film->frame_res_height = atoi(buffer);
-    getNextTokenInFile(buffer, fp); // Skip FOV
-    getNextTokenInFile(buffer, fp);
-    film->fov = degToRad(atof(buffer));
-    film->num_pixels = film->frame_res_width * film->frame_res_height;
     
     // Setup camera
     initPinholeCameraDefault(&(scene->camera));
@@ -374,14 +348,12 @@ void loadSceneFile(Scene* scene, const char* scenefile)
     while(strcmp(buffer, "CAMERA_POS") != 0)
     {
         getNextTokenInFile(buffer, fp);
-    }    
+    }
     parseVec3(cam_pos, fp);
     getNextTokenInFile(buffer, fp); // Skip over LOOK_POINT
     parseVec3(look_point, fp);
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
     cameraLookAt(&(scene->camera), cam_pos, look_point, up_vec);
-
-    calcFilmDimension(film, &(scene->camera));
     
     /*
       Load textures as we parse materials, but defer storing texture pointers in materials
@@ -962,5 +934,4 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
     // NOTE: taken out to main so that projection map can be built before the
     // mesh triangles are scrambled.
     //buildSceneAccel(scene);
-    preprocessLights(scene);
 }

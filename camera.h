@@ -45,9 +45,9 @@ typedef struct Film_s
     float fov;
     float frame_length, frame_height; // Dimension of the film inside the scene
     int frame_res_width, frame_res_height; // Actual image resolution
-    int window_width, window_height;
     float pixel_length;
     int num_pixels;
+    Samples2D samples;
 }Film;
 
 void calcFilmDimension(Film *film, const Camera *camera);

@@ -192,12 +192,10 @@ float rayIntersectFlatTriangle(ShadeRec* sr, FlatTriangle* tri, const Ray ray)
     {
         interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
     }
-    /*
     while(sr->uv[0] > 1.0f) { sr->uv[0] -= 1.0f; }
     while(sr->uv[0] < 0.0f) { sr->uv[0] += 1.0f; }
     while(sr->uv[1] > 1.0f) { sr->uv[1] -= 1.0f; }
-    while(sr->uv[1] < 0.0f) { sr->uv[1] += 1.0f; }
-    */
+    while(sr->uv[1] < 0.0f) { sr->uv[1] += 1.0f; }    
     vec3_copy(sr->normal, tri->normal);
     getPointOnRay(sr->hit_point, ray, t);
     vec3_negate(sr->wo, ray.direction);    
@@ -238,12 +236,10 @@ float rayIntersectSmoothTriangle(ShadeRec* sr, SmoothTriangle* tri, const Ray ra
 
     interpTexcoord(sr->uv, beta, gamma, tri->mesh_ptr, tri->i0, tri->i1, tri->i2);
     // TEMP?
-    /*
     while(sr->uv[0] > 1.0f) { sr->uv[0] -= 1.0f; }
     while(sr->uv[0] < 0.0f) { sr->uv[0] += 1.0f; }
     while(sr->uv[1] > 1.0f) { sr->uv[1] -= 1.0f; }
-    while(sr->uv[1] < 0.0f) { sr->uv[1] += 1.0f; }
-    */
+    while(sr->uv[1] < 0.0f) { sr->uv[1] += 1.0f; }    
     //if(tri->mat->tex_flags & NORMAL)
     vec3 tangent, binormal, tex_normal, normal, tmp;
     interpTriangleVec3(tmp, beta, gamma,
