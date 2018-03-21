@@ -195,6 +195,14 @@ void ppmToImageState()
 extern int g_intersect_count;
 int main(int argc, char** argv)
 {
+    // Init GLFW
+    if(glfwInit() != GL_TRUE)
+    {
+        fprintf(stderr, "Failed to initialize GLFW\n");
+        //return NULL;
+        //return -1;
+    }
+    
     bool using_image_state = false;
     char image_state_file[256];
     if(argc > 2)
