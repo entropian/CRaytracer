@@ -155,8 +155,6 @@ int main(int argc, char** argv)
     ConfigParams params;
     parseConfigFile(&params);
 
-    GlViewport viewport;
-    GLFWwindow* window = initWindow(params.window_width, params.window_height);    
     // TODO Scene_findMaterial seems to print less error messages than it should.    
     // Scene data structures
     Scene scene = Scene_create();
@@ -169,15 +167,9 @@ int main(int argc, char** argv)
     preprocessLights(&scene);
 
     // TODO: the image buffer could be part of film
-    Film film;
-    film.frame_res_width = params.image_width;
-    film.frame_res_height = params.image_height;
-    film.num_pixels = film.frame_res_width * film.frame_res_height;
-    //film.fov = 70.0f / 180.0f * PI; // TODO
-    film.fov = 25.0f / 180.0f * PI; // TODO
-    //film.fov = 35.0f / 180.0f * PI; // TODO
-    Camera *camera = &(scene.camera);
-    calcFilmDimension(&film, camera);
+
+    GlViewport viewport;
+    GLFWwindow* window = initWindow(params.window_width, params.window_height);    
     
     if(window)
     {
@@ -190,8 +182,9 @@ int main(int argc, char** argv)
     }    
 
 
-    unsigned char *image;
-    int num_pixels = params.image_width * params.image_height;    
+    unsigned char* image;
+    //int num_pixels = params.image_width * params.image_height;
+    int num_pixels = scene.film.frame_res_width * scene.film.frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
 
@@ -221,8 +214,10 @@ int main(int argc, char** argv)
     
     ThreadData thread_data;
     thread_data.prev_num_samples = prev_num_samples;
-    thread_data.film = &film;
-    thread_data.camera = camera;
+    //thread_data.film = &film;
+    //thread_data.camera = camera;
+    thread_data.film = &(scene.film);
+    thread_data.camera = &(scene.camera);    
     thread_data.scene = &scene;
     thread_data.color_buffer = color_buffer;
     thread_data.image = image;
@@ -271,14 +266,14 @@ int main(int argc, char** argv)
         printf("Number of object intersection tests: %lld\n", g_intersect_count);
         if(SHOW_PROGRESS)
         {
-            displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
+            displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
         }
     }
     end_time = glfwGetTime();
     double sec = end_time - start_time;
     printf("%f seconds.\n", sec);
 
-    displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
+    displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
     printf("Traversal time = %f\n", g_traversal_time);
 
     if(params.image_save)
@@ -293,9 +288,7 @@ int main(int argc, char** argv)
 
     // Clean up
     freeBSDFMem();
-    Scene_destroy(&scene);
     free(color_buffer);
-
     double frames_per_sec = 10.0;
     double time_between_frames = 1.0 / frames_per_sec;
     double current_time, last_draw_time = 0.0;
@@ -304,11 +297,12 @@ int main(int argc, char** argv)
         current_time = glfwGetTime();
         if((current_time - last_draw_time) >= time_between_frames)
         {
-            displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
+            displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
             last_draw_time = current_time;
         }
         glfwPollEvents();
     }
+    Scene_destroy(&scene);    
     free(image);
     return 0;
 }
