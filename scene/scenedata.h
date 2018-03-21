@@ -350,7 +350,20 @@ void freeSceneLights(SceneLights* sl)
     {
         if(sl->light_ptrs[i] != NULL)
         {
-            if(sl->light_types[i] == POINTLIGHT)
+            if(sl->light_types[i] == AREALIGHT)
+            {
+                AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
+                if(area_light_ptr->samples2D != NULL)
+                {
+                    freeSamples2D(area_light_ptr->samples2D);
+                    area_light_ptr->samples2D = NULL;
+                }
+                if(area_light_ptr->samples3D != NULL)
+                {
+                    freeSamples3D(area_light_ptr->samples3D);
+                    area_light_ptr->samples3D = NULL;
+                }
+            }else if(sl->light_types[i] == POINTLIGHT)
             {
                 PointLight *point_light = (PointLight*)(sl->light_ptrs[i]);
                 if(point_light->proj_map)
