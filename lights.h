@@ -40,9 +40,6 @@ typedef struct AreaLight_s
     float intensity;
     float flux;
     float pdf;
-    Samples2D* samples2D;
-    Samples3D* samples3D;
-    vec3 sample_point;
     vec3 color;
 }AreaLight;
 

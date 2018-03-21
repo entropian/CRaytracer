@@ -281,7 +281,6 @@ typedef struct SceneLights
     void* light_ptrs[MAX_LIGHTS];
     float power[MAX_LIGHTS];
     EnvLight* env_light;
-    AmbientLight* amb_light;
     vec3 bg_color;
 } SceneLights;
 
@@ -290,7 +289,6 @@ SceneLights SceneLights_create()
     SceneLights sl;
     sl.num_lights = 0;
     sl.env_light = NULL;
-    sl.amb_light = NULL;
     vec3_copy(sl.bg_color, WHITE);
     return sl;
 }
@@ -339,6 +337,9 @@ void freeSceneObjects(SceneObjects* so)
     case BVH:
         BVH_destroy((BVHNode*)(so->accel_ptr));
         break;
+    case BVH4:
+        BVH4_destroy((BVHNode4*)(so->accel_ptr));
+        break;        
     }
     
 }
@@ -350,20 +351,7 @@ void freeSceneLights(SceneLights* sl)
     {
         if(sl->light_ptrs[i] != NULL)
         {
-            if(sl->light_types[i] == AREALIGHT)
-            {
-                AreaLight* area_light_ptr = (AreaLight*)(sl->light_ptrs[i]);
-                if(area_light_ptr->samples2D != NULL)
-                {
-                    freeSamples2D(area_light_ptr->samples2D);
-                    area_light_ptr->samples2D = NULL;
-                }
-                if(area_light_ptr->samples3D != NULL)
-                {
-                    freeSamples3D(area_light_ptr->samples3D);
-                    area_light_ptr->samples3D = NULL;
-                }
-            }else if(sl->light_types[i] == POINTLIGHT)
+            if(sl->light_types[i] == POINTLIGHT)
             {
                 PointLight *point_light = (PointLight*)(sl->light_ptrs[i]);
                 if(point_light->proj_map)
@@ -375,7 +363,6 @@ void freeSceneLights(SceneLights* sl)
             sl->light_ptrs[i] = NULL;
         }
     }
-    free(sl->amb_light);
 }
 
 void mvNonGridObjToStart(SceneObjects *so)

@@ -61,22 +61,3 @@ void toneMap(vec3 r, const vec3 a)
     r[2] = clamp(GammaCorrect(a[2]) + 0.5f, 0.f, 1.f);
     */
 }
-bool shadowTest(const int light_index, const SceneLights* sl, const SceneObjects* so,
-                const vec3 light_dir, const ShadeRec* sr)
-{
-    if(sl->shadow[light_index])
-    {
-        Ray shadow_ray;
-        vec3_copy(shadow_ray.origin, sr->hit_point);
-        vec3_copy(shadow_ray.direction, light_dir);
-        
-        float light_dist = calcLightDistance(sl->light_types[light_index],
-                                    sl->light_ptrs[light_index], sr->hit_point);
-        float min_t = shadowIntersectTest(so, shadow_ray, light_dist);             
-        if(min_t < light_dist)
-        {
-            return true;
-        }
-    }
-    return false;
-}

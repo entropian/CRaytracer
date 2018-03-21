@@ -18,27 +18,21 @@
 #include "lights.h"
 #include "scene/scene.h"
 #include "shading.h"
-//#define CORNELL_BOX
 #include "buildscene.h"
 #include "intersect.h"
-//#include "trace.h"
-//#include "raymarch.h"
+#include "trace.h"
 #include "config.h"
 #include "texture.h"
 #include "noise.h"
 #include "imagefile.h"
-//#include "photonmap.h"
 #include "projmap.h"
 #include "imagestate.h"
 #include "reflection.h"
 #include "parallel.h"
 
 bool SHOW_PROGRESS = true;
-
 extern double g_traversal_time;
-
 bool EXIT = false;
-int MAX_DEPTH = 0;
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -222,15 +216,6 @@ int main(int argc, char** argv)
 
     createGlobalSampleObject(params.num_samples, params.num_sample_sets, num_pixels);
     
-
-
-    // Reminder
-    //destroySceneAccel(&scene);
-    //scene.objects.accel = GRID;
-    //buildSceneAccel(&scene);
-
-    //Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
-
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs*);
     trace = getTraceFunc(params.trace_type);
@@ -257,15 +242,11 @@ int main(int argc, char** argv)
 
     initBSDFMem(num_threads, params.max_depth+1);
     
-    preprocessLights(&scene);
-
     double start_time, end_time;
     start_time = glfwGetTime();
     end_time = start_time;
     int prev_percent = 0;
 
-#define MULTITHREAD
-#ifdef MULTITHREAD
     JobQueue job_queue;
     JobQueue_init(&job_queue);
     thread_data.job_queue = &job_queue;
@@ -287,8 +268,6 @@ int main(int argc, char** argv)
             pthread_join(threads[i], NULL);
         }
 
-        
-
         calcProgress(start_time, &end_time, &prev_percent, p, &params);
         printf("Number of object intersection tests: %lld\n", g_intersect_count);
         if(SHOW_PROGRESS)
@@ -296,61 +275,6 @@ int main(int argc, char** argv)
             displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
         }
     }
-#else
-    Sampler sampler;
-    Sampler_create(&sampler);
-    for(unsigned int p = 0; p < params.num_samples; p++)
-    {
-        sampler.cur_sample_index = p;
-        for(int i = 0; i < num_pixels; i++)
-        {
-            Sampler_setPixel(&sampler, i);
-            vec3 color = {0.0f, 0.0f, 0.0f};
-            vec2 sample;
-            Sampler_getSample(sample, &sampler);
-            vec2 imageplane_coord;
-            calcImageCoord(imageplane_coord, &film, sample, i);
-
-            Ray ray;
-            Sampler_getSample(sample, &sampler);
-            calcCameraRay(&ray, imageplane_coord, camera, sample);
-
-
-            TraceArgs trace_args;
-            trace_args.objects = &(scene.objects);
-            trace_args.lights = &(scene.lights);
-            trace_args.sampler = &sampler;
-            
-            vec3 radiance = {0.0f, 0.0f, 0.0f};
-
-            if(i == 70 * 256 + 50)
-            {
-                pathTrace(radiance, params.max_depth, ray, &trace_args);
-                vec3_copy(radiance, RED);
-            }else
-            {
-                trace(radiance, params.max_depth, ray, &trace_args);
-            }
-            vec3_add(color, color, radiance);
-            
-            color_buffer[i*3] += color[0];
-            color_buffer[i*3 + 1] += color[1];
-            color_buffer[i*3 + 2] += color[2];
-            vec3_assign(color, color_buffer[i*3], color_buffer[i*3 +1], color_buffer[i*3 + 2]);
-            vec3_scale(color, color, 1/(float)(p+1 + prev_num_samples));
-            toneMap(color, color);
-
-            image[i*3] = (char)(color[0] * 255.0f);
-            image[i*3 + 1] = (char)(color[1] * 255.0f);
-            image[i*3 + 2] = (char)(color[2] * 255.0f);
-        }
-        calcProgress(start_time, &end_time, &prev_percent, p, &params);
-        if(SHOW_PROGRESS)
-        {
-            displayImage(window, viewport, image, film.frame_res_width, film.frame_res_height);
-        }
-    }
-#endif
     end_time = glfwGetTime();
     double sec = end_time - start_time;
     printf("%f seconds.\n", sec);
