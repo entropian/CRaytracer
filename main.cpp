@@ -31,6 +31,7 @@
 #include "projmap.h"
 #include "imagestate.h"
 #include "reflection.h"
+#include "parallel.h"
 
 bool SHOW_PROGRESS = true;
 
@@ -69,64 +70,6 @@ void calcProgress(const double start_time, double* end_time, int* prev_percent,
         printf("%f sec\t%f sec\n", single_iteration_time, whole_duration);
     }        
 }
-
-const int MAX_JOBS = 1000;
-typedef struct JobQueue_s
-{
-    int indices[MAX_JOBS *2];
-    int num_jobs;
-    int head;
-    pthread_mutex_t mtx;
-}JobQueue;
-
-void JobQueue_init(JobQueue* job_queue)
-{
-    job_queue->num_jobs = 0;
-    job_queue->head = 0;
-    job_queue->mtx = PTHREAD_MUTEX_INITIALIZER;
-}
-
-void JobQueue_addJob(JobQueue* job_queue, int start, int end)
-{
-    pthread_mutex_lock(&(job_queue->mtx));
-    int queue_end = job_queue->num_jobs * 2;
-    job_queue->indices[queue_end] = start;
-    job_queue->indices[queue_end+1] = end;
-    job_queue->num_jobs += 1;
-    pthread_mutex_unlock(&(job_queue->mtx));
-}
-
-int JobQueue_getJob(JobQueue* job_queue, int* start, int* end)
-{
-    pthread_mutex_lock(&(job_queue->mtx));
-    if(job_queue->head == job_queue->num_jobs * 2)
-    {
-        pthread_mutex_unlock(&(job_queue->mtx));
-        return 0;
-    }
-    *start = job_queue->indices[job_queue->head];
-    *end = job_queue->indices[job_queue->head + 1];
-    job_queue->head += 2;
-    pthread_mutex_unlock(&(job_queue->mtx));
-    return 1;
-}
-
-
-typedef struct ThreadData_s
-{
-    int p;
-    int prev_num_samples;
-    unsigned char* set_buffer;
-    Film* film;
-    Camera* camera;
-    Scene* scene;
-    Samples3D* h_samples;
-    float* color_buffer;
-    unsigned char* image;
-    ConfigParams* params;
-    float (*trace)(vec3, int, const Ray, TraceArgs*);
-    JobQueue* job_queue;
-}ThreadData;
 
 void* threadFunc(void* vargp)
 {
@@ -213,14 +156,35 @@ int main(int argc, char** argv)
             using_image_state = true;
             stringCopy(image_state_file, 256, argv[2]);
         }
-    }
+    }    
     
     ConfigParams params;
     parseConfigFile(&params);
-    MAX_DEPTH = params.max_depth;
 
     GlViewport viewport;
     GLFWwindow* window = initWindow(params.window_width, params.window_height);
+    
+    // TODO Scene_findMaterial seems to print less error messages than it should.    
+    // Scene data structures
+    Scene scene = Scene_create();
+    initScene(&scene, params.file_name, params.accel_type);
+    AABB aabbs[MAX_CAUSTIC_OBJECTS];
+    // NOTE: calc aabb before building accel
+    // TODO fix calcCausticObjectsAABB
+    int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
+    buildSceneAccel(&scene);
+
+    // TODO: the image buffer could be part of film
+    Film film;
+    film.frame_res_width = params.image_width;
+    film.frame_res_height = params.image_height;
+    film.num_pixels = film.frame_res_width * film.frame_res_height;
+    //film.fov = 70.0f / 180.0f * PI; // TODO
+    film.fov = 25.0f / 180.0f * PI; // TODO
+    //film.fov = 35.0f / 180.0f * PI; // TODO
+    Camera *camera = &(scene.camera);
+    calcFilmDimension(&film, camera);
+    
     if(window)
     {
         glfwSetKeyCallback(window, keyCallback);
@@ -229,29 +193,15 @@ int main(int argc, char** argv)
     {
         SHOW_PROGRESS = false;
         params.image_save = true;
-    }
+    }    
+
+
     unsigned char *image;
-    int num_pixels = params.image_width * params.image_height;
+    int num_pixels = params.image_width * params.image_height;    
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
-    /*
-    {
-        float* buffer;
-        int num_samples, width, height, size;
-        readImageState(&buffer, &num_samples, &size, &width, &height, "savestate.is");
-        if(size != num_pixels*3)
-        {
-            printf("wrong size\n");
-        }
-        for(int i = 0; i < size; i++)
-        {
-            image[i] = (unsigned char)(buffer[i] * 255.0f / num_samples);
-        }
-        while(1)
-        {
-            displayImage(window, viewport, image, width, height);
-        }
-    }
-    */
+
+
+
     int prev_num_samples = 0;
     float* color_buffer = NULL;
     if(using_image_state)
@@ -269,18 +219,10 @@ int main(int argc, char** argv)
     {
         color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
     }
-    //LatticeNoise_init(CUBIC, 5, 1.0f, 2.0f);
 
     createGlobalSampleObject(params.num_samples, params.num_sample_sets, num_pixels);
     
-    // Scene data structures
-    Scene scene = Scene_create();
-    initScene(&scene, params.file_name, params.accel_type);
-    AABB aabbs[MAX_CAUSTIC_OBJECTS];
-    // NOTE: calc aabb before building accel
-    // TODO fix calcCausticObjectsAABB
-    int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
-    buildSceneAccel(&scene);
+
 
     // Reminder
     //destroySceneAccel(&scene);
@@ -288,17 +230,6 @@ int main(int argc, char** argv)
     //buildSceneAccel(&scene);
 
     //Material *medium_mat = getMediumMatPtr(position, &(scene.objects));
-
-    // TODO: the image buffer could be part of film
-    Film film;
-    film.frame_res_width = params.image_width;
-    film.frame_res_height = params.image_height;
-    film.num_pixels = num_pixels;
-    //film.fov = 70.0f / 180.0f * PI; // TODO
-    film.fov = 25.0f / 180.0f * PI; // TODO
-    //film.fov = 35.0f / 180.0f * PI; // TODO
-    Camera *camera = &(scene.camera);
-    calcFilmDimension(&film, camera);
 
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs*);
