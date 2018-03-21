@@ -110,6 +110,15 @@ Texture* findTexture(const char* tex_name, const SceneTextures* st)
     //fprintf(stderr, "Texture not found.\n");
     return NULL;
 }
+/*
+  // Old
+typedef struct SceneMaterials_s
+{
+    int size;
+    int max;
+    Material* materials;
+}SceneMaterials;
+*/
 
 typedef struct SceneMaterials_s
 {
@@ -117,6 +126,21 @@ typedef struct SceneMaterials_s
     int max;
     Material* materials;
 }SceneMaterials;
+/*
+SceneMaterials SceneMaterials_create()
+{
+    SceneMaterials sm;
+    sm.materials = (Material*)malloc(sizeof(Material) * DEFAULT_MATERIAL);
+    sm.names = (char**)malloc(sizeof(char*) * DEFAULT_MATERIAL);
+    initDefaultMatteMat(&(sm.materials[0]), GREY);
+    sm.names[0] = (char*)malloc(sizeof(char) * NAME_LENGTH);
+    //strcpy_s(sm.names[0], NAME_LENGTH, "DEFAULT");
+    stringCopy(sm.names[0], NAME_LENGTH, "DEFAULT");
+    sm.size = 1;
+    sm.max = DEFAULT_MATERIAL;
+    return sm;
+}
+*/
 
 SceneMaterials SceneMaterials_create()
 {
@@ -153,6 +177,9 @@ Material* findMaterial(const char* mat_name, const SceneMaterials* sm)
             return &(sm->materials[i]);
         }
     }
+    
+    //fprintf(stderr, "Material not found. Default material returned\n");
+    //return &(sm->materials[0]);
     fprintf(stderr, "Material %s not found. Returning NULL\n", mat_name);
     return NULL;
 }
@@ -254,6 +281,7 @@ typedef struct SceneLights
     void* light_ptrs[MAX_LIGHTS];
     float power[MAX_LIGHTS];
     EnvLight* env_light;
+    AmbientLight* amb_light;
     vec3 bg_color;
 } SceneLights;
 
@@ -262,6 +290,7 @@ SceneLights SceneLights_create()
     SceneLights sl;
     sl.num_lights = 0;
     sl.env_light = NULL;
+    sl.amb_light = NULL;
     vec3_copy(sl.bg_color, WHITE);
     return sl;
 }
@@ -300,6 +329,7 @@ void freeSceneObjects(SceneObjects* so)
             }
         }
     }
+
     free(so->objects);
     switch(so->accel)
     {
@@ -309,8 +339,6 @@ void freeSceneObjects(SceneObjects* so)
     case BVH:
         BVH_destroy((BVHNode*)(so->accel_ptr));
         break;
-    case BVH4:
-        BVH4_destroy((BVHNode4*)(so->accel_ptr));
     }
     
 }
@@ -334,6 +362,7 @@ void freeSceneLights(SceneLights* sl)
             sl->light_ptrs[i] = NULL;
         }
     }
+    free(sl->amb_light);
 }
 
 void mvNonGridObjToStart(SceneObjects *so)
