@@ -71,6 +71,8 @@ void* threadFunc(void* vargp)
     Sampler sampler;
     Sampler_create(&sampler);
     sampler.cur_sample_index = thread_data->p;
+    Film* film = &(thread_data->scene->film);
+    Camera* camera = &(thread_data->scene->camera);
     int start_index, end_index;
     while(JobQueue_getJob(thread_data->job_queue, &start_index, &end_index))
     {
@@ -81,11 +83,11 @@ void* threadFunc(void* vargp)
             vec2 imageplane_coord;
             vec2 sample;
             Sampler_getSample(sample, &sampler);
-            calcImageCoord(imageplane_coord, thread_data->film, sample, i);
+            calcImageCoord(imageplane_coord, film, sample, i);
 
             Ray ray;
             Sampler_getSample(sample, &sampler);
-            calcCameraRay(&ray, imageplane_coord, thread_data->camera, sample);
+            calcCameraRay(&ray, imageplane_coord, camera, sample);
 
             TraceArgs trace_args;
             trace_args.objects = &(thread_data->scene->objects);
@@ -169,7 +171,7 @@ int main(int argc, char** argv)
     // TODO: the image buffer could be part of film
 
     GlViewport viewport;
-    GLFWwindow* window = initWindow(params.window_width, params.window_height);    
+    GLFWwindow* window = initWindow(scene.film.window_width, scene.film.window_height);    
     
     if(window)
     {
@@ -181,9 +183,7 @@ int main(int argc, char** argv)
         params.image_save = true;
     }    
 
-
     unsigned char* image;
-    //int num_pixels = params.image_width * params.image_height;
     int num_pixels = scene.film.frame_res_width * scene.film.frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
@@ -194,7 +194,7 @@ int main(int argc, char** argv)
     {
         int width, height, size;
         readImageState(&color_buffer, &prev_num_samples, &size, &width, &height, image_state_file);
-        if(width != params.image_width || height != params.image_height)
+        if(width != scene.film.frame_res_width || height != scene.film.frame_res_height)
         {
             fprintf(stderr, "Wrong dimensions on image state.\n");
             free(color_buffer);
@@ -214,10 +214,8 @@ int main(int argc, char** argv)
     
     ThreadData thread_data;
     thread_data.prev_num_samples = prev_num_samples;
-    //thread_data.film = &film;
-    //thread_data.camera = camera;
-    thread_data.film = &(scene.film);
-    thread_data.camera = &(scene.camera);    
+    //thread_data.film = &(scene.film);
+    //thread_data.camera = &(scene.camera);    
     thread_data.scene = &scene;
     thread_data.color_buffer = color_buffer;
     thread_data.image = image;
@@ -278,13 +276,13 @@ int main(int argc, char** argv)
 
     if(params.image_save)
     {
-        PPM_write("output.ppm", image, num_pixels * 3, params.image_width, params.image_height);
+        PPM_write("output.ppm", image, num_pixels * 3, scene.film.frame_res_width, scene.film.frame_res_height);
         EXIT = true;
     }
 
     // Save image state
-    saveImageState(color_buffer, params.num_samples + prev_num_samples, params.image_width,
-                   params.image_height, "savestate.is");
+    saveImageState(color_buffer, params.num_samples + prev_num_samples, scene.film.frame_res_width,
+                   scene.film.frame_res_height, "savestate.is");
 
     // Clean up
     freeBSDFMem();

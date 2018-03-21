@@ -1,19 +1,6 @@
 scene_file staircase2.txt
-window_width  1024
-window_height  1024
-image_width  512
-image_height 512
 num_samples  256
 num_sample_sets 83
 max_depth  17
 trace_type PATHTRACE
 accel_struct GRID
-num_photons 1000000
-caustic_map no
-num_caustic_photons 2000000
-num_estimate 500
-photon_depth 8
-photon_radius 2
-caustic_radius 0.025
-image_save yes
-
