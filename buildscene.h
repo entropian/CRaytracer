@@ -227,12 +227,16 @@ int generateMeshTriangles(Scene* scene, const MeshEntry mesh_entry)
     for(int i = 0; i < num_mesh_found; i++)
     {
         Mesh* mesh = meshes[i];
-        Material *mat_for_mesh = Scene_findMaterial(scene, mesh->mat_name);
+        Material* mat_for_mesh;
         // NOTE: ignoreing mtl materials for now and use material defined in scene file
-        //if(!mat_for_mesh)
+        /*
+        Material *mat_for_mesh = Scene_findMaterial(scene, mesh->mat_name);
+        if(!mat_for_mesh)
         {
-            mat_for_mesh = mat_default;
+
         }
+        */
+        mat_for_mesh = mat_default;
         triangle_count += mesh->num_indices / 3;
         for(int j = 0; j < mesh->num_indices; j += 3)
         {
@@ -428,15 +432,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                     Mesh mesh;
                     Mesh_copyOBJShape(&mesh, &(shapes[i]));
                     calcTriangleNormals(&mesh);
-                    Material* mat = Scene_findMaterial(scene, mesh.mat_name);
-                    if(!mat)
-                    {
-                        mat = Scene_findMaterial(scene, mesh_entry.mat_name);
-                    }
-                    //if(mat->tex_flags & NORMAL)
-                    {
-                        calcTangentVec(&mesh);
-                    }
+                    calcTangentVec(&mesh);
                     Scene_addMesh(scene, &mesh);
                 }
                 if(shapes){free(shapes);}
@@ -902,5 +898,4 @@ void initScene(Scene* scene, const char* scenefile, const AccelType accel_type)
     // NOTE: taken out to main so that projection map can be built before the
     // mesh triangles are scrambled.
     //buildSceneAccel(scene);
-    preprocessLights(scene);
 }

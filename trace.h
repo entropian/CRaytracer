@@ -459,14 +459,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         }
         BSDF_freeBxDFs(&(sr.bsdf));
     }
-    /*
-    if(bounces > 0)
-        vec3_scale(L, L, 1.0f / bounces);
-    */
     if(good_paths > 0)
         vec3_scale(L, L, 1.0f / good_paths);
-
-    //printf("good pathes %d\n", good_paths);
     vec3_copy(radiance, L);
     return 0.0f;
 }

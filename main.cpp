@@ -156,8 +156,7 @@ int main(int argc, char** argv)
     parseConfigFile(&params);
 
     GlViewport viewport;
-    GLFWwindow* window = initWindow(params.window_width, params.window_height);
-    
+    GLFWwindow* window = initWindow(params.window_width, params.window_height);    
     // TODO Scene_findMaterial seems to print less error messages than it should.    
     // Scene data structures
     Scene scene = Scene_create();
@@ -167,6 +166,7 @@ int main(int argc, char** argv)
     // TODO fix calcCausticObjectsAABB
     int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
     buildSceneAccel(&scene);
+    preprocessLights(&scene);
 
     // TODO: the image buffer could be part of film
     Film film;
