@@ -201,7 +201,6 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
             vec3_scale(sample_point, h_sample, sphere->radius);
             vec3_add(sample_point, sample_point, sphere->center);
             vec3_copy(sample_normal, h_sample);
-            //light_pdf = fabs(vec3_dot(h_sample, z_axis)) * INV_PI;
             light_pdf = 1.0f / (2.0f * PI * sphere->radius*sphere->radius)
                 * fabs(vec3_dot(h_sample, z_axis)) * INV_PI;
         }else if(area_light->obj_type == RECTANGLE)
@@ -458,7 +457,6 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             // TODO Different from PBRT source
             //vec3_scale(beta, beta, (1.0f - q));
         }
-
         BSDF_freeBxDFs(&(sr.bsdf));
     }
     /*

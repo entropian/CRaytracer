@@ -1,4 +1,4 @@
-scene_file new_scene.txt
+scene_file staircase2.txt
 window_width  1024
 window_height  1024
 image_width  512

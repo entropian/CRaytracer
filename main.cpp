@@ -195,7 +195,6 @@ int main(int argc, char** argv)
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));
 
 
-
     int prev_num_samples = 0;
     float* color_buffer = NULL;
     if(using_image_state)

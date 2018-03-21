@@ -337,15 +337,10 @@ void linkMaterialTextures(Scene *scene)
     }    
 }
 
-
-void loadSceneFile(Scene* scene, const char* scenefile)
+FILE* setupFilmAndCamera(Film* film, Camera* camera, FILE* fp)
 {
-    FILE* fp;
-    openFile(&fp, scenefile, "r");
     char buffer[128];
-
     // Setup film
-    Film* film = &(scene->film);    
     while(strcmp(buffer, "WINDOW_WIDTH") != 0)
     {
         getNextTokenInFile(buffer, fp);
@@ -368,7 +363,7 @@ void loadSceneFile(Scene* scene, const char* scenefile)
     
     
     // Setup camera
-    initPinholeCameraDefault(&(scene->camera));
+    initPinholeCameraDefault(camera);
     vec3 cam_pos = {0.0f, 0.0f, 0.0f};
     vec3 look_point = {0.0f, 0.0f, 0.0f};
     getNextTokenInFile(buffer, fp);
@@ -380,9 +375,20 @@ void loadSceneFile(Scene* scene, const char* scenefile)
     getNextTokenInFile(buffer, fp); // Skip over LOOK_POINT
     parseVec3(look_point, fp);
     vec3 up_vec = {0.0f, 1.0f, 0.0f};
-    cameraLookAt(&(scene->camera), cam_pos, look_point, up_vec);
+    cameraLookAt(camera, cam_pos, look_point, up_vec);
 
-    calcFilmDimension(film, &(scene->camera));
+    calcFilmDimension(film, camera);
+    return fp;
+}
+
+
+void loadSceneFile(Scene* scene, const char* scenefile)
+{
+    FILE* fp;
+    openFile(&fp, scenefile, "r");
+    char buffer[128];
+
+    fp = setupFilmAndCamera(&(scene->film), &(scene->camera), fp);
     
     /*
       Load textures as we parse materials, but defer storing texture pointers in materials
@@ -675,7 +681,7 @@ void buildSceneAccel(Scene *scene)
     if(so->accel == GRID)
     {
         start = glfwGetTime();
-        const int multiplier = 2;
+        const int multiplier = 3;
         UniformGrid* rg = UniformGrid_create(so->objects, &(so->num_obj), so->num_non_grid_obj, multiplier);
         end = glfwGetTime();
         printf("Uniform grid build time: %f sec\n", end - start);
