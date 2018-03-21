@@ -78,20 +78,3 @@ static int PPM_read(unsigned char** image, int* image_size, int* width, int* hei
     fclose(fp);
     return 1;
 }
-
-void ppmToImageState()
-{
-    unsigned char* image;
-    int width, height, size;
-    PPM_read(&image, &size, &width, &height, "output.ppm");
-    float* buffer = (float*)malloc(size * sizeof(float));
-    int num_samples = 10000;
-    int i;
-    for(i = 0; i < size; i++)
-    {
-        buffer[i] = (float)(image[i]) / 255.0f * num_samples;
-    }
-    free(image);
-    saveImageState(buffer, num_samples, width, height, "savestate.is");
-    free(buffer);
-}
