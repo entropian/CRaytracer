@@ -111,7 +111,6 @@ void* threadFunc(void* vargp)
             thread_data->image[i*3 + 2] = (char)(color[2] * 255.0f);
         }
     }
-
 }
 
 void ppmToImageState()
@@ -157,18 +156,14 @@ int main(int argc, char** argv)
     ConfigParams params;
     parseConfigFile(&params);
 
-    // TODO Scene_findMaterial seems to print less error messages than it should.    
     // Scene data structures
     Scene scene = Scene_create();
     initScene(&scene, params.file_name, params.accel_type);
     AABB aabbs[MAX_CAUSTIC_OBJECTS];
-    // NOTE: calc aabb before building accel
-    // TODO fix calcCausticObjectsAABB
+    // TODO get rid of calcCausticObjectsAABB
     int num_aabb = calcCausticObjectsAABB(aabbs, &(scene.objects));
     buildSceneAccel(&scene);
     preprocessLights(&scene);
-
-    // TODO: the image buffer could be part of film
 
     GlViewport viewport;
     GLFWwindow* window = initWindow(scene.film.window_width, scene.film.window_height);    
@@ -182,7 +177,7 @@ int main(int argc, char** argv)
         SHOW_PROGRESS = false;
         params.image_save = true;
     }    
-
+    // TODO: the image buffer could be part of film
     unsigned char* image;
     int num_pixels = scene.film.frame_res_width * scene.film.frame_res_height;
     image = (unsigned char*)calloc(num_pixels * 3, sizeof(char));

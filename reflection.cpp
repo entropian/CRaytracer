@@ -854,8 +854,10 @@ void BSDF_addMicrofacetReflectionMetal(BSDF* bsdf, const vec3 color, const vec3 
 {
     MicrofacetReflection* mr = (MicrofacetReflection*)allocateBxDF();
     vec3_copy(mr->color, color);
-    mr->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
-    mr->distrib.alphay = BeckmannRoughnessToAlpha(alphay);
+    mr->distrib.alphax = alphax;
+    mr->distrib.alphay = alphay;    
+    //mr->distrib.alphax = BeckmannRoughnessToAlpha(alphax);
+    //mr->distrib.alphay = BeckmannRoughnessToAlpha(alphay);
     vec3_copy(mr->etaT, etaT);
     vec3_copy(mr->etaI, etaI);
     vec3_copy(mr->k, k);

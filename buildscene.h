@@ -489,6 +489,30 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 getNextTokenInFile(buffer, fp); // Skip INTENSITY
                 getNextTokenInFile(buffer, fp);
                 env_light->intensity = atof(buffer);
+
+                /*
+                  0.693251 0 -0.720696 0
+                  0.720696 0 0.693251 0
+                  0 1 0 0
+                  0 0 0 1]
+                 */
+
+                // Transform
+                /*
+                env_light->transform[0][0] = 0.693251;
+                env_light->transform[0][1] = 0.0f;
+                env_light->transform[0][2] = -0.720696;
+                //env_light->transform[0][3] = 0.0f;
+                env_light->transform[1][0] = 0.720696;
+                env_light->transform[1][1] = 0.0f;
+                env_light->transform[1][2] = -0.693251;
+                //env_light->transform[1][3] = 0.0f;
+                env_light->transform[2][0] = 0.0f;
+                env_light->transform[2][1] = 0.0f;
+                env_light->transform[2][2] = 1.0f;
+                */
+
+                mat3_rotate_y(env_light->transform, 0.76);
             }
             if(scene->lights.env_light)
             {
@@ -829,7 +853,21 @@ void preprocessLights(Scene* scene)
             sl->env_light->world_radius = vec3_length(dist) * 2.0f;
         }else if(so->accel == BVH4)
         {
-            // TODO
+            BVHNode4* node = (BVHNode4*)(so->accel_ptr);
+            vec3 box_min = {K_EPSILON, K_EPSILON, K_EPSILON};
+            vec3 box_max = {-HUGEVALUE, -HUGEVALUE, -HUGEVALUE};
+            for(int i = 0; i < 4; i++)
+            {
+                box_min[0] = min(node->bbox[i + 0], box_min[0]);
+                box_min[1] = min(node->bbox[i + 4], box_min[1]);
+                box_min[2] = min(node->bbox[i + 8], box_min[1]);
+                box_max[0] = max(node->bbox[i + 12], box_max[0]);
+                box_max[1] = max(node->bbox[i + 16], box_max[0]);
+                box_max[2] = max(node->bbox[i + 20], box_max[0]);
+            }
+            vec3 dist;
+            vec3_sub(dist, box_max, box_min);
+            sl->env_light->world_radius = vec3_length(dist) * 2.0f;
         }
     }
     

@@ -1,6 +1,6 @@
-scene_file staircase2.txt
+scene_file car2.txt
 num_samples  256
 num_sample_sets 83
 max_depth  17
 trace_type PATHTRACE
-accel_struct GRID
+accel_struct BVH4

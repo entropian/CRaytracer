@@ -57,6 +57,7 @@ typedef struct EnvLight_s
     vec3 color;
     Texture env_map;
     EnvLightType type;
+    mat3 transform;
 }EnvLight;
 
 typedef struct AmbientLight_s

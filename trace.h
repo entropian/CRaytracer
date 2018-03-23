@@ -249,6 +249,11 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
         vec3 h_sample;
         mapSampleToHemisphere(h_sample, light_sample);
         transformToLocalBasis(h_sample, h_sample, &(sr->bsdf));
+
+        vec3 h_copy;
+        vec3_copy(h_copy, h_sample);
+        mat3_mult_vec3(h_sample, env_light->transform, h_copy);
+        
         vec3 displacement;
         vec3_scale(displacement, h_sample, env_light->world_radius);
         vec3_add(sample_point, sr->hit_point, displacement);
@@ -378,8 +383,20 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             }else
             {
                 vec3 env_inc_radiance;
+
                 if(sl->env_light)
+                {
+                    vec3 dir;
+                    mat3_mult_vec3(dir, sl->env_light->transform, ray.direction);                    
+                    getEnvLightIncRadiance(env_inc_radiance, dir, sl->env_light);
+                }
+
+                /*
+                if(sl->env_light)
+                {
                     getEnvLightIncRadiance(env_inc_radiance, ray.direction, sl->env_light);
+                }
+                */
                 vec3_mult(env_inc_radiance, env_inc_radiance, beta);
                 vec3_add(L, L, env_inc_radiance);
                 good_paths++;
