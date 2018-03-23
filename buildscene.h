@@ -512,7 +512,8 @@ void loadSceneFile(Scene* scene, const char* scenefile)
                 env_light->transform[2][2] = 1.0f;
                 */
 
-                mat3_rotate_y(env_light->transform, 0.76);
+                mat3_rotate_y(env_light->transform, -0.76);
+                //mat3_identity(env_light->transform);
             }
             if(scene->lights.env_light)
             {
