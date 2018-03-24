@@ -1,5 +1,5 @@
 # craytracer: a physically-based path tracer in (mostly) C.
-![Buddha Render](https://i.imgur.com/QeFEkum.jpg)
+![Car](https://i.imgur.com/3TtRSRT.png)
 
 This is an unbiased path tracer written in mostly C inspired by Handmade Hero.
 
