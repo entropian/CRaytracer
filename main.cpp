@@ -33,6 +33,7 @@
 bool SHOW_PROGRESS = true;
 extern double g_traversal_time;
 bool EXIT = false;
+bool PAUSE = false;
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -42,6 +43,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         {
         case GLFW_KEY_Q:
             EXIT = true;
+            break;
+        case GLFW_KEY_P:
+            PAUSE = !PAUSE;
             break;
         }
     }
@@ -77,7 +81,7 @@ void* threadFunc(void* vargp)
     while(JobQueue_getJob(thread_data->job_queue, &start_index, &end_index))
     {
         for(int i = start_index; i < end_index; i++)
-        {
+        {            
             Sampler_setPixel(&sampler, i);
             vec3 color = {0.0f, 0.0f, 0.0f};
             vec2 imageplane_coord;
@@ -98,6 +102,14 @@ void* threadFunc(void* vargp)
             thread_data->trace(radiance, thread_data->params->max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
 
+            float color_sum = color[0] + color[1] + color[2];
+            if(color_sum > 1000.0f)
+            {
+                // Display sample log
+                printSampleLog();
+                exit(0);
+            }
+
             thread_data->color_buffer[i*3] += color[0];
             thread_data->color_buffer[i*3 + 1] += color[1];
             thread_data->color_buffer[i*3 + 2] += color[2];
@@ -110,6 +122,19 @@ void* threadFunc(void* vargp)
             thread_data->image[i*3 + 1] = (char)(color[1] * 255.0f);
             thread_data->image[i*3 + 2] = (char)(color[2] * 255.0f);
         }
+        glfwPollEvents();
+        if(EXIT)
+        {
+            exit(0);
+        }
+    }
+}
+
+void pauseFunc()
+{
+    while(PAUSE)
+    {
+        glfwPollEvents();
     }
 }
 
@@ -218,7 +243,7 @@ int main(int argc, char** argv)
     thread_data.trace = trace;
 
     int num_patches = 256;
-    int num_threads = 3;
+    int num_threads = 1;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
     int patches[257];
@@ -234,11 +259,20 @@ int main(int argc, char** argv)
     end_time = start_time;
     int prev_percent = 0;
 
+    initSampleLog(params.max_depth);
+    
     JobQueue job_queue;
     JobQueue_init(&job_queue);
     thread_data.job_queue = &job_queue;
+    // Rendering
     for(unsigned int p = 0; p < params.num_samples; p++)
     {
+        if(PAUSE)
+        {
+            printf("Paused\n");
+            pauseFunc();
+            printf("Unpaused\n");
+        }
         job_queue.num_jobs = 0;
         job_queue.head = 0;
         thread_data.p = p;

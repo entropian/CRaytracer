@@ -173,6 +173,51 @@ void transformToLocalBasis(vec3 r, const vec3 a, const BSDF* bsdf)
     orthoNormalTransform(r, bsdf->tangent, bsdf->binormal, bsdf->normal, a);
 }
 
+typedef struct SampleLog_s{
+    int depth;
+
+    vec3* beta;
+    float* t;
+    vec3* emissive_indirect_contrib;
+    vec3* env_indirect_contrib;
+    vec3* direct_contrib;
+    float* new_sample_pdf;
+}SampleLog;
+SampleLog sample_log;
+
+void initSampleLog(const int max_depth)
+{
+    sample_log.beta = (vec3*)malloc(sizeof(vec3) * max_depth);
+    sample_log.t = (float*)malloc(sizeof(float) * max_depth);
+    sample_log.emissive_indirect_contrib = (vec3*)malloc(sizeof(vec3) * max_depth);
+    sample_log.env_indirect_contrib = (vec3*)malloc(sizeof(vec3) * max_depth);
+    sample_log.direct_contrib = (vec3*)malloc(sizeof(vec3) * max_depth);
+    sample_log.new_sample_pdf = (float*)malloc(sizeof(float) * max_depth);
+
+    for(int i = 0; i < max_depth; i++)
+    {
+        vec3_assign(sample_log.beta[i], -1.0f, -1.0f, -1.0f);
+        sample_log.t[i] = -1.0f;
+        vec3_assign(sample_log.emissive_indirect_contrib[i], -1.0f, -1.0f, -1.0f);
+        vec3_assign(sample_log.env_indirect_contrib[i], -1.0f, -1.0f, -1.0f);
+        vec3_assign(sample_log.direct_contrib[i], -1.0f, -1.0f, -1.0f);
+        sample_log.new_sample_pdf[i] = -1.0f;
+    }
+}
+
+void printSampleLog()
+{
+    for(int i = 0; i < sample_log.depth; i++)
+    {
+        printf("Bounce %d\n", i);
+        printf("t %f\n", sample_log.t[i]);
+        printVec3WithText("emissive_indirect_contrib", sample_log.emissive_indirect_contrib[i]);
+        printVec3WithText("env_indirect_contrib", sample_log.env_indirect_contrib[i]);
+        printVec3WithText("direct_contrib", sample_log.direct_contrib[i]);
+        printf("new_sample_pdf %f\n", sample_log.new_sample_pdf[i]);
+    }
+}
+
 void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
                     const ShadeRec* sr, const int light_index, const SceneLights* sl, const SceneObjects* so,
                     const BxDFFlags excluded_bxdf)
@@ -361,11 +406,19 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
     BxDFFlags excluded_from_direct = (BxDFFlags)(BSDF_SPECULAR | BSDF_GLOSSY);
     int good_paths = 0;
     int bounces;
+    // LOGGING
+    sample_log.depth = 0;
     for(bounces = 0; ; bounces++)
     {
+        // LOGGING
+        sample_log.depth++;
+        vec3_copy(sample_log.beta[bounces], beta);
         // Intersect ray with scene
         ShadeRec sr;
-        float t = intersectTest(&sr, so, ray);        
+        float t = intersectTest(&sr, so, ray);
+        // LOGGING
+        sample_log.depth = 0;
+        sample_log.t[bounces] = t;
         // Possibly add emitted light at intersection
         if(bounces == 0 || sampled_flags & excluded_from_direct)
         {
@@ -377,6 +430,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                     vec3 inc_radiance;
                     vec3_scale(inc_radiance, emissive->color, emissive->intensity);
                     vec3_mult(inc_radiance, inc_radiance, beta);
+                    // LOGGING
+                    vec3_copy(sample_log.emissive_indirect_contrib[bounces], inc_radiance);
                     vec3_add(L, L, inc_radiance);
                     good_paths++;
                 }
@@ -398,6 +453,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                 }
                 */
                 vec3_mult(env_inc_radiance, env_inc_radiance, beta);
+                // LOGGING
+                vec3_copy(sample_log.env_indirect_contrib[bounces], env_inc_radiance);
                 vec3_add(L, L, env_inc_radiance);
                 good_paths++;
             if(beta[0] < 0.0f || beta[1] < 0.0f || beta[2] < 0.0f)
@@ -423,6 +480,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             vec3 contrib;        
             uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct);
             vec3_mult(contrib, contrib, beta);
+            // LOGGING
+            vec3_copy(sample_log.direct_contrib[bounces], contrib);
             vec3_add(L, L, contrib);
             if(!vec3_equal(contrib, BLACK))
                 good_paths++;
@@ -437,6 +496,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         Sampler_getSample(sample, sampler);
         bool is_specular;
         float pdf = BSDF_sample_f(f, wi, &sampled_flags, wo, sample, &(sr.bsdf));
+        // LOGGING
+        sample_log.new_sample_pdf[bounces] = pdf;
         if(vec3_equal(f, BLACK) || pdf == 0.0f)
         {
             BSDF_freeBxDFs(&(sr.bsdf));                    
