@@ -35,6 +35,9 @@ extern double g_traversal_time;
 bool EXIT = false;
 bool PAUSE = false;
 
+double g_click_x, g_click_y;
+bool g_left_clicked = false;
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if(action == GLFW_PRESS)
@@ -47,6 +50,19 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         case GLFW_KEY_P:
             PAUSE = !PAUSE;
             break;
+        }
+    }
+}
+
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+    if(button == GLFW_MOUSE_BUTTON_LEFT)
+    {
+        if(action == GLFW_PRESS)
+        {
+            g_left_clicked = true;
+            glfwGetCursorPos(window, &(g_click_x), &(g_click_y));
+            printf("%f %f\n", g_click_x, g_click_y);
         }
     }
 }
@@ -81,7 +97,8 @@ void* threadFunc(void* vargp)
     while(JobQueue_getJob(thread_data->job_queue, &start_index, &end_index))
     {
         for(int i = start_index; i < end_index; i++)
-        {            
+        {
+            // Calculate imageplane coordinate
             Sampler_setPixel(&sampler, i);
             vec3 color = {0.0f, 0.0f, 0.0f};
             vec2 imageplane_coord;
@@ -89,6 +106,7 @@ void* threadFunc(void* vargp)
             Sampler_getSample(sample, &sampler);
             calcImageCoord(imageplane_coord, film, sample, i);
 
+            // Calculate primary ray
             Ray ray;
             Sampler_getSample(sample, &sampler);
             calcCameraRay(&ray, imageplane_coord, camera, sample);
@@ -98,18 +116,24 @@ void* threadFunc(void* vargp)
             trace_args.lights = &(thread_data->scene->lights);
             trace_args.sampler = &sampler;
 
+            // Tracing 
             vec3 radiance = {0.0f, 0.0f, 0.0f};
             thread_data->trace(radiance, thread_data->params->max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
 
-            float color_sum = color[0] + color[1] + color[2];
-            if(color_sum > 1000.0f)
+            // Calculate variance
+            if(thread_data->prev_num_samples + thread_data->p > 0)
             {
-                // Display sample log
-                printSampleLog();
-                exit(0);
+                vec3 current_sample_sum = {thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 + 1],
+                thread_data->color_buffer[i*3 + 2]};
+                vec3 sample_avg;
+                vec3_scale(sample_avg, current_sample_sum, 1.0 / (thread_data->prev_num_samples + thread_data->p));
+                vec3 diff;
+                vec3_sub(diff, color, sample_avg);
+                thread_data->variance_buffer[i] = vec3_dot(diff, diff);                
             }
 
+            // Add sample to buffer
             thread_data->color_buffer[i*3] += color[0];
             thread_data->color_buffer[i*3 + 1] += color[1];
             thread_data->color_buffer[i*3 + 2] += color[2];
@@ -118,9 +142,9 @@ void* threadFunc(void* vargp)
             vec3_scale(color, color, 1/(float)(thread_data->p+1 + thread_data->prev_num_samples));
             toneMap(color, color);
 
-            thread_data->image[i*3] = (char)(color[0] * 255.0f);
-            thread_data->image[i*3 + 1] = (char)(color[1] * 255.0f);
-            thread_data->image[i*3 + 2] = (char)(color[2] * 255.0f);
+            thread_data->image[i*3] = (unsigned char)(color[0] * 255.0f);
+            thread_data->image[i*3 + 1] = (unsigned char)(color[1] * 255.0f);
+            thread_data->image[i*3 + 2] = (unsigned char)(color[2] * 255.0f);
         }
         glfwPollEvents();
         if(EXIT)
@@ -130,10 +154,20 @@ void* threadFunc(void* vargp)
     }
 }
 
-void pauseFunc()
+void pauseFunc(const float* buffer, const Film* film)
 {
     while(PAUSE)
     {
+        if(g_left_clicked)
+        {
+            float image_window_ratio = (float)film->frame_res_width / (float)film->window_width;
+            int x = g_click_x * image_window_ratio;
+            int y = g_click_y * image_window_ratio;
+            int index = (y * film->frame_res_width + x) * 3;
+            vec3 sample = {buffer[index], buffer[index+1], buffer[index+2]};
+            printVec3WithText("", sample);
+            g_left_clicked = false;
+        }
         glfwPollEvents();
     }
 }
@@ -196,6 +230,7 @@ int main(int argc, char** argv)
     if(window)
     {
         glfwSetKeyCallback(window, keyCallback);
+        glfwSetMouseButtonCallback(window, mouseButtonCallback);
         initViewport(&viewport);
     }else
     {
@@ -210,6 +245,7 @@ int main(int argc, char** argv)
 
     int prev_num_samples = 0;
     float* color_buffer = NULL;
+    double* variance_buffer = (double*)calloc(num_pixels, sizeof(double));
     if(using_image_state)
     {
         int width, height, size;
@@ -226,6 +262,7 @@ int main(int argc, char** argv)
         color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
     }
 
+    srand(0);
     createGlobalSampleObject(params.num_samples, params.num_sample_sets, num_pixels);
     
     // Set trace function
@@ -234,16 +271,15 @@ int main(int argc, char** argv)
     
     ThreadData thread_data;
     thread_data.prev_num_samples = prev_num_samples;
-    //thread_data.film = &(scene.film);
-    //thread_data.camera = &(scene.camera);    
     thread_data.scene = &scene;
     thread_data.color_buffer = color_buffer;
+    thread_data.variance_buffer = variance_buffer;
     thread_data.image = image;
     thread_data.params = &params;
     thread_data.trace = trace;
 
     int num_patches = 256;
-    int num_threads = 1;
+    int num_threads = 3;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
     int patches[257];
@@ -270,7 +306,7 @@ int main(int argc, char** argv)
         if(PAUSE)
         {
             printf("Paused\n");
-            pauseFunc();
+            pauseFunc(color_buffer, &(scene.film));
             printf("Unpaused\n");
         }
         job_queue.num_jobs = 0;
@@ -303,9 +339,99 @@ int main(int argc, char** argv)
     displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
     printf("Traversal time = %f\n", g_traversal_time);
 
+    // TEMP
+    params.image_save = true;
     if(params.image_save)
     {
         PPM_write("output.ppm", image, num_pixels * 3, scene.film.frame_res_width, scene.film.frame_res_height);
+
+        // Variance pass
+        int indices[100];
+        double top_variance[100];
+        for(int i = 0; i < 10; i++){indices[i] = -1;}
+        for(int i = 0; i < 10; i++){top_variance[i] = 0.0;}
+        for(int i = 0; i < num_pixels; i++)
+        {
+            for(int j = 0; j < 100; j++)
+            {
+                if(variance_buffer[i] > top_variance[j])
+                {
+                    for(int k = 100; k > j; k--)
+                    {
+                        top_variance[k] = top_variance[k-1];
+                        indices[k] = indices[k-1];
+                    }
+                    top_variance[j] = variance_buffer[i];
+                    indices[j] = i;
+                }
+            }
+        }
+
+        for(int i = 0; i < 100; i++)
+        {
+            int count = 0;
+            vec3 neighbor_sum = {0.0f, 0.0f, 0.0f};
+            int index = indices[i] * 3;
+            int current_index = index - scene.film.frame_res_width * 3;
+            if(current_index > -1)
+            {
+                neighbor_sum[0] += color_buffer[current_index];
+                neighbor_sum[1] += color_buffer[current_index];
+                neighbor_sum[2] += color_buffer[current_index];
+                count++;
+            }
+
+            current_index = index - 3;
+            if(current_index > -1)
+            {
+                neighbor_sum[0] += color_buffer[current_index];
+                neighbor_sum[1] += color_buffer[current_index];
+                neighbor_sum[2] += color_buffer[current_index];
+                count++;                
+            }
+
+            current_index = index + 3;
+            if(current_index < num_pixels * 3)
+            {
+                neighbor_sum[0] += color_buffer[current_index];
+                neighbor_sum[1] += color_buffer[current_index];
+                neighbor_sum[2] += color_buffer[current_index];
+                count++;                
+            }
+
+            current_index = index + scene.film.frame_res_width * 3;
+            if(current_index < num_pixels * 3)
+            {
+                neighbor_sum[0] += color_buffer[current_index];
+                neighbor_sum[1] += color_buffer[current_index];
+                neighbor_sum[2] += color_buffer[current_index];
+                count++;                
+            }
+
+            vec3 new_value;
+            vec3_scale(new_value, neighbor_sum, 1.0f / count);
+            color_buffer[index] = new_value[0];
+            color_buffer[index+1] = new_value[1];
+            color_buffer[index+2] = new_value[2];
+        }
+
+        for(int i = 0; i < num_pixels; i++)
+        {
+            int index = i * 3;
+            vec3 color;
+            color[0] = color_buffer[index];
+            color[1] = color_buffer[index+1];
+            color[2] = color_buffer[index+2];
+            vec3_scale(color, color, 1.0f / (float)(thread_data.p + thread_data.prev_num_samples));
+            toneMap(color, color);
+
+            image[index] = (unsigned char)(color[0] * 255.0f);
+            image[index+1] = (unsigned char)(color[1] * 255.0f);
+            image[index+2] = (unsigned char)(color[2] * 255.0f);
+        }
+
+        PPM_write("output2.ppm", image, num_pixels * 3, scene.film.frame_res_width, scene.film.frame_res_height);
+        
         EXIT = true;
     }
 
