@@ -54,7 +54,6 @@ typedef struct ThreadData_s
     Scene* scene;
     Samples3D* h_samples;
     float* color_buffer;
-    double* variance_buffer;
     unsigned char* image;
     ConfigParams* params;
     float (*trace)(vec3, int, const Ray, TraceArgs*);

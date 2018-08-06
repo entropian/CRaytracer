@@ -407,18 +407,18 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
     int good_paths = 0;
     int bounces;
     // LOGGING
-    sample_log.depth = 0;
+    //sample_log.depth = 0;
     for(bounces = 0; ; bounces++)
     {
         // LOGGING
-        sample_log.depth++;
-        vec3_copy(sample_log.beta[bounces], beta);
+        //sample_log.depth++;
+        //vec3_copy(sample_log.beta[bounces], beta);
         // Intersect ray with scene
         ShadeRec sr;
         float t = intersectTest(&sr, so, ray);
         // LOGGING
-        sample_log.depth = 0;
-        sample_log.t[bounces] = t;
+        //sample_log.depth = 0;
+        //sample_log.t[bounces] = t;
         // Possibly add emitted light at intersection
         if(bounces == 0 || sampled_flags & excluded_from_direct)
         {
@@ -431,7 +431,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                     vec3_scale(inc_radiance, emissive->color, emissive->intensity);
                     vec3_mult(inc_radiance, inc_radiance, beta);
                     // LOGGING
-                    vec3_copy(sample_log.emissive_indirect_contrib[bounces], inc_radiance);
+                    //vec3_copy(sample_log.emissive_indirect_contrib[bounces], inc_radiance);
                     vec3_add(L, L, inc_radiance);
                     good_paths++;
                 }
@@ -454,7 +454,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                 */
                 vec3_mult(env_inc_radiance, env_inc_radiance, beta);
                 // LOGGING
-                vec3_copy(sample_log.env_indirect_contrib[bounces], env_inc_radiance);
+                //vec3_copy(sample_log.env_indirect_contrib[bounces], env_inc_radiance);
                 vec3_add(L, L, env_inc_radiance);
                 good_paths++;
             if(beta[0] < 0.0f || beta[1] < 0.0f || beta[2] < 0.0f)
@@ -481,7 +481,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
             uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct);
             vec3_mult(contrib, contrib, beta);
             // LOGGING
-            vec3_copy(sample_log.direct_contrib[bounces], contrib);
+            //vec3_copy(sample_log.direct_contrib[bounces], contrib);
             vec3_add(L, L, contrib);
             if(!vec3_equal(contrib, BLACK))
                 good_paths++;
@@ -497,7 +497,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         bool is_specular;
         float pdf = BSDF_sample_f(f, wi, &sampled_flags, wo, sample, &(sr.bsdf));
         // LOGGING
-        sample_log.new_sample_pdf[bounces] = pdf;
+        //sample_log.new_sample_pdf[bounces] = pdf;
         if(vec3_equal(f, BLACK) || pdf == 0.0f)
         {
             BSDF_freeBxDFs(&(sr.bsdf));                    

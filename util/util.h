@@ -81,3 +81,7 @@ static int openFile(FILE** fp, const char* file_name, const char* mode)
     }
     return 1;
 }
+
+void fixBufferInfAndNaN(float* color_buffer, const int num_pixels, const int width);
+void genImageFromColorBuffer(unsigned char* image,
+                             const float* color_buffer, const int num_pixels, const int num_samples);

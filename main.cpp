@@ -121,18 +121,6 @@ void* threadFunc(void* vargp)
             thread_data->trace(radiance, thread_data->params->max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
 
-            // Calculate variance
-            if(thread_data->prev_num_samples + thread_data->p > 0)
-            {
-                vec3 current_sample_sum = {thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 + 1],
-                thread_data->color_buffer[i*3 + 2]};
-                vec3 sample_avg;
-                vec3_scale(sample_avg, current_sample_sum, 1.0 / (thread_data->prev_num_samples + thread_data->p));
-                vec3 diff;
-                vec3_sub(diff, color, sample_avg);
-                thread_data->variance_buffer[i] = vec3_dot(diff, diff);                
-            }
-
             // Add sample to buffer
             thread_data->color_buffer[i*3] += color[0];
             thread_data->color_buffer[i*3 + 1] += color[1];
@@ -196,8 +184,6 @@ int main(int argc, char** argv)
     if(glfwInit() != GL_TRUE)
     {
         fprintf(stderr, "Failed to initialize GLFW\n");
-        //return NULL;
-        //return -1;
     }
     
     bool using_image_state = false;
@@ -245,7 +231,6 @@ int main(int argc, char** argv)
 
     int prev_num_samples = 0;
     float* color_buffer = NULL;
-    double* variance_buffer = (double*)calloc(num_pixels, sizeof(double));
     if(using_image_state)
     {
         int width, height, size;
@@ -273,7 +258,6 @@ int main(int argc, char** argv)
     thread_data.prev_num_samples = prev_num_samples;
     thread_data.scene = &scene;
     thread_data.color_buffer = color_buffer;
-    thread_data.variance_buffer = variance_buffer;
     thread_data.image = image;
     thread_data.params = &params;
     thread_data.trace = trace;
@@ -344,73 +328,8 @@ int main(int argc, char** argv)
     if(params.image_save)
     {
         PPM_write("output.ppm", image, num_pixels * 3, scene.film.frame_res_width, scene.film.frame_res_height);
-
-        for(int i = 0; i < num_pixels; i++)
-        {
-            int index = i * 3;
-            if(isinf(color_buffer[0]) || isnan(color_buffer[0]))
-            {
-                int count = 0;
-                vec3 neighbor_sum = {0.0f, 0.0f, 0.0f};
-                int current_index = index - scene.film.frame_res_width * 3;
-                if(current_index > -1)
-                {
-                    neighbor_sum[0] += color_buffer[current_index];
-                    neighbor_sum[1] += color_buffer[current_index];
-                    neighbor_sum[2] += color_buffer[current_index];
-                    count++;
-                }
-
-                current_index = index - 3;
-                if(current_index > -1)
-                {
-                    neighbor_sum[0] += color_buffer[current_index];
-                    neighbor_sum[1] += color_buffer[current_index];
-                    neighbor_sum[2] += color_buffer[current_index];
-                    count++;                
-                }
-
-                current_index = index + 3;
-                if(current_index < num_pixels * 3)
-                {
-                    neighbor_sum[0] += color_buffer[current_index];
-                    neighbor_sum[1] += color_buffer[current_index];
-                    neighbor_sum[2] += color_buffer[current_index];
-                    count++;                
-                }
-
-                current_index = index + scene.film.frame_res_width * 3;
-                if(current_index < num_pixels * 3)
-                {
-                    neighbor_sum[0] += color_buffer[current_index];
-                    neighbor_sum[1] += color_buffer[current_index];
-                    neighbor_sum[2] += color_buffer[current_index];
-                    count++;                
-                }
-
-                vec3 new_value;
-                vec3_scale(new_value, neighbor_sum, 1.0f / count);
-                color_buffer[index] = new_value[0];
-                color_buffer[index+1] = new_value[1];
-                color_buffer[index+2] = new_value[2];
-            }
-        }
-
-        for(int i = 0; i < num_pixels; i++)
-        {
-            int index = i * 3;
-            vec3 color;
-            color[0] = color_buffer[index];
-            color[1] = color_buffer[index+1];
-            color[2] = color_buffer[index+2];
-            vec3_scale(color, color, 1.0f / (float)(thread_data.p + thread_data.prev_num_samples));
-            toneMap(color, color);
-
-            image[index] = (unsigned char)(color[0] * 255.0f);
-            image[index+1] = (unsigned char)(color[1] * 255.0f);
-            image[index+2] = (unsigned char)(color[2] * 255.0f);
-        }
-
+        fixBufferInfAndNaN(color_buffer, num_pixels, scene.film.frame_res_width);
+        genImageFromColorBuffer(image, color_buffer, num_pixels, thread_data.p + thread_data.prev_num_samples);
         PPM_write("output2.ppm", image, num_pixels * 3, scene.film.frame_res_width, scene.film.frame_res_height);
         
         EXIT = true;
