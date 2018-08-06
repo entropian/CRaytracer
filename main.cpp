@@ -345,74 +345,55 @@ int main(int argc, char** argv)
     {
         PPM_write("output.ppm", image, num_pixels * 3, scene.film.frame_res_width, scene.film.frame_res_height);
 
-        // Variance pass
-        int indices[100];
-        double top_variance[100];
-        for(int i = 0; i < 10; i++){indices[i] = -1;}
-        for(int i = 0; i < 10; i++){top_variance[i] = 0.0;}
         for(int i = 0; i < num_pixels; i++)
         {
-            for(int j = 0; j < 100; j++)
+            int index = i * 3;
+            if(isinf(color_buffer[0]) || isnan(color_buffer[0]))
             {
-                if(variance_buffer[i] > top_variance[j])
+                int count = 0;
+                vec3 neighbor_sum = {0.0f, 0.0f, 0.0f};
+                int current_index = index - scene.film.frame_res_width * 3;
+                if(current_index > -1)
                 {
-                    for(int k = 100; k > j; k--)
-                    {
-                        top_variance[k] = top_variance[k-1];
-                        indices[k] = indices[k-1];
-                    }
-                    top_variance[j] = variance_buffer[i];
-                    indices[j] = i;
+                    neighbor_sum[0] += color_buffer[current_index];
+                    neighbor_sum[1] += color_buffer[current_index];
+                    neighbor_sum[2] += color_buffer[current_index];
+                    count++;
                 }
-            }
-        }
 
-        for(int i = 0; i < 100; i++)
-        {
-            int count = 0;
-            vec3 neighbor_sum = {0.0f, 0.0f, 0.0f};
-            int index = indices[i] * 3;
-            int current_index = index - scene.film.frame_res_width * 3;
-            if(current_index > -1)
-            {
-                neighbor_sum[0] += color_buffer[current_index];
-                neighbor_sum[1] += color_buffer[current_index];
-                neighbor_sum[2] += color_buffer[current_index];
-                count++;
-            }
+                current_index = index - 3;
+                if(current_index > -1)
+                {
+                    neighbor_sum[0] += color_buffer[current_index];
+                    neighbor_sum[1] += color_buffer[current_index];
+                    neighbor_sum[2] += color_buffer[current_index];
+                    count++;                
+                }
 
-            current_index = index - 3;
-            if(current_index > -1)
-            {
-                neighbor_sum[0] += color_buffer[current_index];
-                neighbor_sum[1] += color_buffer[current_index];
-                neighbor_sum[2] += color_buffer[current_index];
-                count++;                
-            }
+                current_index = index + 3;
+                if(current_index < num_pixels * 3)
+                {
+                    neighbor_sum[0] += color_buffer[current_index];
+                    neighbor_sum[1] += color_buffer[current_index];
+                    neighbor_sum[2] += color_buffer[current_index];
+                    count++;                
+                }
 
-            current_index = index + 3;
-            if(current_index < num_pixels * 3)
-            {
-                neighbor_sum[0] += color_buffer[current_index];
-                neighbor_sum[1] += color_buffer[current_index];
-                neighbor_sum[2] += color_buffer[current_index];
-                count++;                
-            }
+                current_index = index + scene.film.frame_res_width * 3;
+                if(current_index < num_pixels * 3)
+                {
+                    neighbor_sum[0] += color_buffer[current_index];
+                    neighbor_sum[1] += color_buffer[current_index];
+                    neighbor_sum[2] += color_buffer[current_index];
+                    count++;                
+                }
 
-            current_index = index + scene.film.frame_res_width * 3;
-            if(current_index < num_pixels * 3)
-            {
-                neighbor_sum[0] += color_buffer[current_index];
-                neighbor_sum[1] += color_buffer[current_index];
-                neighbor_sum[2] += color_buffer[current_index];
-                count++;                
+                vec3 new_value;
+                vec3_scale(new_value, neighbor_sum, 1.0f / count);
+                color_buffer[index] = new_value[0];
+                color_buffer[index+1] = new_value[1];
+                color_buffer[index+2] = new_value[2];
             }
-
-            vec3 new_value;
-            vec3_scale(new_value, neighbor_sum, 1.0f / count);
-            color_buffer[index] = new_value[0];
-            color_buffer[index+1] = new_value[1];
-            color_buffer[index+2] = new_value[2];
         }
 
         for(int i = 0; i < num_pixels; i++)
