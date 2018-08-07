@@ -120,6 +120,14 @@ void* threadFunc(void* vargp)
             vec3 radiance = {0.0f, 0.0f, 0.0f};
             thread_data->trace(radiance, thread_data->params->max_depth, ray, &trace_args);
             vec3_add(color, color, radiance);
+            
+            if(vec3_hasNan(color) || vec3_hasInf(color))
+            {
+                // if result is NaN or Inf, use average of current color buffer value
+                vec3_assign(color, thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 +1],
+                        thread_data->color_buffer[i*3 + 2]);
+                vec3_scale(color, color, 1/(float)(thread_data->p+1 + thread_data->prev_num_samples));
+            }
 
             // Add sample to buffer
             thread_data->color_buffer[i*3] += color[0];
@@ -247,7 +255,6 @@ int main(int argc, char** argv)
         color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
     }
 
-    srand(0);
     createGlobalSampleObject(params.num_samples, params.num_sample_sets, num_pixels);
     
     // Set trace function
@@ -328,10 +335,6 @@ int main(int argc, char** argv)
     if(params.image_save)
     {
         PPM_write("output.ppm", image, num_pixels * 3, scene.film.frame_res_width, scene.film.frame_res_height);
-        fixBufferInfAndNaN(color_buffer, num_pixels, scene.film.frame_res_width);
-        genImageFromColorBuffer(image, color_buffer, num_pixels, thread_data.p + thread_data.prev_num_samples);
-        PPM_write("output2.ppm", image, num_pixels * 3, scene.film.frame_res_width, scene.film.frame_res_height);
-        
         EXIT = true;
     }
 

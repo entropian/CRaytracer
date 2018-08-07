@@ -370,3 +370,4 @@ inline void vec3_sqrt(vec3 r, const vec3 a)
     r[1] = sqrtf(a[1]);
     r[2] = sqrtf(a[2]);
 }
+

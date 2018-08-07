@@ -82,6 +82,19 @@ static int openFile(FILE** fp, const char* file_name, const char* mode)
     return 1;
 }
 
-void fixBufferInfAndNaN(float* color_buffer, const int num_pixels, const int width);
 void genImageFromColorBuffer(unsigned char* image,
                              const float* color_buffer, const int num_pixels, const int num_samples);
+
+inline bool vec3_hasNan(const vec3 a)
+{
+    if(isnan(a[0])) { return true; }
+    if(isnan(a[1])) { return true; }
+    if(isnan(a[2])) { return true; }
+}
+
+inline bool vec3_hasInf(const vec3 a)
+{
+    if(isinf(a[0])) { return true; }
+    if(isinf(a[1])) { return true; }
+    if(isinf(a[2])) { return true; }
+}
