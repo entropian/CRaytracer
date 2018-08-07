@@ -58,4 +58,5 @@ typedef struct ThreadData_s
     ConfigParams* params;
     float (*trace)(vec3, int, const Ray, TraceArgs*);
     JobQueue* job_queue;
+    FILE* log_file;
 }ThreadData;

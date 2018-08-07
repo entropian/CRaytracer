@@ -576,7 +576,7 @@ void Sampler_delete(Sampler* sampler)
     sampler->set_sequence = NULL;
 }
 
-void Sampler_calcSetSquence(Sampler* sampler, const int a)
+void Sampler_calcSetSequence(Sampler* sampler, const int a)
 {
     int index = random_sets[a];
     for(int i = 0; i < NUM_SAMPLE_SETS; i++)
@@ -588,7 +588,7 @@ void Sampler_calcSetSquence(Sampler* sampler, const int a)
 void Sampler_setPixel(Sampler* sampler, const int a)
 {
     sampler->cur_dimension = 0;
-    Sampler_calcSetSquence(sampler, a);
+    Sampler_calcSetSequence(sampler, a);
 }
 
 void Sampler_getSample(vec2 out, Sampler* sampler)

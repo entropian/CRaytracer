@@ -123,6 +123,9 @@ void* threadFunc(void* vargp)
             
             if(vec3_hasNan(color) || vec3_hasInf(color))
             {
+                // Retrace ray and log data
+                Sampler_setPixel(&sampler, i);
+                pathTraceLogging(radiance, thread_data->log_file, thread_data->params->max_depth, ray, &trace_args);
                 // if result is NaN or Inf, use average of current color buffer value
                 vec3_assign(color, thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 +1],
                         thread_data->color_buffer[i*3 + 2]);
@@ -133,14 +136,6 @@ void* threadFunc(void* vargp)
             thread_data->color_buffer[i*3] += color[0];
             thread_data->color_buffer[i*3 + 1] += color[1];
             thread_data->color_buffer[i*3 + 2] += color[2];
-            vec3_assign(color, thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 +1],
-                        thread_data->color_buffer[i*3 + 2]);
-            vec3_scale(color, color, 1/(float)(thread_data->p+1 + thread_data->prev_num_samples));
-            toneMap(color, color);
-
-            thread_data->image[i*3] = (unsigned char)(color[0] * 255.0f);
-            thread_data->image[i*3 + 1] = (unsigned char)(color[1] * 255.0f);
-            thread_data->image[i*3 + 2] = (unsigned char)(color[2] * 255.0f);
         }
         glfwPollEvents();
         if(EXIT)
@@ -268,6 +263,7 @@ int main(int argc, char** argv)
     thread_data.image = image;
     thread_data.params = &params;
     thread_data.trace = trace;
+    openFile(&(thread_data.log_file), "trace_log.txt", "w");
 
     int num_patches = 256;
     int num_threads = 3;
@@ -286,7 +282,6 @@ int main(int argc, char** argv)
     end_time = start_time;
     int prev_percent = 0;
 
-    initSampleLog(params.max_depth);
     
     JobQueue job_queue;
     JobQueue_init(&job_queue);
@@ -320,6 +315,7 @@ int main(int argc, char** argv)
         printf("Number of object intersection tests: %lld\n", g_intersect_count);
         if(SHOW_PROGRESS)
         {
+            genImageFromColorBuffer(image, color_buffer, num_pixels, p + 1  + prev_num_samples);
             displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
         }
     }
@@ -343,6 +339,7 @@ int main(int argc, char** argv)
                    scene.film.frame_res_height, "savestate.is");
 
     // Clean up
+    fclose(thread_data.log_file);
     freeBSDFMem();
     free(color_buffer);
     double frames_per_sec = 10.0;
