@@ -360,9 +360,11 @@ float BVHShadowIntersectTest(const BVHNode* tree, const Ray ray)
         return t1 < t2 ? t1 : t2;
     }
 }
-
+int intersect_call_count = 0;
+int shadow_intersect_call_count = 0;
 float intersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 {
+    intersect_call_count++;
 #ifdef MEASURE_TRAVERSAL_TIME
     double start_time, end_time;
     start_time = glfwGetTime();
@@ -440,6 +442,7 @@ RETURN:
 
 float shadowIntersectTest(const SceneObjects *so, const Ray shadow_ray, const float light_dist)
 {
+    shadow_intersect_call_count++;
     // TODO: add traversal time
     if(so->accel == GRID)
     {

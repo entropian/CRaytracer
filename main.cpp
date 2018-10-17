@@ -94,8 +94,11 @@ void* threadFunc(void* vargp)
     Film* film = &(thread_data->scene->film);
     Camera* camera = &(thread_data->scene->camera);
     int start_index, end_index;
+    printf("here!\n");
     while(JobQueue_getJob(thread_data->job_queue, &start_index, &end_index))
     {
+        // TEMP end_index + 1
+
         for(int i = start_index; i < end_index; i++)
         {
             // Calculate imageplane coordinate
@@ -124,7 +127,7 @@ void* threadFunc(void* vargp)
             if(vec3_hasNan(color) || vec3_hasInf(color))
             {
                 // Retrace ray and log data
-                Sampler_setPixel(&sampler, i);
+                Sampler_setPixel(&sampler, i);                
                 pathTraceLogging(radiance, thread_data->log_file, thread_data->params->max_depth, ray, &trace_args);
                 // if result is NaN or Inf, use average of current color buffer value
                 vec3_assign(color, thread_data->color_buffer[i*3], thread_data->color_buffer[i*3 +1],
@@ -249,9 +252,10 @@ int main(int argc, char** argv)
     {
         color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
     }
-
-    createGlobalSampleObject(params.num_samples, params.num_sample_sets, num_pixels);
+    srand(0);
     
+    createGlobalSampleObject(params.num_samples, params.num_sample_sets, num_pixels);
+
     // Set trace function
     float (*trace)(vec3, int, const Ray, TraceArgs*);
     trace = getTraceFunc(params.trace_type);
@@ -265,8 +269,10 @@ int main(int argc, char** argv)
     thread_data.trace = trace;
     openFile(&(thread_data.log_file), "trace_log.txt", "w");
 
-    int num_patches = 256;
-    int num_threads = 3;
+    // TEMP
+    //int num_patches = 256;
+    int num_patches = 1;
+    int num_threads = 1;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
     int patches[257];
@@ -281,7 +287,6 @@ int main(int argc, char** argv)
     start_time = glfwGetTime();
     end_time = start_time;
     int prev_percent = 0;
-
     
     JobQueue job_queue;
     JobQueue_init(&job_queue);
@@ -323,6 +328,8 @@ int main(int argc, char** argv)
     double sec = end_time - start_time;
     printf("%f seconds.\n", sec);
 
+    printf("intersect_call_count = %d\nshadow_intersect_call_count = %d\n", intersect_call_count,
+           shadow_intersect_call_count);
     displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
     printf("Traversal time = %f\n", g_traversal_time);
 

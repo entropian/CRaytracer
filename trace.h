@@ -369,9 +369,13 @@ void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_s
     int light_index;
     float light_pdf;
     float rand_float = (float)rand() / (float)RAND_MAX;    
-    // Uniform distribution    
-    //light_pdf = 1.0f / num_lights;
-    //light_index = (int)min(rand_float * num_lights, num_lights - 1);    
+    // Uniform distribution
+    /*
+    light_pdf = 1.0f / num_lights;
+    light_index = (int)min(rand_float * num_lights, num_lights - 1);
+    light_index = 12;
+    */
+    
 
     float cdf = 0.0f;
     for(int i = 0; i < sl->num_lights; i++)
@@ -530,6 +534,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
 
 float pathTraceLogging(vec3 radiance, FILE* fp, int depth, const Ray primary_ray, TraceArgs *trace_args)
 {
+    fprintf(fp, "New trace\n");
     const SceneObjects *so = trace_args->objects;
     SceneLights *sl = trace_args->lights;
     Sampler* sampler = trace_args->sampler;

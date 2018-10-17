@@ -90,6 +90,7 @@ inline bool vec3_hasNan(const vec3 a)
     if(isnan(a[0])) { return true; }
     if(isnan(a[1])) { return true; }
     if(isnan(a[2])) { return true; }
+    return false;
 }
 
 inline bool vec3_hasInf(const vec3 a)
@@ -97,4 +98,5 @@ inline bool vec3_hasInf(const vec3 a)
     if(isinf(a[0])) { return true; }
     if(isinf(a[1])) { return true; }
     if(isinf(a[2])) { return true; }
+    return false;
 }
