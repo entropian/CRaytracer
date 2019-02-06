@@ -341,7 +341,7 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
         ShadeRec tmp_sr;
         float min_t = intersectTest(&tmp_sr, so, shadow_ray);
         if(t == TMAX && min_t < TMAX)
-        {
+        {            
             t = shadowIntersectTest(so, shadow_ray, distance);
             min_t = intersectTest(&tmp_sr, so, shadow_ray);
         }
@@ -369,9 +369,11 @@ void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_s
     int light_index;
     float light_pdf;
     float rand_float = (float)rand() / (float)RAND_MAX;    
-    // Uniform distribution    
-    //light_pdf = 1.0f / num_lights;
-    //light_index = (int)min(rand_float * num_lights, num_lights - 1);    
+    // Uniform distribution
+    /*
+    light_pdf = 1.0f / num_lights;
+    light_index = (int)min(rand_float * num_lights, num_lights - 1);    
+    */
 
     float cdf = 0.0f;
     for(int i = 0; i < sl->num_lights; i++)

@@ -254,7 +254,8 @@ int main(int argc, char** argv)
     {
         color_buffer = (float*)calloc(num_pixels * 3, sizeof(float));
     }
-
+    // NOTE: for testing
+    srand(0);
     createGlobalSampleObject(params.num_samples, params.num_sample_sets, num_pixels);
     
     // Set trace function
@@ -270,7 +271,7 @@ int main(int argc, char** argv)
     thread_data.trace = trace;
 
     int num_patches = 256;
-    int num_threads = 3;
+    int num_threads = 1;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
     int patches[257];
@@ -322,6 +323,7 @@ int main(int argc, char** argv)
         {
             displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
         }
+        exit(0);
     }
     end_time = glfwGetTime();
     double sec = end_time - start_time;

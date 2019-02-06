@@ -11,7 +11,8 @@
 static void readRgba1(const char file_name[], float** data, int* width, int* height)
 {
     Imf::RgbaInputFile file(file_name);
-    Imath_2_2::Box2i dw = file.dataWindow();
+    //Imath_2_2::Box2i dw = file.dataWindow();
+    IMATH_NAMESPACE::Box2i dw = file.dataWindow();
 
     *width = dw.max.x - dw.min.x + 1;
     *height = dw.max.y - dw.min.y + 1;
