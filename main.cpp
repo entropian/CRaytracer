@@ -185,7 +185,7 @@ void ppmToImageState()
     free(buffer);
 }
 
-extern int g_intersect_count;
+extern unsigned long long g_intersect_count;
 int main(int argc, char** argv)
 {
     // Init GLFW
@@ -271,7 +271,7 @@ int main(int argc, char** argv)
     thread_data.trace = trace;
 
     int num_patches = 256;
-    int num_threads = 1;
+    int num_threads = 3;
     int num_pixels_per_patch = num_pixels / num_patches;
     pthread_t threads[17];
     int patches[257];
@@ -323,7 +323,17 @@ int main(int argc, char** argv)
         {
             displayImage(window, viewport, image, scene.film.frame_res_width, scene.film.frame_res_height);
         }
-        exit(0);
+        /*
+        printf("light info:\n");
+        int total_light_intersect = 0;
+        for(int i = 0; i < 13; i++)
+        {
+            printf("%d\t%d\t%d\n", i, g_light_counts[i], g_intersections_per_light[i]);
+            total_light_intersect += g_intersections_per_light[i];
+        }
+        printf("Total light intersect tests: %d\n", total_light_intersect);
+        */
+        //exit(0);
     }
     end_time = glfwGetTime();
     double sec = end_time - start_time;

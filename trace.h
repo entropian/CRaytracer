@@ -216,8 +216,9 @@ void printSampleLog()
         printVec3WithText("direct_contrib", sample_log.direct_contrib[i]);
         printf("new_sample_pdf %f\n", sample_log.new_sample_pdf[i]);
     }
-}
-
+} 
+extern unsigned long long g_intersect_count;
+extern unsigned long long g_shadow_count;
 void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
                     const ShadeRec* sr, const int light_index, const SceneLights* sl, const SceneObjects* so,
                     const BxDFFlags excluded_bxdf)
@@ -334,18 +335,21 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
     if(!vec3_equal(f, BLACK))
     {
         bool in_shadow;
-        float distance = vec3_length(sample_to_hit_point);
+        //float distance = vec3_length(sample_to_hit_point);
+        float distance = vec3_length(sample_to_hit_point) - K_EPSILON;
         Ray shadow_ray;
+        // NOTE: for testing
+        unsigned long long prev_shadow_count = g_shadow_count;
         resetRay(&shadow_ray, sr->hit_point, wi);
         float t = shadowIntersectTest(so, shadow_ray, distance);
         ShadeRec tmp_sr;
-        float min_t = intersectTest(&tmp_sr, so, shadow_ray);
-        if(t == TMAX && min_t < TMAX)
-        {            
-            t = shadowIntersectTest(so, shadow_ray, distance);
-            min_t = intersectTest(&tmp_sr, so, shadow_ray);
-        }
-        in_shadow = t < distance - K_EPSILON;
+        //float min_t = intersectTest(&tmp_sr, so, shadow_ray);
+        // NOTE: for testing
+        int diff_shadow = g_shadow_count - prev_shadow_count;
+        //printf("num intersection per this light: %d\n", diff);
+        //printf("num shadow intersection per this light: %d\n", diff_shadow);
+        //in_shadow = t < distance - K_EPSILON;
+        in_shadow = t < TMAX;
         if(!in_shadow)
         {
             vec3 radiance;
@@ -356,9 +360,11 @@ void estimateDirect(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
     }
 }
 
+int g_light_counts[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int g_intersections_per_light[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_sample,
                            const ShadeRec* sr, const SceneLights* sl, const SceneObjects* so,
-                           const BxDFFlags excluded_bxdf)
+                           const BxDFFlags excluded_bxdf, const float rand_float)
 {
     vec3_copy(L, BLACK);
     int num_lights = sl->num_lights;
@@ -368,13 +374,13 @@ void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_s
     }
     int light_index;
     float light_pdf;
-    float rand_float = (float)rand() / (float)RAND_MAX;    
+    //float rand_float = (float)rand() / (float)RAND_MAX;    
     // Uniform distribution
-    /*
+
     light_pdf = 1.0f / num_lights;
     light_index = (int)min(rand_float * num_lights, num_lights - 1);    
-    */
 
+    /*
     float cdf = 0.0f;
     for(int i = 0; i < sl->num_lights; i++)
     {
@@ -388,11 +394,18 @@ void uniformSampleOneLight(vec3 L, const vec2 light_sample, const vec2 scatter_s
     }
     if(rand_float == 1.0f)
         light_index = sl->num_lights - 1;
-
+    */
+    g_light_counts[light_index]++;
+    
+    unsigned long long prev_count = g_intersect_count;
+    
     vec3 Ld;
     estimateDirect(Ld, light_sample, scatter_sample, sr, light_index, sl, so, excluded_bxdf);
     vec3_scale(L, Ld, 1.0f / light_pdf);
+
+    g_intersections_per_light[light_index] += g_intersect_count - prev_count;
 }
+
 
 float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trace_args)
 {
@@ -479,8 +492,10 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         Sampler_getSample(scatter_sample, sampler);
         if(!(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT || sr.mat.mat_type == GLASS))
         {
-            vec3 contrib;        
-            uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct);
+            vec3 contrib;
+            float rand_float = (float)rand() / (float)RAND_MAX;
+            uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct,
+                rand_float);
             vec3_mult(contrib, contrib, beta);
             // LOGGING
             //vec3_copy(sample_log.direct_contrib[bounces], contrib);

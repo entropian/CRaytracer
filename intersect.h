@@ -57,7 +57,6 @@ double g_traversal_time = 0.0f;
                 // TODO get sr
 v            }else
  */
-
 float gridIntersectTest(ShadeRec* sr, const SceneObjects* so, const Ray ray)
 {
     // first find where the ray intersects with the aabb or if its origin is inside the aabb

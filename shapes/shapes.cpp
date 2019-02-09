@@ -1,6 +1,7 @@
 #include "shapes.h"
 
 unsigned long long g_intersect_count = 0;
+unsigned long long g_shadow_count = 0;
 float rayIntersectObject(ShadeRec* sr, const Object_t obj, const Ray ray)
 {
     g_intersect_count++;
@@ -49,6 +50,7 @@ float rayIntersectObject(ShadeRec* sr, const Object_t obj, const Ray ray)
 
 float shadowRayIntersectObject(const Object_t obj, const Ray ray)
 {
+    g_shadow_count++;
     float t = TMAX;
     switch(obj.type)
     {
