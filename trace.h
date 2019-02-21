@@ -421,19 +421,11 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
     BxDFFlags excluded_from_direct = (BxDFFlags)(BSDF_SPECULAR | BSDF_GLOSSY);
     int good_paths = 0;
     int bounces;
-    // LOGGING
-    //sample_log.depth = 0;
     for(bounces = 0; ; bounces++)
     {
-        // LOGGING
-        //sample_log.depth++;
-        //vec3_copy(sample_log.beta[bounces], beta);
         // Intersect ray with scene
         ShadeRec sr;
         float t = intersectTest(&sr, so, ray);
-        // LOGGING
-        //sample_log.depth = 0;
-        //sample_log.t[bounces] = t;
         // Possibly add emitted light at intersection
         if(bounces == 0 || sampled_flags & excluded_from_direct)
         {
@@ -445,22 +437,18 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                     vec3 inc_radiance;
                     vec3_scale(inc_radiance, emissive->color, emissive->intensity);
                     vec3_mult(inc_radiance, inc_radiance, beta);
-                    // LOGGING
-                    //vec3_copy(sample_log.emissive_indirect_contrib[bounces], inc_radiance);
                     vec3_add(L, L, inc_radiance);
                     good_paths++;
                 }
             }else
             {
-                vec3 env_inc_radiance;
-
+                vec3 env_inc_radiance = {0.0f, 0.0f, 0.0f};
                 if(sl->env_light)
                 {
                     vec3 dir;
                     mat3_mult_vec3(dir, sl->env_light->transform, ray.direction);                    
                     getEnvLightIncRadiance(env_inc_radiance, dir, sl->env_light);
                 }
-
                 /*
                 if(sl->env_light)
                 {
@@ -468,8 +456,6 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
                 }
                 */
                 vec3_mult(env_inc_radiance, env_inc_radiance, beta);
-                // LOGGING
-                //vec3_copy(sample_log.env_indirect_contrib[bounces], env_inc_radiance);
                 vec3_add(L, L, env_inc_radiance);
                 good_paths++;
             if(beta[0] < 0.0f || beta[1] < 0.0f || beta[2] < 0.0f)
@@ -479,6 +465,7 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
 
         // Terminate path if ray escaped or maxDepth was reached
         // NOTE: Only do blackbody emission for now
+        // NOTE: different from pbrt
         if(t == TMAX || bounces >= depth || sr.mat.mat_type == EMISSIVE) 
             break;
         
@@ -487,18 +474,19 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         computeScatteringFunc(&(sr.bsdf), sr.uv, &(sr.mat));
 
         // Sample illumination from lights to find path contribution
-        vec2 light_sample, scatter_sample;
+        vec2 light_sample, scatter_sample, light_select_sample;
         Sampler_getSample(light_sample, sampler);
         Sampler_getSample(scatter_sample, sampler);
+        Sampler_getSample(light_select_sample, sampler);
         if(!(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT || sr.mat.mat_type == GLASS))
         {
+
+            float rand_float = (light_select_sample[0] + light_select_sample[1]) * 0.5f;
+            //float rand_float = (float)rand() / (float)RAND_MAX;            
             vec3 contrib;
-            float rand_float = (float)rand() / (float)RAND_MAX;
             uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct,
                 rand_float);
             vec3_mult(contrib, contrib, beta);
-            // LOGGING
-            //vec3_copy(sample_log.direct_contrib[bounces], contrib);
             vec3_add(L, L, contrib);
             if(!vec3_equal(contrib, BLACK))
                 good_paths++;
@@ -513,8 +501,6 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         Sampler_getSample(sample, sampler);
         bool is_specular;
         float pdf = BSDF_sample_f(f, wi, &sampled_flags, wo, sample, &(sr.bsdf));
-        // LOGGING
-        //sample_log.new_sample_pdf[bounces] = pdf;
         if(vec3_equal(f, BLACK) || pdf == 0.0f)
         {
             BSDF_freeBxDFs(&(sr.bsdf));                    
@@ -538,11 +524,14 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec3_scale(rr_beta, beta, eta_scale);
         float max_comp = max(rr_beta[0], max(rr_beta[1], rr_beta[2]));
         */
+        vec2 rr_sample;
+        Sampler_getSample(rr_sample, sampler);        
         float max_comp = max(beta[0], max(beta[1], beta[2]));
         if(bounces > 3)
         {
             float q = max(0.05, 1.0f - max_comp);
-            float rand_float = (float)rand() / (float)RAND_MAX;
+            //float rand_float = (float)rand() / (float)RAND_MAX;
+            float rand_float = (rr_sample[0] + rr_sample[1]) * 0.5f;
             if(rand_float < q)
             {
                 BSDF_freeBxDFs(&(sr.bsdf));
@@ -554,8 +543,8 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         }
         BSDF_freeBxDFs(&(sr.bsdf));
     }
-    if(good_paths > 0)
-        vec3_scale(L, L, 1.0f / good_paths);
+    //if(good_paths > 0)
+    //vec3_scale(L, L, 1.0f / good_paths);
     vec3_copy(radiance, L);
     return 0.0f;
 }

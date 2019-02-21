@@ -408,6 +408,7 @@ void mapSamplesToDisk(Samples2D *dest_samples, const Samples2D *src_samples)
     }
 }
 
+/*
 void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, const float e)
 {
     if(src_samples->samples == NULL)
@@ -430,7 +431,8 @@ void mapSamplesToHemisphere(Samples3D* dest_samples, Samples2D * src_samples, co
         vec3_assign(dest_samples->samples[i], pu, pv, pw);
     }
 }
-
+*/
+/*
 Samples3D* genHemisphereSamples(const SamplesType st, const float exp)
 {
     Samples3D *samples = (Samples3D*)malloc(sizeof(Samples3D));    
@@ -459,7 +461,7 @@ Samples3D* genHemisphereSamples(const SamplesType st, const float exp)
     freeSamples2D(&disk_samples);
     return samples;
 }
-
+*/
 
 void drawSamples(unsigned char *image, Samples2D *samples,
                  const int frame_res_width, const int frame_res_height, const int num_pixels)
@@ -519,6 +521,7 @@ void createGlobalSampleObject(const int num_samples, const int num_sets, const i
 {
     setNumSamplesAndSets(num_samples, num_sets);
     genMultijitteredSamples(&global_samples);
+    //genHammersleySamples(&global_samples);
     permutation_arrays = (int**)malloc(sizeof(int*) * num_sets);
     for(int i = 0; i < num_sets; i++)
     {

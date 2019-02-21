@@ -451,8 +451,9 @@ void loadSceneFile(Scene* scene, const char* scenefile)
         }else if(strcmp(buffer, "ENV_LIGHT") == 0)
         {            
             EnvLight* env_light = (EnvLight*)malloc(sizeof(EnvLight));
-            Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
-            env_light->samples3D = samples;            
+            //Samples3D* samples = genHemisphereSamples(MULTIJITTERED, 1.0f);
+            //env_light->samples3D = samples;
+            env_light->samples3D = NULL;            
             getNextTokenInFile(buffer, fp); // Skip TYPE
             getNextTokenInFile(buffer, fp);
             if(strcmp(buffer, "CONSTANT") == 0)

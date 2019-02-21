@@ -154,6 +154,7 @@ void pauseFunc(const float* buffer, const Film* film)
 {
     while(PAUSE)
     {
+        sleep(1);
         if(g_left_clicked)
         {
             float image_window_ratio = (float)film->frame_res_width / (float)film->window_width;
