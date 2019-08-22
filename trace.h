@@ -474,15 +474,12 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         computeScatteringFunc(&(sr.bsdf), sr.uv, &(sr.mat));
 
         // Sample illumination from lights to find path contribution
-        vec2 light_sample, scatter_sample, light_select_sample;
+        vec2 light_sample, scatter_sample;
         Sampler_getSample(light_sample, sampler);
         Sampler_getSample(scatter_sample, sampler);
-        Sampler_getSample(light_select_sample, sampler);
         if(!(sr.mat.mat_type == MIRROR || sr.mat.mat_type == TRANSPARENT || sr.mat.mat_type == GLASS))
         {
-
-            float rand_float = (light_select_sample[0] + light_select_sample[1]) * 0.5f;
-            //float rand_float = (float)rand() / (float)RAND_MAX;            
+            float rand_float = (float)rand() / (float)RAND_MAX;            
             vec3 contrib;
             uniformSampleOneLight(contrib, light_sample, scatter_sample,  &sr, sl, so, excluded_from_direct,
                 rand_float);
@@ -524,14 +521,11 @@ float pathTrace(vec3 radiance, int depth, const Ray primary_ray, TraceArgs *trac
         vec3_scale(rr_beta, beta, eta_scale);
         float max_comp = max(rr_beta[0], max(rr_beta[1], rr_beta[2]));
         */
-        vec2 rr_sample;
-        Sampler_getSample(rr_sample, sampler);        
         float max_comp = max(beta[0], max(beta[1], beta[2]));
         if(bounces > 3)
         {
             float q = max(0.05, 1.0f - max_comp);
-            //float rand_float = (float)rand() / (float)RAND_MAX;
-            float rand_float = (rr_sample[0] + rr_sample[1]) * 0.5f;
+            float rand_float = (float)rand() / (float)RAND_MAX;
             if(rand_float < q)
             {
                 BSDF_freeBxDFs(&(sr.bsdf));

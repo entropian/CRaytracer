@@ -175,6 +175,7 @@ void ppmToImageState()
     int width, height, size;
     PPM_read(&image, &size, &width, &height, "output.ppm");
     float* buffer = (float*)malloc(size * sizeof(float));
+    // TODO: WTF is this?
     int num_samples = 10000;
     int i;
     for(i = 0; i < size; i++)

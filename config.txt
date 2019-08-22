@@ -1,5 +1,5 @@
 scene_file staircase2.txt
-num_samples  6400
+num_samples  100
 num_sample_sets 83
 max_depth  15
 trace_type PATHTRACE

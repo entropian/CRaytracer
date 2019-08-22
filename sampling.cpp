@@ -1,5 +1,6 @@
 #include "sampling.h"
 #include <assert.h>
+#include <random>
 
 static bool INTERLEAVED = false;
 static unsigned char* set_buffer;
@@ -16,11 +17,12 @@ static int NUM_SAMPLES = 0;
 static int NUM_SAMPLE_SETS = 0;
 static int TOTAL_SAMPLES = 0;
 
+
 void setNumSamplesAndSets(const int num_samples, const int num_sets)
 {
     NUM_SAMPLES = num_samples;
     NUM_SAMPLE_SETS = num_sets;
-    TOTAL_SAMPLES = NUM_SAMPLES * NUM_SAMPLE_SETS;
+    TOTAL_SAMPLES = NUM_SAMPLES * NUM_SAMPLE_SETS;    
 }
 
 void setInterleaved(bool interleaved)
@@ -258,14 +260,20 @@ void genMultijitteredSamples(Samples2D *samples)
 }
 */
 void genMultijitteredSamples(Samples2D *samples)
-{
+{    
     int samples_per_row = (int)sqrt(NUM_SAMPLES);    
     if(samples_per_row * samples_per_row != NUM_SAMPLES)
     {
         fprintf(stderr, "num_samples must be a perfect square.\n");
         return ;
     }
-    prepSample2DStruct(samples);    
+    prepSample2DStruct(samples);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> rdis(0.0, 1.0);
+    std::default_random_engine e1(rd());
+    std::uniform_int_distribution<int> uniform_dist(0, samples_per_row-1);    
     int sample_index = 0;
     for(int p = 0; p < NUM_SAMPLE_SETS; p++)
     {
@@ -273,8 +281,8 @@ void genMultijitteredSamples(Samples2D *samples)
         {
             for(int j = 0; j < samples_per_row; j++)
             {
-                float x = (float)rand() / (float)RAND_MAX;
-                float y = (float)rand() / (float)RAND_MAX;                
+                float x = rdis(gen);
+                float y = rdis(gen);
                 x += (float)(i + j * samples_per_row);
                 x /= (float)(NUM_SAMPLES);
                 y += (float)(j + i * samples_per_row);
@@ -295,7 +303,7 @@ void genMultijitteredSamples(Samples2D *samples)
             {
                 row_offset = i + p * samples->num_samples;
             }
-            int target = rand() % samples_per_row + row_offset;
+            int target = uniform_dist(e1) + row_offset;
             float tmp = samples->samples[i + p * samples->num_samples][0];
             samples->samples[i + p * samples->num_samples][0] = samples->samples[target][0];
             samples->samples[target][0] = tmp;
@@ -306,8 +314,12 @@ void genMultijitteredSamples(Samples2D *samples)
 
         for(int i = 0; i < samples->num_samples; i++)
         {
+            int target = uniform_dist(e1) * samples_per_row + (i % samples_per_row)
+                + p * samples->num_samples;
+            /*
             int target = rand() % samples_per_row * samples_per_row + (i % samples_per_row)
                 + p * samples->num_samples;
+            */
             float tmp = samples->samples[i + p * samples->num_samples][1];
             samples->samples[i + p * samples->num_samples][1] = samples->samples[target][1];
             samples->samples[target][1] = tmp;
@@ -519,9 +531,15 @@ static int* random_sets = NULL;
 static int random_sets_size = 0;
 void createGlobalSampleObject(const int num_samples, const int num_sets, const int num_pixels)
 {
+#ifdef NEW_RANDOM
+    std::random_device rd;
+    std::default_random_engine e1(rd());
+    std::uniform_int_distribution<int> uniform_dist(0, num_sets-1);
+#endif    
+    
     setNumSamplesAndSets(num_samples, num_sets);
     genMultijitteredSamples(&global_samples);
-    //genHammersleySamples(&global_samples);
+    //genHammersleySamples(&global_samples);    
     permutation_arrays = (int**)malloc(sizeof(int*) * num_sets);
     for(int i = 0; i < num_sets; i++)
     {
@@ -532,7 +550,7 @@ void createGlobalSampleObject(const int num_samples, const int num_sets, const i
         }
         for(int j = 0; j < num_sets; j++)
         {
-            int random_index = rand() % num_sets;
+            int random_index = uniform_dist(e1);
             int tmp = permutation_arrays[i][j];
             permutation_arrays[i][j] = permutation_arrays[i][random_index];
             permutation_arrays[i][random_index] = tmp;
@@ -542,7 +560,7 @@ void createGlobalSampleObject(const int num_samples, const int num_sets, const i
     random_sets_size = num_pixels;
     for(int i = 0; i < num_pixels; i++)
     {
-        random_sets[i] = rand() % num_sets;
+        random_sets[i] = uniform_dist(e1);
     }
 }
 
