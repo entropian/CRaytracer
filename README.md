@@ -7,7 +7,7 @@ This is an unbiased path tracer written in mostly C inspired by Handmade Hero.
 - Physically-based materials
 - Direct light sampling
 - Texture maps and environment map
-- Uniform grid, BVH, and QBVH for acceleration
+- Uniform grid, BVH, and QBVH for ray-traversal acceleration
 - Multithreaded
 - Wavefront .obj files
 
